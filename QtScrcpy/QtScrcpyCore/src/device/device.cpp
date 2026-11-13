@@ -22,9 +22,8 @@ namespace qsc {
 Device::Device(DeviceParams params, QObject *parent) : IDevice(parent), m_params(params)
 {
     if (isCameraMode()) {
-        // Camera capture has no Android display target. Normalize every
-        // display-only option here so all callers (UI, group control, or
-        // future APIs) receive the same safety boundary.
+        // 相机采集没有 Android 显示目标。在此统一归一化所有“仅显示”相关选项，
+        // 使所有调用方（UI、群控、或未来的 API）都遵守相同的安全边界。
         m_params.closeScreen = false;
         m_params.stayAwake = false;
         m_params.crop.clear();
@@ -174,9 +173,8 @@ bool Device::screenshot()
             return;
         }
 
-        // VideoBuffer deletes the RGB buffer as soon as this callback returns,
-        // so the image must own a deep copy of the pixels before it reaches the
-        // system clipboard.
+        // VideoBuffer 会在回调返回后立即释放 RGB 缓冲区，因此图像在到达
+        // 系统剪贴板前必须持有像素的深拷贝。
         QImage image(dataRGB32, width, height, QImage::Format_RGB32);
         clipboard->setImage(image.copy());
         copied = true;
@@ -295,7 +293,7 @@ void Device::initSignals()
                 double diff = m_startTimeCount.elapsed() / 1000.0;
                 qInfo() << QString("server start finish in %1s").arg(diff).toStdString().c_str();
 
-                // init recorder
+                // 初始化录制器
                 if (m_recorder) {
                     m_recorder->setFrameSize(size);
                     if (!m_recorder->open()) {
@@ -307,17 +305,17 @@ void Device::initSignals()
                     }
                 }
 
-                // init decoder
+                // 初始化解码器
                 if (m_decoder) {
                     m_decoder->open();
                 }
 
-                // init stream
+                // 初始化数据流
                 m_stream->installVideoSocket(m_server->removeVideoSocket());
                 m_stream->setFrameSize(size);
                 m_stream->startDecode();
 
-                // recv device msg
+                // 接收设备消息
                 connect(m_server->getControlSocket(), &QTcpSocket::readyRead, this, [this](){
                     if (!m_controller) {
                         return;
@@ -329,7 +327,7 @@ void Device::initSignals()
                         DeviceMsg deviceMsg;
                         qint32 consume = deviceMsg.deserialize(byteArray);
                         if (consume == 0) {
-                            // Incomplete device message: wait for the next readyRead.
+                            // 设备消息不完整：等待下一次 readyRead。
                             break;
                         }
                         if (consume < 0) {
@@ -346,9 +344,8 @@ void Device::initSignals()
                 if (m_params.videoSource == VIDEO_SOURCE_DISPLAY && m_params.closeScreen && m_params.display && m_controller) {
                     m_controller->setDisplayPower(false);
                 }
-                // Starting an Android app is only meaningful for display capture.
-                // Some bundled server builds do not accept control message type 16
-                // while a camera stream is active, which terminates the session.
+                // 启动 Android 应用仅对显示采集有意义。部分打包的服务端版本在
+                // 相机流活跃时不接受控制消息类型 16，会导致会话终止。
                 if (m_params.videoSource == VIDEO_SOURCE_DISPLAY && !m_params.startApp.isEmpty() && m_controller) {
                     m_controller->startApp(m_params.startApp);
                 }
@@ -371,8 +368,8 @@ void Device::initSignals()
             for (const auto& item : m_deviceObservers) {
                 item->onVideoSessionChanged(size, clientResized);
             }
-            // Match scrcpy: Recorder keeps the initial session dimensions for
-            // its single H.264 stream and does not restart on later sessions.
+            // 与 scrcpy 保持一致：录制器为单一 H.264 流保留初始会话尺寸，
+            // 后续会话不再重新启动。
         });
         connect(m_stream, &Demuxer::onStreamStop, this, [this]() {
             disconnectDevice();
@@ -420,22 +417,21 @@ bool Device::connectDevice()
         return false;
     }
 
-    // fix: macos cant recv finished signel, timer is ok
+    // 修复：macOS 收不到 finished 信号，因此改用定时器
     QTimer::singleShot(0, this, [this]() {
         m_startTimeCount.start();
-        // max size support 480p 720p 1080p 设备原生分辨率
-        // support wireless connect, example:
+        // 最大尺寸支持 480p / 720p / 1080p 及设备原生分辨率
+        // 支持无线连接，例如：
         //m_server->start("192.168.0.174:5555", 27183, m_maxSize, m_bitRate, "");
-        // only one devices, serial can be null
-        // mark: crop input format: "width:height:x:y" or "" for no crop, for example: "100:200:0:0"
+        // 仅单台设备时 serial 可为空
+        // 备注：裁剪输入格式为 "width:height:x:y"，空字符串表示不裁剪，例如："100:200:0:0"
         Server::ServerParams params;
         params.serverLocalPath = m_params.serverLocalPath;
         params.serverRemotePath = m_params.serverRemotePath;
         params.serial = m_params.serial;
         params.localPort = m_params.localPort;
-        // scrcpy permits max_size together with flex_display. In that case,
-        // the server constrains each requested virtual-display resize to the
-        // encoder cap.
+        // scrcpy 允许 max_size 与 flex_display 同时使用。此时服务端会把每次
+        // 请求的虚拟显示缩放限制在编码能力上限内。
         params.maxSize = m_params.maxSize;
         params.bitRate = m_params.bitRate;
         params.maxFps = m_params.maxFps;
@@ -479,7 +475,7 @@ void Device::disconnectDevice()
         m_stream->stopDecode();
     }
 
-    // server must stop before decoder, because decoder block main thread
+    // 必须在解码器之前先停止服务端，因为解码器会阻塞主线程
     if (m_decoder) {
         m_decoder->close();
     }
@@ -716,8 +712,8 @@ void Device::resizeDisplay(const QSize &size)
     if (isCameraMode() || !m_controller || !m_params.flexDisplay) {
         return;
     }
-    // Resize is intentionally not broadcast to group observers. Each virtual
-    // display keeps its own dimensions while group input remains normalized.
+    // 缩放调整有意不向群控观察者广播。每个虚拟显示保留各自尺寸，
+    // 而群控输入仍保持归一化坐标。
     m_controller->resizeDisplay(size);
 }
 

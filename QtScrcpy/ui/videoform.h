@@ -37,7 +37,7 @@ public:
     void switchFullScreen();
     bool isHost();
 
-    // Screen recording, driven by the toolbar record button.
+    // 屏幕录制：由工具栏的录制按钮触发。
     bool isRecording() const;
     bool isRecordingSupported() const;
     bool startRecord();
@@ -54,8 +54,8 @@ private:
     QString buildRecordFilePath() const;
     void openRecordFolder(const QString &filePath) const;
 
-    // Keep the window geometry in sync with the video aspect ratio. Without
-    // this, maximizing (or restoring from minimize) leaves a huge letterbox.
+    // 让窗口几何尺寸与视频宽高比保持同步。否则最大化（或从最小化还原）后会
+    // 留下大片黑边。
     QSize fittedWindowSize(bool fillScreen);
     void fitWindowToFrame(bool fillScreen);
     bool hasExcessiveLetterbox() const;
@@ -71,6 +71,8 @@ private:
     void updateStyleSheet(bool vertical);
     QMargins getMargins(bool vertical);
     void initUI();
+    // 连接加载遮罩：让遮罩始终覆盖画面区域并保持顶层
+    void syncLoadingOverlay();
 
     void showToolForm(bool show = true);
     void syncToolFormGeometry();
@@ -120,16 +122,14 @@ private:
 
     QPointer<QLabel> m_fpsLabel;
 
-    // screen recording
+    // 录屏
     QPointer<VideoRecorder> m_recorder;
     QString m_recordAudioKey;
     bool m_closing = false;
 
-    // Smart-maximize toggle state. On maximize we grow the picture to the
-    // largest size the screen can hold (instead of leaving black bands) but
-    // keep the window in the normal state, so the native maximize/restore
-    // button still toggles it. These fields remember the pre-maximize geometry
-    // and whether a smart maximize is currently active.
+    // 智能最大化状态。最大化时把画面放大到屏幕可容纳的最大尺寸（而不是留黑边），
+    // 但窗口仍保持普通状态，使系统的最大化/还原按钮能正常切换。这些字段记录
+    // 最大化前的几何尺寸以及当前是否处于智能最大化状态。
     bool m_smartMaximized = false;
     QRect m_restoredGeometry;
     bool m_stateAdjusting = false;

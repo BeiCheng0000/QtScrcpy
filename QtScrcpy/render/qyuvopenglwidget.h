@@ -21,6 +21,12 @@ public:
     const QSize &frameSize();
     void updateTextures(quint8 *dataY, quint8 *dataU, quint8 *dataV, quint32 linesizeY, quint32 linesizeU, quint32 linesizeV);
 
+signals:
+    // 一帧真实画面数据成功上传到纹理后发出。
+    // 注意与“首帧回调”区分：首帧回调到达时纹理里可能还是未初始化的
+    // 零填充数据（渲染为绿色占位），只有真实数据上传完成才能对外展示。
+    void frameUpdated();
+
 protected:
     void initializeGL() override;
     void paintGL() override;

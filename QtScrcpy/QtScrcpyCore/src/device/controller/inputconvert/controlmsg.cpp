@@ -39,9 +39,9 @@ void ControlMsg::setInjectKeycodeMsgData(AndroidKeyeventAction action, AndroidKe
 
 void ControlMsg::setInjectTextMsgData(QString &text)
 {
-    // write length (2 byte) + string (non nul-terminated)
+    // 写入长度（2 字节）+ 字符串（非 null 结尾）
     if (CONTROL_MSG_INJECT_TEXT_MAX_LENGTH < text.length()) {
-        // injecting a text takes time, so limit the text length
+        // 注入文本耗时，因此限制文本长度
         text = text.left(CONTROL_MSG_INJECT_TEXT_MAX_LENGTH);
     }
     QByteArray tmp = text.toUtf8();
@@ -158,7 +158,7 @@ qint16 ControlMsg::flostToI16fp(float f)
     qint32 i = f * 0x1p15f; // 2^15
     Q_ASSERT(i >= -0x8000);
     if (i >= 0x7fff) {
-        Q_ASSERT(i == 0x8000); // for f == 1.0f
+        Q_ASSERT(i == 0x8000); // 当 f == 1.0f 时
         i = 0x7fff;
     }
     return (qint16)i;
@@ -193,8 +193,8 @@ QByteArray ControlMsg::serializeData()
     } break;
     case CMT_INJECT_SCROLL: {
         writePosition(buffer, m_data.injectScroll.position);
-        // Accept values in the range [-16, 16].
-        // Normalize to [-1, 1] in order to use sc_float_to_i16fp().
+        // 接受范围在 [-16, 16] 内的值。
+        // 归一化到 [-1, 1] 以便使用 sc_float_to_i16fp()。
         float hscrollNorm = m_data.injectScroll.hScroll / 16;
         hscrollNorm = CLAMP(hscrollNorm, -1, 1);
         float vscrollNorm = m_data.injectScroll.vScroll / 16;

@@ -21,14 +21,14 @@ Decoder::~Decoder() {
 
 bool Decoder::open()
 {
-    // codec
+    // 解码器
     const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (!codec) {
         qCritical("H.264 decoder not found");
         return false;
     }
 
-    // codec context
+    // 解码器上下文
     m_codecCtx = avcodec_alloc_context3(codec);
     if (!m_codecCtx) {
         qCritical("Could not allocate decoder context");
@@ -151,7 +151,7 @@ void Decoder::pushFrame()
     bool previousFrameSkipped = true;
     m_vb->offerDecodedFrame(previousFrameSkipped);
     if (previousFrameSkipped) {
-        // the previous newFrame will consume this frame
+        // 上一个 newFrame 会消费掉这一帧
         return;
     }
     emit newFrame();

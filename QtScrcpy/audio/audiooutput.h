@@ -21,7 +21,7 @@ public:
     explicit AudioOutput(QObject *parent = nullptr);
     ~AudioOutput();
 
-    // Single process wide audio channel, shared by playback and recording.
+    // 进程级单一音频通道，播放与录制共用。
     static AudioOutput &instance();
 
     bool start(const QString& serial, int port);
@@ -30,13 +30,12 @@ public:
     bool isRunning() const;
     QString serial() const;
 
-    // Stop playback AND tear down the device side of the audio bridge when the
-    // device window is closed: adb forward + the sndcpy capture activity.
-    // Safe to call repeatedly and harmless for a different device's stream.
+    // 设备窗口关闭时，停止播放并拆除音频桥接的设备侧：
+    // adb 转发 + sndcpy 采集 Activity。可重复调用，且对其它设备的音频流无害。
     void stopForDevice(const QString& serial);
 
-    // Listeners receive the raw s16le/48k/stereo PCM pushed by sndcpy.
-    // They are invoked from the socket thread and must not block.
+    // 监听器收到 sndcpy 推送的原始 s16le/48k/立体声 PCM 数据。
+    // 它们在 socket 线程中被调用，不得阻塞。
     void addPcmListener(const QString &key, std::function<void(const char *, int)> listener);
     void removePcmListener(const QString &key);
 

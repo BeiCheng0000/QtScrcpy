@@ -47,7 +47,7 @@ static void avLogCallback(void *avcl, int level, const char *fmt, va_list vl)
         break;
     }
 
-    // do not forward others, which are too verbose
+    // 其余级别过于冗长，不再转发
     return;
 }
 
@@ -65,7 +65,7 @@ bool Demuxer::init()
 
 void Demuxer::deInit()
 {
-    avformat_network_deinit(); // ignore failure
+    avformat_network_deinit(); // 忽略失败
 }
 
 void Demuxer::installVideoSocket(VideoSocket *videoSocket)
@@ -121,14 +121,14 @@ void Demuxer::run()
     m_parser = Q_NULLPTR;
     AVPacket *packet = Q_NULLPTR;
 
-    // codec
+    // 解码器
     const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (!codec) {
         qCritical("H.264 decoder not found");
         goto runQuit;
     }
 
-    // codeCtx
+    // 解码器上下文
     m_codecCtx = avcodec_alloc_context3(codec);
     if (!m_codecCtx) {
         qCritical("Could not allocate codec context");
@@ -145,8 +145,8 @@ void Demuxer::run()
         goto runQuit;
     }
 
-    // We must only pass complete frames to av_parser_parse2()!
-    // It's more complicated, but this allows to reduce the latency by 1 frame!
+    // 必须只向 av_parser_parse2() 传入完整的帧！
+    // 虽然更复杂，但这样可以将延迟减少 1 帧！
     m_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
     packet = av_packet_alloc();
@@ -158,19 +158,19 @@ void Demuxer::run()
     for (;;) {
         bool ok = recvPacket(packet);
         if (!ok) {
-            // end of stream
+            // 流结束
             break;
         }
 
         if (!packet->size) {
-            // scrcpy 4.x session metadata was consumed
+            // 已消费 scrcpy 4.x 的会话元数据
             continue;
         }
 
         ok = pushPacket(packet);
         av_packet_unref(packet);
         if (!ok) {
-            // cannot process packet (error already logged)
+            // 无法处理数据包（错误已记录）
             break;
         }
     }
@@ -201,27 +201,26 @@ runQuit:
 
 bool Demuxer::recvPacket(AVPacket *packet)
 {
-    // The video stream contains raw packets, without time information. When we
-    // record, we retrieve the timestamps separately, from a "meta" header
-    // added by the server before each raw packet.
+    // 视频流包含原始数据包，没有时间信息。录制时，我们在
+    // 每个原始数据包之前由服务端添加的 "meta" 头部中单独获取时间戳。
     //
-    // The "meta" header length is 12 bytes:
+    // "meta" 头部长度为 12 字节：
     // [. . . . . . . .|. . . .]. . . . . . . . . . . . . . . ...
     //  <-------------> <-----> <-----------------------------...
     //        PTS        packet        raw packet
     //                    size
     //
-    // It is followed by <packet_size> bytes containing the packet/frame.
+    // 其后跟随 <packet_size> 字节，包含数据包/帧。
     //
-    // The most significant bits of the PTS are used for packet flags:
+    // PTS 的最高有效位用于数据包标志：
     //
     //  byte 7   byte 6   byte 5   byte 4   byte 3   byte 2   byte 1   byte 0
     // SCK..... ........ ........ ........ ........ ........ ........ ........
     // ^^^<------------------------------------------------------------------>
     // |||                                PTS
-    // || `- config packet
-    // | `-- key frame
-    // `---- session metadata
+    // || `- 配置包
+    // | `-- 关键帧
+    // `---- 会话元数据
 
     quint8 header[HEADER_SIZE];
     qint32 r = recvData(header, HEADER_SIZE);
@@ -278,8 +277,8 @@ bool Demuxer::pushPacket(AVPacket *packet)
 {
     bool isConfig = packet->pts == AV_NOPTS_VALUE;
 
-    // A config packet must not be decoded immetiately (it contains no
-    // frame); instead, it must be concatenated with the future data packet.
+    // 配置包不能立即解码（它不包含帧），
+    // 而必须与后续的数据包拼接在一起。
     if (m_pending || isConfig) {
         qint32 offset;
         if (m_pending) {
@@ -301,7 +300,7 @@ bool Demuxer::pushPacket(AVPacket *packet)
         memcpy(m_pending->data + offset, packet->data, static_cast<unsigned int>(packet->size));
 
         if (!isConfig) {
-            // prepare the concat packet to send to the decoder
+            // 准备拼接后送往解码器的数据包
             m_pending->pts = packet->pts;
             m_pending->dts = packet->dts;
             m_pending->flags = packet->flags;
@@ -310,17 +309,17 @@ bool Demuxer::pushPacket(AVPacket *packet)
     }
 
     if (isConfig) {
-        // config packet
+        // 配置包
         bool ok = processConfigPacket(packet);
         if (!ok) {
             return false;
         }
     } else {
-        // data packet
+        // 数据包
         bool ok = parse(packet);
 
         if (m_pending) {
-            // the pending packet must be discarded (consumed or error)
+            // 待处理的数据包必须丢弃（已消费或出错）
             av_packet_free(&m_pending);
         }
 
@@ -345,7 +344,7 @@ bool Demuxer::parse(AVPacket *packet)
     int outLen = 0;
     int r = av_parser_parse2(m_parser, m_codecCtx, &outData, &outLen, inData, inLen, AV_NOPTS_VALUE, AV_NOPTS_VALUE, -1);
 
-    // PARSER_FLAG_COMPLETE_FRAMES is set
+    // 已设置 PARSER_FLAG_COMPLETE_FRAMES
     Q_ASSERT(r == inLen);
     (void)r;
     Q_ASSERT(outLen == inLen);

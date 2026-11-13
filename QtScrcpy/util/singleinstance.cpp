@@ -12,9 +12,8 @@ namespace
     const char kActivateMessage[] = "activate";
     const int kTimeoutMs = 1000;
 
-    // The name becomes a named pipe on Windows and a file under /tmp elsewhere,
-    // so keep it to plain characters. Include the user name so two users on the
-    // same machine each get their own instance.
+    // 该名称在 Windows 上是命名管道，在其他平台是 /tmp 下的文件，
+    // 因此只能使用普通字符。加入用户名，使同一机器上的不同用户各自拥有独立实例。
     QString makeServerName(const QString &appId)
     {
         QString user = qEnvironmentVariable("USERNAME");
@@ -33,8 +32,8 @@ namespace
 
 SingleInstance::SingleInstance(const QString &appId, QObject *parent) : QObject(parent), m_serverName(makeServerName(appId))
 {
-    // Probe for a live primary. A stale socket file left by a crashed primary
-    // (Unix) refuses the connection, so a failed connect means we can take over.
+    // 探测是否存在存活的主实例。崩溃的主实例残留的 socket 文件（Unix）会拒绝连接，
+    // 因此连接失败意味着我们可以接管。
     QLocalSocket probe;
     probe.connectToServer(m_serverName);
     if (probe.waitForConnected(kTimeoutMs)) {
@@ -49,7 +48,7 @@ SingleInstance::SingleInstance(const QString &appId, QObject *parent) : QObject(
     if (m_server->listen(m_serverName)) {
         connect(m_server, &QLocalServer::newConnection, this, &SingleInstance::onNewConnection);
     } else {
-        // Better to run unguarded than to refuse to start at all.
+        // 与其完全拒绝启动，不如以未加保护的方式运行。
         qWarning() << "SingleInstance: cannot listen on" << m_serverName << ":" << m_server->errorString();
         delete m_server;
         m_server = nullptr;
@@ -60,7 +59,7 @@ SingleInstance::SingleInstance(const QString &appId, QObject *parent) : QObject(
 SingleInstance::~SingleInstance()
 {
     if (m_server) {
-        m_server->close(); // also removes the socket file on Unix
+        m_server->close(); // 同时移除 Unix 上的 socket 文件
     }
 }
 
@@ -79,9 +78,8 @@ bool SingleInstance::notifyPrimary()
     }
 
 #ifdef Q_OS_WIN32
-    // This process was just launched by the user, so it holds the right to
-    // change the foreground window. Hand that right to the primary; without it
-    // Windows only flashes the taskbar button instead of raising the window.
+    // 本进程刚由用户启动，因此拥有更改前台窗口的权限。将该权限授予主实例；
+    // 否则 Windows 只会闪烁任务栏按钮，而不会真正将窗口提到前台。
     AllowSetForegroundWindow(ASFW_ANY);
 #endif
 

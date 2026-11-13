@@ -39,7 +39,7 @@ public:
     bool connectDevice() override;
     void disconnectDevice() override;
 
-    // key map
+    // 按键映射
     void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize) override;
     void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize) override;
     void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize) override;
@@ -87,7 +87,7 @@ private:
     void initSignals();
 
 private:
-    // server relevant
+    // 与服务端相关
     QPointer<Server> m_server;
     bool m_serverStartSuccess = false;
     QPointer<IDecoder> m_decoder;

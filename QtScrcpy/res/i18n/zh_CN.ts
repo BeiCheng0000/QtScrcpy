@@ -314,6 +314,52 @@
         <source>Profile:</source>
         <translation>方案：</translation>
     </message>
+    <message>
+        <source>MTK Encoder</source>
+        <translation>联发科编码器</translation>
+    </message>
+    <message>
+        <source>This feature is for MediaTek (MTK) devices only.
+Using on non-MTK devices may cause encoding failure or visual artifacts.</source>
+        <translation>此功能仅适用于联发科（MTK）设备。
+在非 MTK 设备上使用可能导致编码失败或画面异常。</translation>
+    </message>
+    <message>
+        <source>Game Mode (20Mbps, QP≤28)</source>
+        <translation>游戏模式（20Mbps，QP≤28）</translation>
+    </message>
+    <message>
+        <source>VBR + hard QP cap at 28 + short GOP. The strongest anti-blur shield for real-time gaming.</source>
+        <translation>VBR + 28 的硬 QP 上限 + 短 GOP。实时游戏最强的防模糊护盾。</translation>
+    </message>
+    <message>
+        <source>VBR + QP cap at 28 + short GOP (5 frames). Hard ceiling blocks Sticky QP completely — best for real-time gaming.</source>
+        <translation>VBR + 28 的 QP 上限 + 短 GOP（5 帧）。硬上限彻底阻挡 Sticky QP——最适合实时游戏。</translation>
+    </message>
+    <message>
+        <source>Balanced (8Mbps, QP≤35)</source>
+        <translation>均衡（8Mbps，QP≤35）</translation>
+    </message>
+    <message>
+        <source>Standard anti-blur protection with optimal visual quality. Recommended for daily use.</source>
+        <translation>标准防模糊保护，画质最优。推荐日常使用。</translation>
+    </message>
+    <message>
+        <source>VBR + QP cap at 35 + standard GOP. Matches default visual quality while preventing QP runaway. Ideal for daily use.</source>
+        <translation>VBR + 35 的 QP 上限 + 标准 GOP。在保持默认画质的同时防止 QP 失控。适合日常使用。</translation>
+    </message>
+    <message>
+        <source>Power Saver (4Mbps, QP≤35)</source>
+        <translation>省电（4Mbps，QP≤35）</translation>
+    </message>
+    <message>
+        <source>Maximum power saving: low-power ME + single ref frame. Saves most encoder power for non-gaming scenarios.</source>
+        <translation>最大省电：低功耗运动估计 + 单参考帧。在非游戏场景下最省编码器功耗。</translation>
+    </message>
+    <message>
+        <source>VBR + QP cap at 35 + disabled visual optimizations + low-power ME + single ref frame. Maximum power saving for non-intensive scenarios.</source>
+        <translation>VBR + 35 的 QP 上限 + 关闭画质优化 + 低功耗运动估计 + 单参考帧。非高强度场景下的最大省电。</translation>
+    </message>
 </context>
 <context>
     <name>ToolForm</name>
@@ -334,14 +380,6 @@
         <translation>触摸显示开关</translation>
     </message>
     <message>
-        <source>screen shot</source>
-        <translation>截图</translation>
-    </message>
-    <message>
-        <source>copy clipboard text</source>
-        <translation>复制设备剪贴板文本</translation>
-    </message>
-    <message>
         <source>open screen</source>
         <translation>打开屏幕</translation>
     </message>
@@ -356,10 +394,6 @@
     <message>
         <source>expand notify (Ctrl+N)</source>
         <translation>展开通知栏（Ctrl+N）</translation>
-    </message>
-    <message>
-        <source>expand settings panel (Ctrl+Alt+N)</source>
-        <translation>展开设置面板（Ctrl+Alt+N）</translation>
     </message>
     <message>
         <source>rotate device (Ctrl+R)</source>
@@ -408,6 +442,14 @@
     <message>
         <source>zoom in</source>
         <translation>放大</translation>
+    </message>
+    <message>
+        <source>系统设置（Ctrl+Alt+N，悬停展开更多）</source>
+        <translation>系统设置（Ctrl+Alt+N，悬停展开更多）</translation>
+    </message>
+    <message>
+        <source>截图（复制到剪贴板）</source>
+        <translation>截图（复制到剪贴板）</translation>
     </message>
 </context>
 <context>
@@ -479,6 +521,14 @@ Choose No to record video only.</source>
     <message>
         <source>Recording failed: %1</source>
         <translation>录制失败：%1</translation>
+    </message>
+    <message>
+        <source>正在连接设备…</source>
+        <translation>正在连接设备…</translation>
+    </message>
+    <message>
+        <source>仍在连接，请检查设备与 USB 调试授权…</source>
+        <translation>仍在连接，请检查设备与 USB 调试授权…</translation>
     </message>
 </context>
 <context>

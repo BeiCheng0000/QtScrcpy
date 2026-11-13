@@ -14,7 +14,7 @@ void InputConvertNormal::mouseEvent(const QMouseEvent *from, const QSize &frameS
         return;
     }
 
-    // action
+    // 动作
     AndroidMotioneventAction action;
     switch (from->type()) {
     case QEvent::MouseButtonPress:
@@ -24,7 +24,7 @@ void InputConvertNormal::mouseEvent(const QMouseEvent *from, const QSize &frameS
         action = AMOTION_EVENT_ACTION_UP;
         break;
     case QEvent::MouseMove:
-        // only support left button drag
+        // 仅支持左键拖拽
         if (!(from->buttons() & Qt::LeftButton)) {
             return;
         }
@@ -34,17 +34,17 @@ void InputConvertNormal::mouseEvent(const QMouseEvent *from, const QSize &frameS
         return;
     }
 
-    // pos
+    // 坐标
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     QPointF pos = from->localPos();
 #else
     QPointF pos = from->position();
 #endif
-    // convert pos
+    // 转换坐标
     pos.setX(pos.x() * frameSize.width() / showSize.width());
     pos.setY(pos.y() * frameSize.height() / showSize.height());
 
-    // set data
+    // 设置数据
     ControlMsg *controlMsg = new ControlMsg(ControlMsg::CMT_INJECT_TOUCH);
     if (!controlMsg) {
         return;
@@ -58,9 +58,9 @@ void InputConvertNormal::mouseEvent(const QMouseEvent *from, const QSize &frameS
         AMOTION_EVENT_ACTION_DOWN == action ? 1.0f : 0.0f);
     sendControlMsg(controlMsg);
 
-    // pinch-to-zoom / tilt simulation (ported from scrcpy):
-    // inject a second "virtual finger" whose position is the drag position
-    // mirrored through the center of the screen (on one or both axes).
+    // 双指缩放 / 倾斜模拟（移植自 scrcpy）：
+    // 注入第二个“虚拟手指”，其位置为拖拽位置
+    // 经屏幕中心镜像后的位置（在一个或两个轴上）。
     const bool ctrl = from->modifiers().testFlag(Qt::ControlModifier);
     const bool shift = from->modifiers().testFlag(Qt::ShiftModifier);
 
@@ -71,8 +71,8 @@ void InputConvertNormal::mouseEvent(const QMouseEvent *from, const QSize &frameS
             && from->button() == Qt::LeftButton && m_vfingerDown;
 
     if (startPinch) {
-        // Ctrl: invert both axes (pinch/rotate); Shift: invert x only (vertical
-        // tilt); Ctrl+Shift: invert y only (horizontal tilt). Same rule as scrcpy.
+        // Ctrl：反转两个轴（捏合/旋转）；Shift：仅反转 x 轴（垂直
+        // 倾斜）；Ctrl+Shift：仅反转 y 轴（水平倾斜）。规则与 scrcpy 一致。
         m_vfingerInvertX = ctrl != shift;
         m_vfingerInvertY = ctrl;
         m_vfingerDown = true;
@@ -119,21 +119,21 @@ void InputConvertNormal::wheelEvent(const QWheelEvent *from, const QSize &frameS
         return;
     }
 
-    // delta
+    // 滚动增量
     float hScroll = from->angleDelta().x() / 64.0f;
     float vScroll = from->angleDelta().y() / 64.0f;
 
-    // pos
+    // 坐标
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     QPointF pos = from->position();
 #else
     QPointF pos = from->posF();
 #endif
-    // convert pos
+    // 转换坐标
     pos.setX(pos.x() * frameSize.width() / showSize.width());
     pos.setY(pos.y() * frameSize.height() / showSize.height());
 
-    // set data
+    // 设置数据
     ControlMsg *controlMsg = new ControlMsg(ControlMsg::CMT_INJECT_SCROLL);
     if (!controlMsg) {
         return;
@@ -152,7 +152,7 @@ void InputConvertNormal::keyEvent(const QKeyEvent *from, const QSize &frameSize,
 
     bool repeat = from->isAutoRepeat();
 
-    // action
+    // 动作
     AndroidKeyeventAction action;
     switch (from->type()) {
     case QEvent::KeyPress:
@@ -165,13 +165,13 @@ void InputConvertNormal::keyEvent(const QKeyEvent *from, const QSize &frameSize,
         return;
     }
 
-    // key code
+    // 键值
     AndroidKeycode keyCode = convertKeyCode(from->key(), from->modifiers());
     if (AKEYCODE_UNKNOWN == keyCode) {
         return;
     }
 
-    // set data
+    // 设置数据
     ControlMsg *controlMsg = new ControlMsg(ControlMsg::CMT_INJECT_KEYCODE);
     if (!controlMsg) {
         return;
@@ -240,7 +240,7 @@ AndroidMotioneventButtons InputConvertNormal::convertMouseButton(Qt::MouseButton
 AndroidKeycode InputConvertNormal::convertKeyCode(int key, Qt::KeyboardModifiers modifiers)
 {
     AndroidKeycode keyCode = AKEYCODE_UNKNOWN;
-    // functional keys
+    // 功能键
     switch (key) {
     case Qt::Key_Return:
         keyCode = AKEYCODE_ENTER;
@@ -289,12 +289,12 @@ AndroidKeycode InputConvertNormal::convertKeyCode(int key, Qt::KeyboardModifiers
         return keyCode;
     }
 
-    // if ALT and META are pressed, dont handle letters and space
+    // 若按下 ALT 和 META，则不处理字母与空格
     if (modifiers & (Qt::AltModifier | Qt::MetaModifier)) {
         return keyCode;
     }
 
-    // character keys
+    // 字符键
     switch (key) {
     case Qt::Key_A:
         keyCode = AKEYCODE_A;
@@ -501,7 +501,7 @@ AndroidMetastate InputConvertNormal::convertMetastate(Qt::KeyboardModifiers modi
         metastate |= AMETA_CAPS_LOCK_ON;
     }
     if (mod & KMOD_MODE) { // Alt Gr
-        // no mapping?
+        // 无对应映射？
     }
     */
     return static_cast<AndroidMetastate>(metastate);

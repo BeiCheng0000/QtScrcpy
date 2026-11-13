@@ -33,8 +33,8 @@ qint32 DeviceMsg::deserialize(QByteArray &byteArray)
     qint32 ret = 0;
 
     if (len < 1) {
-        // at least the message type
-        return 0; // not available
+        // 至少包含消息类型
+        return 0; // 数据不足
     }
 
     buf.getChar(&c);
@@ -42,14 +42,14 @@ qint32 DeviceMsg::deserialize(QByteArray &byteArray)
     switch (m_data.type) {
     case DMT_GET_CLIPBOARD: {
         if (len < 5) {
-            ret = 0; // not available
+            ret = 0; // 数据不足
             break;
         }
 
         m_data.clipboardMsg.text = Q_NULLPTR;
         quint32 clipboardLen = BufferUtil::read32(buf);
         if (clipboardLen > len - 5) {
-            ret = 0; // not available
+            ret = 0; // 数据不足
             break;
         }
 
@@ -63,21 +63,21 @@ qint32 DeviceMsg::deserialize(QByteArray &byteArray)
     }
     case DMT_ACK_CLIPBOARD:
         if (len < 9) {
-            ret = 0; // not available
+            ret = 0; // 数据不足
             break;
         }
         ret = 9;
         break;
     case DMT_UHID_OUTPUT: {
         if (len < 5) {
-            ret = 0; // not available
+            ret = 0; // 数据不足
             break;
         }
 
-        BufferUtil::read16(buf); // id
+        BufferUtil::read16(buf); // 标识
         quint16 dataLen = BufferUtil::read16(buf);
         if (dataLen > len - 5) {
-            ret = 0; // not available
+            ret = 0; // 数据不足
             break;
         }
         ret = 5 + dataLen;
@@ -85,7 +85,7 @@ qint32 DeviceMsg::deserialize(QByteArray &byteArray)
     }
     default:
         qWarning("Unsupported device msg type: %d", (int)m_data.type);
-        ret = -1; // error, the protocol does not expose a generic frame size
+        ret = -1; // 错误：协议未暴露通用的帧大小
     }
 
     buf.close();

@@ -25,8 +25,7 @@ bool VideoBuffer::init()
         goto error;
     }
 
-    // there is initially no rendering frame, so consider it has already been
-    // consumed
+    // 初始时尚未有渲染帧，因此视为该帧已被消费
     m_renderingFrameConsumed = true;
 
     m_fpsCounter.start();
@@ -76,7 +75,7 @@ void VideoBuffer::offerDecodedFrame(bool &previousFrameSkipped)
 
     if (m_renderExpiredFrames) {
         // if m_renderExpiredFrames is enable, then the decoder must wait for the current
-        // frame to be consumed
+        // 等待帧被消费
         while (!m_renderingFrameConsumed && !m_interrupted) {
             m_renderingFrameConsumedCond.wait(&m_mutex);
         }
@@ -101,7 +100,7 @@ const AVFrame *VideoBuffer::consumeRenderedFrame()
     }
     if (m_renderExpiredFrames) {
         // if m_renderExpiredFrames is enable, then notify the decoder the current frame is
-        // consumed, so that it may push a new one
+        // 已被消费，因此可以推送新的一帧
         m_renderingFrameConsumedCond.wakeOne();
     }
     return m_renderingframe;
@@ -119,7 +118,7 @@ void VideoBuffer::peekRenderedFrame(std::function<void(int width, int height, ui
     int height = frame->height;
     int linesize = frame->linesize[0];
 
-    // create buffer
+    // 创建缓冲区
     uint8_t* rgbBuffer = new uint8_t[linesize * height * 4];
     AVFrame *rgbFrame = av_frame_alloc();
     if (!rgbFrame) {
@@ -127,10 +126,10 @@ void VideoBuffer::peekRenderedFrame(std::function<void(int width, int height, ui
         return;
     }
 
-    // bind buffer to AVFrame
+    // 将缓冲区绑定到 AVFrame
     av_image_fill_arrays(rgbFrame->data, rgbFrame->linesize, rgbBuffer, AV_PIX_FMT_RGB32, width, height, 4);
 
-    // convert
+    // 颜色空间转换
     AVFrameConvert convert;
     convert.setSrcFrameInfo(width, height, AV_PIX_FMT_YUV420P);
     convert.setDstFrameInfo(width, height, AV_PIX_FMT_RGB32);
@@ -161,7 +160,7 @@ void VideoBuffer::interrupt()
         m_mutex.lock();
         m_interrupted = true;
         m_mutex.unlock();
-        // wake up blocking wait
+        // 唤醒阻塞等待
         m_renderingFrameConsumedCond.wakeOne();
     }
 }

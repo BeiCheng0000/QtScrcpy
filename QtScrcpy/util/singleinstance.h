@@ -6,11 +6,10 @@
 
 class QLocalServer;
 
-// Keeps a single QtScrcpy process per user.
+// 保证每个用户只运行一个 QtScrcpy 进程。
 //
-// The first process becomes the primary and listens on a local socket. Any
-// process started later finds that socket, asks the primary to show its main
-// window (which may be hidden in the system tray) and then exits.
+// 第一个进程成为主实例并监听本地 socket。之后启动的进程会发现该 socket，
+// 请求主实例显示其主窗口（可能隐藏在系统托盘中），随后退出。
 class SingleInstance : public QObject
 {
     Q_OBJECT
@@ -18,14 +17,14 @@ public:
     explicit SingleInstance(const QString &appId, QObject *parent = nullptr);
     ~SingleInstance() override;
 
-    // true when no other instance was found and this process now owns the lock
+    // 未找到其他实例、本进程当前持有锁时为 true
     bool isPrimary() const;
 
-    // secondary instance only: ask the primary to show its window
+    // 仅次要实例使用：请求主实例显示其窗口
     bool notifyPrimary();
 
 signals:
-    // primary instance only: a secondary instance asked us to show the window
+    // 仅主实例使用：有次要实例请求我们显示窗口
     void activateRequested();
 
 private:

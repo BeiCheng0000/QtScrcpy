@@ -5,7 +5,7 @@
 #include "compat.h"
 #include "recorder.h"
 
-static const AVRational SCRCPY_TIME_BASE = { 1, 1000000 }; // timestamps in us
+static const AVRational SCRCPY_TIME_BASE = { 1, 1000000 }; // 时间戳单位：微秒
 
 Recorder::Recorder(const QString &fileName, QObject *parent) : QThread(parent), m_fileName(fileName), m_format(guessRecordFormat(fileName)) {}
 
@@ -50,7 +50,7 @@ void Recorder::setFormat(Recorder::RecorderFormat format)
 
 bool Recorder::open()
 {
-    // codec
+    // 解码器
     const AVCodec* inputCodec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (!inputCodec) {
         qCritical("H.264 decoder not found");
@@ -71,9 +71,9 @@ bool Recorder::open()
         return false;
     }
 
-    // contrary to the deprecated API (av_oformat_next()), av_muxer_iterate()
-    // returns (on purpose) a pointer-to-const, but AVFormatContext.oformat
-    // still expects a pointer-to-non-const (it has not be updated accordingly)
+    // 与已废弃的 API（av_oformat_next()）不同，av_muxer_iterate()
+    // 特意返回指向常量的指针，但 AVFormatContext.oformat
+    // 仍期望非常量指针（它尚未随之更新）
     // <https://github.com/FFmpeg/FFmpeg/commit/0694d8702421e7aff1340038559c438b61bb30dd>
 
     m_formatCtx->oformat = (AVOutputFormat *)format;
@@ -107,7 +107,7 @@ bool Recorder::open()
         char errorbuf[255] = { 0 };
         av_strerror(ret, errorbuf, 254);
         qCritical() << QString("Failed to open output file: %1 %2").arg(errorbuf).arg(m_fileName).toUtf8().toStdString().c_str();
-        // ostream will be cleaned up during context cleaning
+        // ostream 会在上下文清理时一并释放
         avformat_free_context(m_formatCtx);
         m_formatCtx = Q_NULLPTR;
         return false;
@@ -128,7 +128,7 @@ void Recorder::close()
                 qInfo() << QString("success record %1").arg(m_fileName).toStdString().c_str();
             }
         } else {
-            // the recorded file is empty
+            // 录制的文件为空
             m_failed = true;
         }
         avio_close(m_formatCtx->pb);
@@ -153,7 +153,7 @@ bool Recorder::write(AVPacket *packet)
     }
 
     if (packet->pts == AV_NOPTS_VALUE) {
-        // ignore config packets
+        // 忽略配置包
         return true;
     }
 
@@ -173,7 +173,7 @@ const AVOutputFormat *Recorder::findMuxer(const char *name)
 #else
         outFormat = av_oformat_next(outFormat);
 #endif
-        // until null or with name "name"
+        // 直到为空或名称匹配 "name"
     } while (outFormat && strcmp(outFormat->name, name));
     return outFormat;
 }
@@ -186,7 +186,7 @@ bool Recorder::recorderWriteHeader(const AVPacket *packet)
         qCritical("Cannot allocate extradata");
         return false;
     }
-    // copy the first packet to the extra data
+    // 将首个数据包拷贝到 extradata
     memcpy(extradata, packet->data, packet->size);
 
 #ifdef QTSCRCPY_LAVF_HAS_NEW_CODEC_PARAMS_API
@@ -251,20 +251,20 @@ void Recorder::run()
                 m_recvDataCond.wait(&m_mutex);
             }
 
-            // if stopped is set, continue to process the remaining events (to
-            // finish the recording) before actually stopping
+            // 如果已设置停止，仍继续处理剩余事件（以
+            // 完成录制），之后才真正停止
             if (m_stopped && m_queue.isEmpty()) {
                 AVPacket *last = m_previous;
                 if (last) {
                     last->pts -= ptsOrigin;
                     last->dts = last->pts;
-                    // assign an arbitrary duration to the last packet
+                    // 为最后一个数据包指定一个随意的时长
                     last->duration = 100000;
                     bool ok = write(last);
                     if (!ok) {
-                        // failing to write the last frame is not very serious, no
-                        // future frame may depend on it, so the resulting file
-                        // will still be valid
+                        // 未能写入最后一帧并不严重，后续帧
+                        // 都不会依赖它，因此生成的文件
+                        // 依然有效
                         qWarning("Could not record last packet");
                     }
                     packetDelete(last);
@@ -275,18 +275,18 @@ void Recorder::run()
             rec = m_queue.dequeue();
         }
 
-        // recorder->previous is only written from this thread, no need to lock
+        // recorder->previous 仅由本线程写入，无需加锁
         AVPacket *previous = m_previous;
         m_previous = rec;
 
         if (!previous) {
-            // we just received the first packet
+            // 刚收到第一个数据包
             continue;
         }
 
-        // config packets have no PTS, we must ignore them
+        // 配置包没有 PTS，必须忽略
         if (rec->pts != AV_NOPTS_VALUE && previous->pts != AV_NOPTS_VALUE) {
-            // we now know the duration of the previous packet
+            // 现在可以计算出上一个数据包的时长
             previous->duration = rec->pts - previous->pts;
         }
 
@@ -304,7 +304,7 @@ void Recorder::run()
             qCritical("Could not record packet");
             QMutexLocker locker(&m_mutex);
             m_failed = true;
-            // discard pending packets
+            // 丢弃待处理的数据包
             queueClear();
             break;
         }
@@ -332,7 +332,7 @@ bool Recorder::push(const AVPacket *packet)
     Q_ASSERT(!m_stopped);
 
     if (m_failed) {
-        // reject any new packet (this will stop the stream)
+        // 拒绝任何新数据包（这将停止流）
         return false;
     }
 

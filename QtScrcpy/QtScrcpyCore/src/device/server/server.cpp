@@ -36,7 +36,7 @@ Server::Server(QObject *parent) : QObject(parent)
             m_controlSocket = tmp;
             if (m_controlSocket && m_controlSocket->isValid()) {
                 // we don't need the server socket anymore
-                // just m_videoSocket is ok
+                // 仅 m_videoSocket 即可
                 m_serverSocket.close();
                 // we don't need the adb tunnel anymore
                 disableTunnelReverse();
@@ -133,7 +133,7 @@ bool Server::execute()
         SERVER_DEBUGGER_PORT,
 #endif
 
-        args << "/"; // unused;
+        args << "/"; // 未使用;
     args << "com.genymobile.scrcpy.Server";
     args << m_params.serverVersion;
 
@@ -158,7 +158,7 @@ bool Server::execute()
         args << QString("max_fps=%1").arg(QString::number(m_params.maxFps));
     }
 
-    // capture_orientation=@90
+    // 采集方向参数（@90 表示锁定并旋转 90°，无 @ 表示不锁定）
     // 有@表示锁定，没@不锁定
     // 有值表示指定方向，没值表示原始方向
     if (1 == m_params.captureOrientationLock) {
@@ -208,7 +208,7 @@ bool Server::execute()
             args << "keep_active=true";
         }
     }
-    // code option
+    // 编码选项
     // https://github.com/Genymobile/scrcpy/commit/080a4ee3654a9b7e96c8ffe37474b5c21c02852a
     // <https://d.android.com/reference/android/media/MediaFormat>
     if (!m_params.codecOptions.isEmpty()) {
@@ -241,17 +241,17 @@ bool Server::execute()
 
 #ifdef SERVER_DEBUGGER
     qInfo("Server debugger waiting for a client on device port " SERVER_DEBUGGER_PORT "...");
-    // From the computer, run
+    // 在电脑上执行
     //     adb forward tcp:5005 tcp:5005
-    // Then, from Android Studio: Run > Debug > Edit configurations...
-    // On the left, click on '+', "Remote", with:
+    // 然后在 Android Studio 中：Run > Debug > Edit configurations...
+    // 左侧点击 '+'、"Remote"，填写：
     //     Host: localhost
     //     Port: 5005
-    // Then click on "Debug"
+    // 然后点击 "Debug"
 #endif
 
     // adb -s P7C0218510000537 shell CLASSPATH=/data/local/tmp/scrcpy-server app_process / com.genymobile.scrcpy.Server 0 8000000 false
-    // mark: crop input format: "width:height:x:y" or "" for no crop, for example: "100:200:0:0"
+    // 备注：裁剪输入格式为 "width:height:x:y"，空字符串表示不裁剪，例如："100:200:0:0"
     // 这条adb命令是阻塞运行的，m_serverProcess进程不会退出了
     m_serverProcess.execute(m_params.serial, args);
     return true;
@@ -324,7 +324,7 @@ void Server::stop()
         m_controlSocket->close();
         m_controlSocket->deleteLater();
     }
-    // ignore failure
+    // 忽略失败
     m_serverProcess.kill();
     if (m_tunnelEnabled) {
         if (m_tunnelForward) {
@@ -341,7 +341,7 @@ void Server::stop()
 bool Server::startServerByStep()
 {
     bool stepSuccess = false;
-    // push, enable tunnel et start the server
+    // 推送、建立隧道并启动服务端
     if (SSS_NULL != m_serverStartStep) {
         switch (m_serverStartStep) {
         case SSS_PUSH:
@@ -354,7 +354,7 @@ bool Server::startServerByStep()
             stepSuccess = enableTunnelForward();
             break;
         case SSS_EXECUTE_SERVER:
-            // server will connect to our server socket
+            // 服务端将连接到我们的服务端 socket
             stepSuccess = execute();
             break;
         default:
@@ -390,7 +390,7 @@ bool Server::readInfo(VideoSocket *videoSocket, QString &deviceName, QSize &size
     buf[DEVICE_NAME_FIELD_LENGTH - 1] = '\0'; // in case the client sends garbage
     deviceName = QString::fromUtf8((const char *)buf);
 
-    // scrcpy 4.x: codec id (4 bytes), then session metadata (flags, width, height).
+    // scrcpy 4.x：先是 codec id（4 字节），随后是会话元数据（flags、宽、高）。
     size.setWidth(bufferRead32be(&buf[DEVICE_NAME_FIELD_LENGTH + 8]));
     size.setHeight(bufferRead32be(&buf[DEVICE_NAME_FIELD_LENGTH + 12]));
 
@@ -428,7 +428,7 @@ void Server::stopConnectTimeoutTimer()
 
 void Server::onConnectTimer()
 {
-    // device server need time to start
+    // 设备端服务端需要时间启动
     // 这里连接太早时间不够导致安卓监听socket还没有建立，readInfo会失败，所以采取定时重试策略
     // 每隔100ms尝试一次，最多尝试MAX_CONNECT_COUNT次
     QString deviceName;
@@ -455,10 +455,10 @@ void Server::onConnectTimer()
     }
 
     if (QTcpSocket::ConnectedState == videoSocket->state()) {
-        // connect will success even if devices offline, recv data is real connect success
-        // because connect is to pc adb server
+        // 即使设备离线连接也会“成功”，真正连接成功以收到数据为准，
+        // 因为这里连接的是电脑侧的 adb server
         videoSocket->waitForReadyRead(1000);
-        // devices will send 1 byte first on tunnel forward mode
+        // 在隧道转发模式下，设备会先发送 1 字节
         QByteArray data = videoSocket->read(1);
         if (!data.isEmpty() && readInfo(videoSocket, deviceName, deviceSize)) {
             success = true;
@@ -477,7 +477,7 @@ result:
     if (success) {
         stopConnectTimeoutTimer();
         m_videoSocket = videoSocket;
-        // devices will send 1 byte first on tunnel forward mode
+        // 在隧道转发模式下，设备会先发送 1 字节
         controlSocket->read(1);
         m_controlSocket = controlSocket;
         // we don't need the adb tunnel anymore
@@ -530,11 +530,9 @@ void Server::onWorkProcessResult(qsc::AdbProcess::ADB_EXEC_RESULT processResult)
                 break;
             case SSS_ENABLE_TUNNEL_REVERSE:
                 if (qsc::AdbProcess::AER_SUCCESS_EXEC == processResult) {
-                    // At the application level, the device part is "the server" because it
-                    // serves video stream and control. However, at the network level, the
-                    // client listens and the server connects to the client. That way, the
-                    // client can listen before starting the server app, so there is no need to
-                    // try to connect until the server socket is listening on the device.
+                    // 在应用层，设备端被称为“服务端”，因为它提供视频流与控制；
+                    // 但在网络层，客户端监听、服务端反向连接客户端。这样客户端可以在
+                    // 启动服务端程序前就先监听，无需在服务端 socket 就绪前尝试连接。
                     m_serverSocket.setMaxPendingConnections(2);
                     if (!m_serverSocket.listen(QHostAddress::LocalHost, m_params.localPort)) {
                         qCritical() << QString("Could not listen on port %1").arg(m_params.localPort).toStdString().c_str();

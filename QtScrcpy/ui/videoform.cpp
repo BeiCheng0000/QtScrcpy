@@ -23,6 +23,7 @@
 #include <QUrl>
 #include <QWindow>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QVBoxLayout>
 
 #if defined(Q_OS_WIN32)
 #include <Windows.h>
@@ -167,8 +168,75 @@ void VideoForm::initUI()
     setMouseTracking(true);
     if (m_videoWidget) {
         m_videoWidget->setMouseTracking(true);
+        // 真实帧数据上传完成才撤掉加载遮罩：仅凭“首帧回调”不够，
+        // 此时纹理里可能还是零填充数据（渲染为绿色占位屏）。
+        connect(m_videoWidget, &QYUVOpenGLWidget::frameUpdated, this, [this]() {
+            if (m_loadingWidget) {
+                m_loadingWidget->deleteLater();
+            }
+        });
     }
     ui->keepRatioWidget->setMouseTracking(true);
+
+    // 连接过程中的加载遮罩：首帧画面到达前覆盖画面区域，
+    // 避免窗口显示成一块空背景，让用户误以为程序异常。
+    // 注意 keepRatioWidget 是 QScrollArea，直接挂成它的子控件在滚动区上显示/置顶不可靠，
+    // 因此挂在它的同级父控件上，用其 geometry() 对齐覆盖。
+    m_loadingWidget = new QWidget(ui->keepRatioWidget->parentWidget());
+    m_loadingWidget->setObjectName(QStringLiteral("loadingOverlay"));
+    // 背景接近不透明：皮肤图的屏幕区域是绿色占位图，半透明遮罩会透出绿色，
+    // 视觉上仍然突兀，因此用近实色的深色背景将其完全盖住。
+    m_loadingWidget->setStyleSheet(QStringLiteral(
+        "#loadingOverlay{background: rgba(18, 20, 26, 246); border-radius: 12px;}"));
+    auto *loadingLayout = new QVBoxLayout(m_loadingWidget);
+    loadingLayout->setContentsMargins(0, 0, 0, 0);
+    loadingLayout->setAlignment(Qt::AlignCenter);
+
+    auto *spinner = new QLabel(m_loadingWidget);
+    spinner->setFixedSize(72, 72);
+    spinner->setAlignment(Qt::AlignCenter);
+    spinner->setStyleSheet(QStringLiteral("background: transparent;"));
+
+    auto *loadingText = new QLabel(tr("正在连接设备…"), m_loadingWidget);
+    loadingText->setObjectName(QStringLiteral("loadingTextLabel"));
+    loadingText->setStyleSheet(QStringLiteral(
+        "QLabel{color: #D8DCE0; font-size: 14px; background: transparent;}"));
+    loadingText->setAlignment(Qt::AlignCenter);
+
+    loadingLayout->addWidget(spinner, 0, Qt::AlignCenter);
+    loadingLayout->addSpacing(14);
+    loadingLayout->addWidget(loadingText, 0, Qt::AlignCenter);
+    // 立即置为可见：窗口显示时遮罩随之出现，不依赖 showEvent 的调用顺序。
+    // 几何尺寸由 syncLoadingOverlay 在 showEvent/resizeEvent 中同步。
+    syncLoadingOverlay();
+    m_loadingWidget->show();
+
+    // 转圈动画：定时器重绘旋转圆弧，遮罩销毁时定时器随之销毁
+    auto *spinnerTimer = new QTimer(m_loadingWidget);
+    spinnerTimer->setInterval(33);
+    connect(spinnerTimer, &QTimer::timeout, spinner, [spinner]() {
+        const int phase = spinner->property("phase").toInt() + 30;
+        spinner->setProperty("phase", phase);
+
+        QPixmap pm(spinner->size());
+        pm.fill(Qt::transparent);
+        QPainter p(&pm);
+        p.setRenderHint(QPainter::Antialiasing);
+        QPen pen(QColor(64, 158, 255), 6);
+        pen.setCapStyle(Qt::RoundCap);
+        p.setPen(pen);
+        p.drawArc(QRect(8, 8, 56, 56), phase * 16, 110 * 16);
+        spinner->setPixmap(pm);
+    });
+    spinnerTimer->start();
+}
+
+void VideoForm::syncLoadingOverlay()
+{
+    if (m_loadingWidget) {
+        m_loadingWidget->setGeometry(ui->keepRatioWidget->geometry());
+        m_loadingWidget->raise();
+    }
 }
 
 QRect VideoForm::getGrabCursorRect()
@@ -177,7 +245,7 @@ QRect VideoForm::getGrabCursorRect()
     QWidget *vw = videoWidget();
 #if defined(Q_OS_WIN32)
     rc = QRect(ui->keepRatioWidget->mapToGlobal(vw->pos()), vw->size());
-    // high dpi support
+    // 高 DPI 支持
     rc.setTopLeft(rc.topLeft() * vw->devicePixelRatioF());
     rc.setBottomRight(rc.bottomRight() * vw->devicePixelRatioF());
 
@@ -196,7 +264,7 @@ QRect VideoForm::getGrabCursorRect()
     rc.setHeight(rc.height() - 20);
 #elif defined(Q_OS_LINUX)
     rc = QRect(ui->keepRatioWidget->mapToGlobal(vw->pos()), vw->size());
-    // high dpi support -- taken from the WIN32 section and untested
+    // 高 DPI 支持——取自 WIN32 分支，未经测试
     rc.setTopLeft(rc.topLeft() * vw->devicePixelRatioF());
     rc.setBottomRight(rc.bottomRight() * vw->devicePixelRatioF());
 
@@ -248,9 +316,9 @@ void VideoForm::updateRender(int width, int height, uint8_t* dataY, uint8_t* dat
     }
 
     if (m_videoWidget->isHidden()) {
-        if (m_loadingWidget) {
-            m_loadingWidget->close();
-        }
+        // 首个回调先显示视频控件，但保持遮罩覆盖：此刻纹理里可能还是
+        // 未初始化数据（渲染为绿色占位屏），等 frameUpdated（真实数据
+        // 上传完成）后再撤掉遮罩。
         m_videoWidget->show();
     }
 
@@ -279,8 +347,20 @@ void VideoForm::showToolForm(bool show)
         m_toolForm = new ToolForm(this, ToolForm::AP_OUTSIDE_RIGHT);
         m_toolForm->setSerial(m_serial);
     }
-    m_toolForm->move(pos().x() + geometry().width(), pos().y() + 30);
+    syncToolFormGeometry();
     m_toolForm->setVisible(show);
+}
+
+void VideoForm::syncToolFormGeometry()
+{
+    if (!m_toolForm || isFullScreen()) {
+        return;
+    }
+    // 与视频窗口的顶部边缘齐平，并跨越其完整可见高度
+    // （frameGeometry 包含标题栏，而 height() 不包含），这样
+    // 工具栏按钮就能贴到上下两端而不会出现空白条带。
+    m_toolForm->resize(m_toolForm->width(), frameGeometry().height());
+    m_toolForm->move(pos().x() + geometry().width(), pos().y());
 }
 
 void VideoForm::moveCenter()
@@ -352,7 +432,7 @@ void VideoForm::installShortcut()
 {
     QShortcut *shortcut = nullptr;
 
-    // record screen
+    // 录制屏幕
     shortcut = new QShortcut(QKeySequence("Ctrl+Alt+r"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -363,7 +443,7 @@ void VideoForm::installShortcut()
         }
     });
 
-    // switchFullScreen
+    // 切换全屏
     shortcut = new QShortcut(QKeySequence("Ctrl+f"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -374,17 +454,17 @@ void VideoForm::installShortcut()
         switchFullScreen();
     });
 
-    // resizeSquare
+    // 缩放到正方形
     shortcut = new QShortcut(QKeySequence("Ctrl+g"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() { resizeSquare(); });
 
-    // removeBlackRect
+    // 去除黑边
     shortcut = new QShortcut(QKeySequence("Ctrl+w"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() { removeBlackRect(); });
 
-    // postGoHome
+    // 返回桌面（Home）
     shortcut = new QShortcut(QKeySequence("Ctrl+h"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -395,7 +475,7 @@ void VideoForm::installShortcut()
         device->postGoHome();
     });
 
-    // postGoBack
+    // 返回键
     shortcut = new QShortcut(QKeySequence("Ctrl+b"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -406,7 +486,7 @@ void VideoForm::installShortcut()
         device->postGoBack();
     });
 
-    // postAppSwitch
+    // 应用切换
     shortcut = new QShortcut(QKeySequence("Ctrl+s"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -417,7 +497,7 @@ void VideoForm::installShortcut()
         emit device->postAppSwitch();
     });
 
-    // postGoMenu
+    // 菜单键
     shortcut = new QShortcut(QKeySequence("Ctrl+m"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -428,7 +508,7 @@ void VideoForm::installShortcut()
         device->postGoMenu();
     });
 
-    // postVolumeUp
+    // 音量+
     shortcut = new QShortcut(QKeySequence("Ctrl+up"), this);
     connect(shortcut, &QShortcut::activated, this, [this]() {
         auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
@@ -438,7 +518,7 @@ void VideoForm::installShortcut()
         emit device->postVolumeUp();
     });
 
-    // postVolumeDown
+    // 音量-
     shortcut = new QShortcut(QKeySequence("Ctrl+down"), this);
     connect(shortcut, &QShortcut::activated, this, [this]() {
         auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
@@ -448,7 +528,7 @@ void VideoForm::installShortcut()
         emit device->postVolumeDown();
     });
 
-    // postPower
+    // 电源键
     shortcut = new QShortcut(QKeySequence("Ctrl+p"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -469,7 +549,7 @@ void VideoForm::installShortcut()
         emit device->setDisplayPower(false);
     });
 
-    // expandNotificationPanel
+    // 展开通知面板
     shortcut = new QShortcut(QKeySequence("Ctrl+n"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -485,7 +565,7 @@ void VideoForm::installShortcut()
     connect(shortcut, &QShortcut::activated, this, [this]() {
         auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
         if (device) {
-            device->expandSettingsPanel();
+            device->startActivity(QStringLiteral("android.settings.SETTINGS"));
         }
     });
 
@@ -498,7 +578,7 @@ void VideoForm::installShortcut()
         }
     });
 
-    // collapsePanel
+    // 收起面板
     shortcut = new QShortcut(QKeySequence("Ctrl+Shift+n"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -509,7 +589,7 @@ void VideoForm::installShortcut()
         emit device->collapsePanel();
     });
 
-    // copy
+    // 复制
     shortcut = new QShortcut(QKeySequence("Ctrl+c"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -520,7 +600,7 @@ void VideoForm::installShortcut()
         emit device->postCopy();
     });
 
-    // cut
+    // 剪切
     shortcut = new QShortcut(QKeySequence("Ctrl+x"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -531,7 +611,7 @@ void VideoForm::installShortcut()
         emit device->postCut();
     });
 
-    // clipboardPaste
+    // 剪贴板粘贴
     shortcut = new QShortcut(QKeySequence("Ctrl+v"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -542,7 +622,7 @@ void VideoForm::installShortcut()
         emit device->setDeviceClipboard();
     });
 
-    // setDeviceClipboard
+    // 设置设备剪贴板
     shortcut = new QShortcut(QKeySequence("Ctrl+Shift+v"), this);
     shortcut->setAutoRepeat(false);
     connect(shortcut, &QShortcut::activated, this, [this]() {
@@ -614,8 +694,8 @@ QSize VideoForm::fittedWindowSize(bool fillScreen)
     }
 
     const bool vertical = m_widthHeightRatio < 1.0f;
-    // Skin margins are drawn as the phone frame; they are part of the window
-    // but not part of the picture, so exclude them from the available area.
+    // 皮肤边距被绘制为手机外框；它们属于窗口的一部分，
+    // 但不属于画面，因此要从可用区域中排除。
     const QMargins skin = m_skin ? getMargins(vertical) : QMargins();
     const int availW = screenRect.width() - skin.left() - skin.right();
     const int availH = screenRect.height() - skin.top() - skin.bottom();
@@ -625,9 +705,9 @@ QSize VideoForm::fittedWindowSize(bool fillScreen)
 
     QSize videoSize;
     if (fillScreen) {
-        // "Maximize" should grow the picture, not the black borders: take the
-        // largest rectangle with the device aspect ratio that still fits the
-        // screen's available geometry.
+        // “最大化”应当放大画面而非黑边：取与设备宽高比一致、
+        // 且仍能在屏幕可用区域内放下的
+        // 最大矩形。
         const int maxW = qMax(1, availW - 20);
         const int maxH = qMax(1, availH - 20);
         int w = maxW;
@@ -661,8 +741,8 @@ bool VideoForm::hasExcessiveLetterbox() const
     }
     const qreal fill = qreal(video.width()) * video.height() /
                        (qreal(container.width()) * container.height());
-    // The phone skin occupies the margins, so a healthy window is nearly
-    // 100% picture; anything below 70% is a visible empty band.
+    // 手机外框占据了边距，因此一个正常的窗口应几乎
+    // 100% 都是画面；低于 70% 就会出现可见的空白条带。
     return fill < 0.70;
 }
 
@@ -680,8 +760,8 @@ void VideoForm::fitWindowToFrame(bool fillScreen)
         return;
     }
 
-    // resizeEvent used to pin a minimum size derived from the maximized
-    // video; clear it so the window may shrink back to the fitted size.
+    // resizeEvent 曾会把最小尺寸固定为最大化时
+    // 的视频尺寸；此处清空它，让窗口能缩回到适配尺寸。
     setMinimumSize(0, 0);
     if (!wasMaximized && fitted == size()) {
         return;
@@ -695,8 +775,8 @@ void VideoForm::fitWindowToFrame(bool fillScreen)
 
 void VideoForm::updateShowSize(const QSize &newSize)
 {
-    // Also called from the frame callbacks: a same-size call must stay a
-    // no-op, otherwise the window would fight any manual resize by the user.
+    // 帧回调也会调用本函数：相同尺寸调用必须保持
+    // 为无操作，否则窗口会与用户的手动缩放相互冲突。
     if (m_frameSize == newSize) {
         return;
     }
@@ -723,8 +803,8 @@ void VideoForm::onVideoSessionChanged(const QSize &size, bool clientResized)
         ui->keepRatioWidget->setWidthHeightRatio(-1.0f);
         return;
     }
-    // clientResized is only meaningful for flex display. Normal display
-    // rotations must retain the longstanding auto-resize behavior.
+    // clientResized 仅在 flex 显示模式下有意义。普通显示
+    // 的旋转必须保留长期以来的自动缩放行为。
     m_preventAutoResize = false;
     updateShowSize(size);
 }
@@ -738,9 +818,9 @@ void VideoForm::switchFullScreen()
         }
 
         showNormal();
-        // back to normal size.
+        // 恢复为正常尺寸。
         resize(m_normalSize);
-        // fullscreen window will move (0,0). qt bug?
+        // 全屏窗口会移动到 (0,0)。是 Qt 的 bug 吗？
         move(m_fullScreenBeforePos);
 
 #ifdef Q_OS_MACOS
@@ -760,7 +840,7 @@ void VideoForm::switchFullScreen()
             ui->keepRatioWidget->setWidthHeightRatio(-1.0f);
         }
 
-        // record current size before fullscreen, it will be used to rollback size after exit fullscreen.
+        // 进入全屏前记录当前尺寸，退出全屏后用于还原尺寸。
         m_normalSize = size();
 
         m_fullScreenBeforePos = pos();
@@ -811,7 +891,7 @@ bool VideoForm::isRecording() const
 
 bool VideoForm::isRecordingSupported() const
 {
-    // The Metal path delivers CVPixelBufferRef instead of YUV planes.
+    // Metal 路径提供的是 CVPixelBufferRef 而非 YUV 平面数据。
     return !isMetalMode();
 }
 
@@ -894,7 +974,7 @@ bool VideoForm::startRecord()
     const bool ok = recorder->start(filePath, m_frameSize.width(), m_frameSize.height(), config.recordFps,
                                    config.recordVideoBitrate, withAudio ? 48000 : 0, 2, config.recordAudioBitrate);
     if (!ok) {
-        // errorOccurred() already reported the reason through onRecordingError()
+        // errorOccurred() 已通过 onRecordingError() 上报了原因
         return false;
     }
 
@@ -917,8 +997,8 @@ void VideoForm::stopRecord()
         return;
     }
     if (!m_recordAudioKey.isEmpty()) {
-        // Remove the sink before stopping so the socket thread cannot push into
-        // a recorder that is being torn down.
+        // 在停止前先移除接收端，避免套接字线程向
+        // 正在拆除的录制器推送数据。
         AudioOutput::instance().removePcmListener(m_recordAudioKey);
         m_recordAudioKey.clear();
     }
@@ -1012,7 +1092,8 @@ void VideoForm::onFrameMetal(void *cvPixelBuffer, int width, int height)
     if (m_metalFirstFrame) {
         m_metalFirstFrame = false;
         if (m_loadingWidget) {
-            m_loadingWidget->close();
+            // 首帧到达，销毁遮罩（其子定时器随之销毁）
+            m_loadingWidget->deleteLater();
         }
         ui->keepRatioWidget->updateGeometry();
     }
@@ -1075,7 +1156,7 @@ void VideoForm::mousePressEvent(QMouseEvent *event)
         QMouseEvent newEvent(event->type(), mappedPos, globalPos, event->button(), event->buttons(), event->modifiers());
         emit device->mouseEvent(&newEvent, m_frameSize, vw->size());
 
-        // debug keymap pos
+        // 调试按键映射坐标
         if (event->button() == Qt::LeftButton) {
             qreal x = localPos.x() / vw->size().width();
             qreal y = localPos.y() / vw->size().height();
@@ -1109,7 +1190,7 @@ void VideoForm::mouseReleaseEvent(QMouseEvent *event)
             return;
         }
 
-        // local check
+        // 本地范围校验
         QPointF local = vw->mapFrom(this, localPos.toPoint());
         if (local.x() < 0) {
             local.setX(0);
@@ -1263,17 +1344,17 @@ void VideoForm::changeEvent(QEvent *event)
         return;
     }
     if (isFullScreen() || isMinimized()) {
-        return;  // Full screen / minimize are handled by their own paths.
+        return;  // 全屏/最小化由各自的路径处理。
     }
     const auto *stateEvent = static_cast<QWindowStateChangeEvent *>(event);
     const bool wasMax = stateEvent->oldState() & Qt::WindowMaximized;
     const bool isMax = windowState() & Qt::WindowMaximized;
 
     if (isMax && !m_smartMaximized) {
-        // First maximize click: remember the geometry to restore, then grow the
-        // picture to the largest size the screen can hold instead of leaving
-        // huge black bands. The window stays in the normal state, so the native
-        // maximize/restore button keeps working as a real toggle.
+        // 首次点击“最大化”：记下待恢复的尺寸，再把画面放大到
+        // 屏幕能容纳的最大尺寸，而不是留下大片黑边。窗口仍保持
+        // 普通状态，因此系统的“最大化/还原”按钮仍能作为真正的
+        // 开关使用。
         m_restoredGeometry = normalGeometry();
         m_smartMaximized = true;
         m_stateAdjusting = true;
@@ -1281,8 +1362,8 @@ void VideoForm::changeEvent(QEvent *event)
         fitWindowToFrame(true);
         m_stateAdjusting = false;
     } else if (isMax && m_smartMaximized) {
-        // Second maximize click while already grown: restore the pre-maximize
-        // geometry so the button behaves like a real maximize/restore toggle.
+        // 已放大状态下再次点击“最大化”：恢复点击前的
+        // 尺寸，使按钮表现像真正的“最大化/还原”开关。
         m_smartMaximized = false;
         m_stateAdjusting = true;
         showNormal();
@@ -1296,7 +1377,7 @@ void VideoForm::changeEvent(QEvent *event)
         }
         m_stateAdjusting = false;
     } else if (wasMax) {
-        // Leaving a real maximized state via the restore button.
+        // 通过“还原”按钮离开真正的“最大化”状态。
         m_smartMaximized = false;
         m_stateAdjusting = true;
         if (m_restoredGeometry.isValid()) {
@@ -1309,11 +1390,29 @@ void VideoForm::changeEvent(QEvent *event)
     } else if (hasExcessiveLetterbox()) {
         fitWindowToFrame(false);
     }
+
+    // 上面应用的几何变化（showNormal/setGeometry）可能会向 resizeEvent
+    // 上报一个过期的 frameGeometry，使工具栏停留在上一次的
+    // 高度。待事件循环稳定新窗口几何后再重新同步一次。
+    QTimer::singleShot(0, this, [this]() { syncToolFormGeometry(); });
 }
 
 void VideoForm::showEvent(QShowEvent *event)
 {
     Q_UNUSED(event)
+    // 首帧到达前显示连接加载遮罩
+    if (m_loadingWidget) {
+        syncLoadingOverlay();
+        m_loadingWidget->show();
+        // 15 秒仍未出画时更新文案，安抚等待中的用户
+        QTimer::singleShot(15000, m_loadingWidget, [this]() {
+            if (m_loadingWidget && m_loadingWidget->isVisible()) {
+                if (auto *label = m_loadingWidget->findChild<QLabel *>(QStringLiteral("loadingTextLabel"))) {
+                    label->setText(tr("仍在连接，请检查设备与 USB 调试授权…"));
+                }
+            }
+        });
+    }
     // 窗口每次显示时先做一次越界检查，处理"上次退出时窗口位于副屏、
     // 本次启动副屏已不存在"导致窗口出现在屏幕外的情况。
     //
@@ -1324,11 +1423,10 @@ void VideoForm::showEvent(QShowEvent *event)
     // 故稍后复查一次，确保最终位置落在屏内。
     QTimer::singleShot(300, this, [this]() {
         ensureOnScreen();
-        // A geometry left over from a "smart maximized" session can be nearly
-        // as large as the screen. Dialog restores it verbatim with setGeometry,
-        // so the window starts grown while the toggle flag is reset: the first
-        // maximize click then appears to do nothing. Shrink such leftovers
-        // back to the normal fitted size on first show.
+        // “智能最大化”会话遗留的几何尺寸可能几乎和屏幕一样大。Dialog 用
+        // setGeometry 原样恢复它，于是窗口以放大状态启动，而开关标志却被
+        // 重置：首次点击“最大化”就会像没反应。首次显示时把这类
+        // 遗留尺寸缩回正常的适配尺寸。
         if (!isMaximized() && !isFullScreen() && !m_closing) {
             const QSize fitted = fittedWindowSize(false);
             const bool oversized = !fitted.isEmpty() &&
@@ -1348,6 +1446,11 @@ void VideoForm::showEvent(QShowEvent *event)
 void VideoForm::resizeEvent(QResizeEvent *event)
 {
     Q_UNUSED(event)
+    // 遮罩跟随窗口大小变化，始终覆盖画面区域
+    syncLoadingOverlay();
+    if (m_toolForm && !isFullScreen()) {
+        m_toolForm->resize(m_toolForm->width(), frameGeometry().height());
+    }
     if (m_flexDisplay) {
         m_pendingDisplaySize = ui->keepRatioWidget->size();
         if (!m_pendingDisplaySize.isEmpty()) {
@@ -1356,35 +1459,34 @@ void VideoForm::resizeEvent(QResizeEvent *event)
         return;
     }
 
-    // KeepRatioWidget scales the picture to whatever space is available, so
-    // no minimum window size is needed. The old logic pinned a minimum derived
-    // from the *previous* (maximized) video size and prevented the window from
-    // shrinking back -- that was the source of the huge black borders after
-    // maximize/minimize.
+    // KeepRatioWidget 会把画面缩放到任意可用空间，因此
+    // 不需要最小窗口尺寸。旧逻辑把最小尺寸固定为*上一次*（最大化时）的
+    // 视频尺寸，导致窗口无法缩回——这正是
+    // 最大化/最小化后大片黑边的根源。
 }
 
 void VideoForm::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event)
-    // Flush a running recording first: the completion dialog tells the user
-    // where the file was saved before the window goes away.
+    // 先冲刷正在进行的录制：完成对话框会在窗口消失前
+    // 告诉用户文件保存到了哪里。
     if (m_recorder) {
         stopRecord();
     }
     m_closing = true;
 
-    // The sndcpy bridge is bound to this device: closing its window must also
-    // stop audio playback (and tear down the forward/capture activity).
+    // sndcpy 桥接与本设备绑定：关闭其窗口也必须
+    // 停止音频播放（并拆除 forward/捕获活动）。
     AudioOutput::instance().stopForDevice(m_serial);
 
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
     if (!device) {
         return;
     }
-    // Never persist a grown geometry. "Smart maximize" keeps the window in the
-    // normal state, so an isMaximized() check alone would save the enlarged
-    // size and the next connect would start grown while the toggle flag is
-    // reset -- making the maximize/restore button look broken.
+    // 绝不持久化放大后的几何尺寸。“智能最大化”让窗口保持
+    // 普通状态，因此单靠 isMaximized() 检查会保存放大后的
+    // 尺寸，下次连接时窗口就会以放大状态启动，而开关标志却已
+    // 重置——导致“最大化/还原”按钮看起来失效。
     QRect savedRect = isMaximized() ? normalGeometry() : geometry();
     if (m_smartMaximized && m_restoredGeometry.isValid()) {
         savedRect = m_restoredGeometry;

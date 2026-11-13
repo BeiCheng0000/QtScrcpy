@@ -12,7 +12,7 @@ void TcpServer::incomingConnection(qintptr handle)
         socket->setSocketDescriptor(handle);
         addPendingConnection(socket);
 
-        // next is control socket
+        // 接下来是控制套接字
         m_isVideoSocket = false;
     } else {
         QTcpSocket *socket = new QTcpSocket();

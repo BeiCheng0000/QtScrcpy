@@ -314,40 +314,50 @@
         <source>Profile:</source>
         <translation>Profile:</translation>
     </message>
-</context>
-<context>
-    <name>QObject</name>
     <message>
-        <source>This software is completely open source and free. Use it at your own risk. You can download it at the following address:</source>
-        <translation>This software is completely open source and free. Use it at your own risk. You can download it at the following address:</translation>
+        <source>MTK Encoder</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>QuickMirror</source>
-        <translation>QuickMirror</translation>
+        <source>This feature is for MediaTek (MTK) devices only.
+Using on non-MTK devices may cause encoding failure or visual artifacts.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>If you need more professional batch control mirror software, you can try the following software:</source>
-        <translation>If you need more professional batch control mirror software, you can try the following software:</translation>
+        <source>Game Mode (20Mbps, QP≤28)</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>If you need more professional game keymap mirror software, you can try the following software:</source>
-        <translation>If you need more professional game keymap mirror software, you can try the following software:</translation>
+        <source>VBR + hard QP cap at 28 + short GOP. The strongest anti-blur shield for real-time gaming.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>QuickAssistant</source>
-        <translation>QuickAssistant</translation>
+        <source>VBR + QP cap at 28 + short GOP (5 frames). Hard ceiling blocks Sticky QP completely — best for real-time gaming.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>If you need more professional PC remote software, you can try the following software:</source>
-        <translation>If you need more professional PC remote software, you can try the following software:</translation>
+        <source>Balanced (8Mbps, QP≤35)</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>QuickDesk</source>
-        <translation>QuickDesk</translation>
+        <source>Standard anti-blur protection with optimal visual quality. Recommended for daily use.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>You can contact me with telegram &lt;https://t.me/+Ylf_5V_rDCMyODQ1&gt;</source>
-        <translation>You can contact me with telegram &lt;https://t.me/+Ylf_5V_rDCMyODQ1&gt;</translation>
+        <source>VBR + QP cap at 35 + standard GOP. Matches default visual quality while preventing QP runaway. Ideal for daily use.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Power Saver (4Mbps, QP≤35)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Maximum power saving: low-power ME + single ref frame. Saves most encoder power for non-gaming scenarios.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>VBR + QP cap at 35 + disabled visual optimizations + low-power ME + single ref frame. Maximum power saving for non-intensive scenarios.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -359,14 +369,6 @@
     <message>
         <source>touch switch</source>
         <translation>touch switch</translation>
-    </message>
-    <message>
-        <source>screen shot</source>
-        <translation>screen shot</translation>
-    </message>
-    <message>
-        <source>copy clipboard text</source>
-        <translation>copy clipboard text</translation>
     </message>
     <message>
         <source>open screen</source>
@@ -383,10 +385,6 @@
     <message>
         <source>expand notify (Ctrl+N)</source>
         <translation>expand notify (Ctrl+N)</translation>
-    </message>
-    <message>
-        <source>expand settings panel (Ctrl+Alt+N)</source>
-        <translation>expand settings panel (Ctrl+Alt+N)</translation>
     </message>
     <message>
         <source>rotate device (Ctrl+R)</source>
@@ -442,6 +440,14 @@
     </message>
     <message>
         <source>stop record %1:%2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>系统设置（Ctrl+Alt+N，悬停展开更多）</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>截图（复制到剪贴板）</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -507,6 +513,14 @@ Audio: %3</source>
     </message>
     <message>
         <source>Recording failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>正在连接设备…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>仍在连接，请检查设备与 USB 调试授权…</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

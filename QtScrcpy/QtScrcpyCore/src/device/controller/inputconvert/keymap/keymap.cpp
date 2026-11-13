@@ -27,7 +27,7 @@ void KeyMap::loadKeyMap(const QString &json)
         goto parseError;
     }
 
-    // switchKey
+    // 切换键
     rootObj = jsonDoc.object();
 
     if (!checkItemString(rootObj, "switchKey")) {
@@ -44,7 +44,7 @@ void KeyMap::loadKeyMap(const QString &json)
     m_switchKey.type = switchKey.first;
     m_switchKey.key = switchKey.second;
 
-    // mouseMoveMap
+    // 鼠标移动映射
     if (checkItemObject(rootObj, "mouseMoveMap")) {
         QJsonObject mouseMoveMap = getItemObject(rootObj, "mouseMoveMap");
         KeyMapNode keyMapNode;
@@ -52,21 +52,21 @@ void KeyMap::loadKeyMap(const QString &json)
 
         bool have_speedRatio = false;
 
-        // General speedRatio (for backwards compatibility)
+        // 通用 speedRatio（为保持向后兼容）
         if (checkItemDouble(mouseMoveMap, "speedRatio")) {
             float ratio = static_cast<float>(getItemDouble(mouseMoveMap, "speedRatio"));
             keyMapNode.data.mouseMove.speedRatio.setX(ratio);
-            keyMapNode.data.mouseMove.speedRatio.setY(ratio / 2.25f); // Phone screens are often FHD+
+            keyMapNode.data.mouseMove.speedRatio.setY(ratio / 2.25f); // 手机屏幕通常是 FHD+ 分辨率
             have_speedRatio = true;
         }
 
-        // Individual X Ratio
+        // 单独的 X 轴比例
         if (checkItemDouble(mouseMoveMap, "speedRatioX")) {
             keyMapNode.data.mouseMove.speedRatio.setX(static_cast<float>(getItemDouble(mouseMoveMap, "speedRatioX")));
             have_speedRatio = true;
         }
 
-        // Individual Y Ratio
+        // 单独的 Y 轴比例
         if (checkItemDouble(mouseMoveMap, "speedRatioY")) {
             keyMapNode.data.mouseMove.speedRatio.setY(static_cast<float>(getItemDouble(mouseMoveMap, "speedRatioY")));
             have_speedRatio = true;
@@ -77,7 +77,7 @@ void KeyMap::loadKeyMap(const QString &json)
             goto parseError;
         }
 
-        // Sanity check: No ratio must be lower than 0.001
+        // 合理性检查：比例不得低于 0.001
         if ( ( keyMapNode.data.mouseMove.speedRatio.x() < 0.001f ) || ( keyMapNode.data.mouseMove.speedRatio.x() < 0.001f ) ) {
             errorString = QString("json error: Minimum speedRatio is 0.001");
             goto parseError;
@@ -95,7 +95,7 @@ void KeyMap::loadKeyMap(const QString &json)
             keyMapNode.data.mouseMove.startPos.setY(getItemDouble(startPos, "y"));
         }
 
-        // small eyes
+        // 小眼睛（辅助按键）
         if (checkItemObject(mouseMoveMap, "smallEyes")) {
             QJsonObject smallEyes = mouseMoveMap.value("smallEyes").toObject();
             if (!smallEyes.contains("type") || !smallEyes.value("type").isString()) {
@@ -103,14 +103,14 @@ void KeyMap::loadKeyMap(const QString &json)
                 goto parseError;
             }
 
-            // type just support KMT_CLICK
+            // 类型仅支持 KMT_CLICK
             KeyMap::KeyMapType type = getItemKeyMapType(smallEyes, "type");
             if (KeyMap::KMT_CLICK != type) {
                 errorString = QString("json error: smallEyes just support KMT_CLICK");
                 goto parseError;
             }
 
-            // safe check
+            // 安全校验
             if (!checkForClick(smallEyes)) {
                 errorString = QString("json error: smallEyes node format error");
                 goto parseError;
@@ -150,7 +150,7 @@ void KeyMap::loadKeyMap(const QString &json)
             KeyMap::KeyMapType type = getItemKeyMapType(node, "type");
             switch (type) {
             case KeyMap::KMT_CLICK: {
-                // safe check
+                // 安全校验
                 if (!checkForClick(node)) {
                     qWarning() << "json error: keyMapNodes node format error";
                     break;
@@ -170,7 +170,7 @@ void KeyMap::loadKeyMap(const QString &json)
                 m_keyMapNodes.push_back(keyMapNode);
             } break;
             case KeyMap::KMT_CLICK_TWICE: {
-                // safe check
+                // 安全校验
                 if (!checkForClickTwice(node)) {
                     qWarning() << "json error: keyMapNodes node format error";
                     break;
@@ -191,7 +191,7 @@ void KeyMap::loadKeyMap(const QString &json)
                 m_keyMapNodes.push_back(keyMapNode);
             } break;
             case KeyMap::KMT_CLICK_MULTI: {
-                // safe check
+                // 安全校验
                 if (!checkForClickMulti(node)) {
                     qWarning() << "json error: keyMapNodes node format error";
                     break;
@@ -226,7 +226,7 @@ void KeyMap::loadKeyMap(const QString &json)
                 m_keyMapNodes.push_back(keyMapNode);
             } break;
             case KeyMap::KMT_STEER_WHEEL: {
-                // safe check
+                // 安全校验
                 if (!checkForSteerWhell(node)) {
                     qWarning() << "json error: keyMapNodes node format error";
                     break;
@@ -264,7 +264,7 @@ void KeyMap::loadKeyMap(const QString &json)
                 m_keyMapNodes.push_back(keyMapNode);
             } break;
             case KeyMap::KMT_DRAG: {
-                // safe check
+                // 安全校验
                 if (!checkForDrag(node)) {
                     qWarning() << "json error: keyMapNodes node format error";
                     break;
@@ -281,7 +281,7 @@ void KeyMap::loadKeyMap(const QString &json)
                 keyMapNode.data.drag.keyNode.key = key.second;
                 keyMapNode.data.drag.keyNode.pos = getItemPos(node, "startPos");
                 keyMapNode.data.drag.keyNode.extendPos = getItemPos(node, "endPos");
-                // Read optional drag delay parameters
+                // 读取可选的拖拽延迟参数
                 keyMapNode.data.drag.startDelay = node.contains("startDelay") ? 
                     static_cast<quint32>(getItemDouble(node, "startDelay")) : 0;
                 keyMapNode.data.drag.dragSpeed = node.contains("dragSpeed") ? 
@@ -290,7 +290,7 @@ void KeyMap::loadKeyMap(const QString &json)
                 break;
             }
             case KeyMap::KMT_ANDROID_KEY: {
-                // safe check
+                // 安全校验
                 if (!checkForAndroidKey(node)) {
                     qWarning() << "json error: keyMapNodes node format error";
                     break;
@@ -314,7 +314,7 @@ void KeyMap::loadKeyMap(const QString &json)
             }
         }
     }
-    // this must be called after m_keyMapNodes is stable
+    // 必须在 m_keyMapNodes 稳定后调用
     makeReverseMap();
     qInfo() << "Script updated, current keymap mode:normal, Press ~ key to switch keymap mode";
 

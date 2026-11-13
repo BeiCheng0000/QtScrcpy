@@ -17,7 +17,7 @@ qint32 VideoSocket::subThreadRecvData(quint8 *buf, qint32 bufSize)
     if (!buf) {
         return 0;
     }
-    // this function cant call in main thread
+    // 此函数不能在主线程中调用
     Q_ASSERT(QCoreApplication::instance()->thread() != QThread::currentThread());
 
     while (bytesAvailable() < bufSize) {
@@ -26,6 +26,6 @@ qint32 VideoSocket::subThreadRecvData(quint8 *buf, qint32 bufSize)
         }
     }
 
-    // recv data
+    // 接收数据
     return read((char *)buf, bufSize);
 }

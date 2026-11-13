@@ -16,14 +16,14 @@ PresetConfigDialog::PresetConfigDialog(const EncoderPreset &preset, QWidget *par
 
     auto *mainLayout = new QVBoxLayout(this);
 
-    // Warning label
+    // 警示标签
     auto *warningLabel = new QLabel(this);
     warningLabel->setWordWrap(true);
     warningLabel->setStyleSheet(QStringLiteral("color:#e67e22; font-weight:bold; padding:8px;"));
     warningLabel->setText(preset.warning);
     mainLayout->addWidget(warningLabel);
 
-    // --- Encoder level group ---
+    // --- 编码优化档位分组 ---
     auto *levelGroup = new QGroupBox(tr("Encoding Optimization Level"), this);
     auto *levelLayout = new QGridLayout(levelGroup);
 
@@ -59,7 +59,7 @@ PresetConfigDialog::PresetConfigDialog(const EncoderPreset &preset, QWidget *par
     levelLayout->addWidget(levelDesc, 1, 0, 1, 2);
     mainLayout->addWidget(levelGroup);
 
-    // --- Close button ---
+    // --- 关闭按钮 ---
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Close, this);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::close);
     mainLayout->addWidget(buttonBox);

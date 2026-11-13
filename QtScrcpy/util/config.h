@@ -14,7 +14,7 @@ struct UserBootConfig
     int recordVideoBitrate = 8000000;
     int recordFps = 30;
     int recordAudioBitrate = 128000;
-    bool autoStartAudio    = true; // bring up sndcpy right after a device connects
+    bool autoStartAudio    = true; // 设备连接后立刻启动 sndcpy 音频桥接
     quint32 bitRate = 2000000;
     int maxSizeIndex = 0;
     int recordFormatIndex = 0;
@@ -30,10 +30,10 @@ struct UserBootConfig
     bool simpleMode       = false;
     bool autoUpdateDevice = true;
     bool showToolbar      = true;
-    bool quitOnClose      = false; // quit instead of hiding to the system tray when the main window is closed
+    bool quitOnClose      = false; // 主窗口关闭时直接退出，而非隐藏到系统托盘
     int decodeMode        = 0;  // 0=FFmpeg OpenGL (默认), 1=VideoToolbox Metal (Apple Silicon)
     int codecModeIndex    = 0;
-    int presetLevel       = 1;  // optimization tier of the currently selected encoder preset
+    int presetLevel       = 1;  // 当前选中编码预设的优化档位
     int videoSource       = 0;  // 0=display, 1=camera
     int cameraFacing      = 0;  // 0=back, 1=front
     bool advancedDisplay = false;
@@ -57,7 +57,7 @@ public:
 
     static Config &getInstance();
 
-    // config
+    // 配置
     QString getLanguage();
     QString getTitle();
     int getMaxFps();
@@ -74,13 +74,13 @@ public:
     bool updateCommonConfig(const QMap<QString, QVariant> &values);
     QStringList getConnectedGroups();
 
-    // user data:common
+    // 用户数据：通用
     void setUserBootConfig(const UserBootConfig &config);
     UserBootConfig getUserBootConfig();
     void setTrayMessageShown(bool shown);
     bool getTrayMessageShown();
 
-    // user data:device
+    // 用户数据：设备
     void setNickName(const QString &serial, const QString &name);
     QString getNickName(const QString &serial);
     void setRect(const QString &serial, const QRect &rc);
@@ -93,7 +93,7 @@ public:
     QStringList getIpHistory(); 
     void clearIpHistory();
 
-    // Port history methods
+    // 端口历史记录方法
     void savePortHistory(const QString &port);
     QStringList getPortHistory(); 
     void clearPortHistory();

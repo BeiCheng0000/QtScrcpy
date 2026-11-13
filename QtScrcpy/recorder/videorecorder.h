@@ -35,7 +35,7 @@ public:
 
     bool isRecording() const;
     QString filePath() const;
-    // true when an audio track is present in the output file
+    // 输出文件中包含音轨时为 true
     bool hasAudio() const;
 
 signals:

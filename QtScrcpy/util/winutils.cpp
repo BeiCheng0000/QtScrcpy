@@ -15,8 +15,8 @@ WinUtils::WinUtils(){};
 
 WinUtils::~WinUtils(){};
 
-// Set dark border to window
-// Reference: qt/qtbase.git/tree/src/plugins/platforms/windows/qwindowswindow.cpp
+// 为窗口设置深色边框
+// 参考：qt/qtbase.git/tree/src/plugins/platforms/windows/qwindowswindow.cpp
 bool WinUtils::setDarkBorderToWindow(const HWND &hwnd, const bool &d)
 {
     const BOOL darkBorder = d ? TRUE : FALSE;

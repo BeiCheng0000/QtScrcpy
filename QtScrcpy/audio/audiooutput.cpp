@@ -43,8 +43,8 @@ AudioOutput::~AudioOutput()
 
 AudioOutput &AudioOutput::instance()
 {
-    // Intentionally leaked: the audio bridge must outlive the widgets and is
-    // torn down with the process, not during static destruction.
+    // 故意泄漏：音频桥接必须比各控件存活更久，随进程退出而释放，
+    // 而不是在静态析构阶段被销毁。
     static AudioOutput *s_instance = new AudioOutput();
     return *s_instance;
 }
@@ -105,8 +105,8 @@ void AudioOutput::stop()
     stopRecvData();
     stopAudioOutput();
 
-    // No listener may outlive the audio session (e.g. a recorder that was
-    // still attached when the device window was closed).
+    // 任何监听器都不应比音频会话存活更久（例如设备窗口已关闭
+    // 时仍附属着的录制器）。
     {
         QMutexLocker locker(&m_listenerMutex);
         m_pcmListeners.clear();
@@ -117,10 +117,10 @@ void AudioOutput::stop()
 void AudioOutput::stopForDevice(const QString& serial)
 {
     if (!m_running) {
-        return; // already stopped, keep this call idempotent
+        return; // 已停止，保持调用幂等
     }
     if (!m_serial.isEmpty() && m_serial != serial) {
-        return; // audio belongs to another connected device
+        return; // 音频属于另一台已连接设备
     }
 
     stop();
@@ -183,9 +183,8 @@ bool AudioOutput::runSndcpyProcess(const QString &serial, int port, bool wait)
 
 #ifdef Q_OS_WIN32
     QStringList params{serial, QString::number(port)};
-    // sndcpy.bat looks for adb.exe and sndcpy.apk in its working directory.
-    // Always run it next to the executable so recording audio also works when
-    // the application was launched from another directory.
+    // sndcpy.bat 会在其工作目录中查找 adb.exe 与 sndcpy.apk。
+    // 始终在可执行文件旁边运行它，这样即使程序从其他目录启动，录制音频也能正常工作。
     m_sndcpy.setWorkingDirectory(QCoreApplication::applicationDirPath());
     m_sndcpy.start("sndcpy.bat", params);
 #else
@@ -314,7 +313,7 @@ void AudioOutput::startRecvData(int port)
             return;
         }
 
-        // Playback may be unavailable while recording, so forward the raw PCM
+        // 录制时播放可能不可用，因此直接转发原始 PCM
         // to the listeners first.
         {
             QMutexLocker locker(&m_listenerMutex);

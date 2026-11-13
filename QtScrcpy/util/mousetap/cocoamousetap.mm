@@ -47,7 +47,7 @@ static CGEventRef Cocoa_MouseTapCallback(CGEventTapProxy proxy, CGEventType type
 
     NSRect limitWindowRect = NSMakeRect(tapdata->rc.left(), tapdata->rc.top(),
                                    tapdata->rc.width(), tapdata->rc.height());
-    // check rect samll than limit rect
+    // 检查矩形是否小于限制矩形
     NSRect checkWindowRect = NSMakeRect(limitWindowRect.origin.x + 10, limitWindowRect.origin.y + 10,
                             limitWindowRect.size.width - 10, limitWindowRect.size.height - 10);
     /* This is in CGs global screenspace coordinate system, which has a

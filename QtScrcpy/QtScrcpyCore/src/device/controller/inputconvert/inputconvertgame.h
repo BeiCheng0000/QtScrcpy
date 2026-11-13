@@ -32,27 +32,27 @@ protected:
     QPointF calcFrameAbsolutePos(QPointF relativePos);
     QPointF calcScreenAbsolutePos(QPointF relativePos);
 
-    // multi touch id
+    // 多点触控 id
     int attachTouchID(int key);
     void detachTouchID(int key);
     int getTouchID(int key);
 
-    // steer wheel
+    // 方向盘
     void processSteerWheel(const KeyMap::KeyMapNode &node, const QKeyEvent *from);
 
-    // click
+    // 点击
     void processKeyClick(const QPointF &clickPos, bool clickTwice, bool switchMap, const QKeyEvent *from);
 
-    // click mutil
+    // 多点点击
     void processKeyClickMulti(const KeyMap::DelayClickNode *nodes, const int count, const QKeyEvent *from);
 
-    // drag
+    // 拖拽
     void processKeyDrag(const QPointF &startPos, QPointF endPos, quint32 startDelay, float dragSpeed, const QKeyEvent *from);
 
-    // android key
+    // 安卓按键
     void processAndroidKey(AndroidKeycode androidKey, const QKeyEvent *from);
 
-    // mouse
+    // 鼠标
     bool processMouseClick(const QMouseEvent *from);
     bool processMouseMove(const QMouseEvent *from);
     void moveCursorTo(const QMouseEvent *from, const QPoint &localPosPixel);
@@ -87,17 +87,17 @@ private:
 
     bool m_processMouseMove = true;
 
-    // steer wheel
+    // 方向盘
     struct
     {
-        // the first key pressed
+        // 第一个按下的按键
         int touchKey = Qt::Key_unknown;
         bool pressedUp = false;
         bool pressedDown = false;
         bool pressedLeft = false;
         bool pressedRight = false;
 
-        // for delay
+        // 用于延迟
         struct {
             QPointF currentPos;
             QTimer* timer = nullptr;
@@ -107,7 +107,7 @@ private:
         } delayData;
     } m_ctrlSteerWheel;
 
-    // mouse move
+    // 鼠标移动
     struct
     {
         QPointF lastConverPos;
@@ -118,7 +118,7 @@ private:
         int ignoreCount = 0;
     } m_ctrlMouseMove;
 
-    // for drag delay
+    // 用于拖拽延迟
     struct {
         QPointF currentPos;
         QTimer* timer = nullptr;

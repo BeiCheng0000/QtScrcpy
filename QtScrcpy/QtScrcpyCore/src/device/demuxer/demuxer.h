@@ -49,8 +49,8 @@ private:
 
     AVCodecContext *m_codecCtx = Q_NULLPTR;
     AVCodecParserContext *m_parser = Q_NULLPTR;
-    // successive packets may need to be concatenated, until a non-config
-    // packet is available
+    // 连续的数据包可能需要拼接，直到出现一个非配置包
+    // 才认为可用
     AVPacket* m_pending = Q_NULLPTR;
 };
 

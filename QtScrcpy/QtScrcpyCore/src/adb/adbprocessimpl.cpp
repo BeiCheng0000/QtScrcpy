@@ -57,7 +57,7 @@ const QString &AdbProcessImpl::getAdbPath()
 
 void AdbProcessImpl::initSignals()
 {
-    // aboutToQuit not exit event loop, so deletelater is ok
+    // aboutToQuit 不会退出事件循环，因此使用 deleteLater 即可
     //connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &AdbProcessImpl::deleteLater);
 
     connect(this, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, [this](int exitCode, QProcess::ExitStatus exitStatus) {
@@ -131,7 +131,7 @@ void AdbProcessImpl::setShowTouchesEnabled(const QString &serial, bool enabled)
 
 QStringList AdbProcessImpl::getDevicesSerialFromStdOut()
 {
-    // get devices serial by adb devices
+    // 通过 adb devices 获取设备序列号
     QStringList serials;
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     QRegExp lineExp("\r\n|\n");

@@ -226,7 +226,7 @@ void Dialog::initUI()
 
     setWindowTitle(Config::getInstance().getTitle());
 #ifdef Q_OS_LINUX
-    // Set window icon (inherits from application icon set in main.cpp)
+    // 设置窗口图标（继承 main.cpp 中设置的程序图标）
     // If application icon was set, this will use it automatically
     if (!qApp->windowIcon().isNull()) {
         setWindowIcon(qApp->windowIcon());
@@ -241,8 +241,8 @@ void Dialog::initUI()
 
     ui->presetConfigBtn->setVisible(false);
 
-    // Populate the codec-mode combo. Index 0 is the static "Default (Auto)"
-    // item from the .ui; every registered encoder preset is appended below it.
+    // 填充编码模式下拉框。索引 0 是 .ui 中固定的“默认（自动）”项，
+    // 其下依次追加所有已注册的编码预设。
     for (const EncoderPreset &preset : EncoderPresetRegistry::all()) {
         ui->codecModeBox->addItem(preset.displayName);
     }
@@ -624,7 +624,7 @@ void Dialog::updateBootConfig(bool toView)
         ui->decodeModeBox->setCurrentIndex(config.decodeMode);
         ui->codecModeBox->setCurrentIndex(config.codecModeIndex);
 
-        // Restore encoder preset dialog state (if dialog was previously opened)
+        // 恢复编码预设对话框的状态（若该对话框此前已打开）
         if (m_presetDialog) {
             m_presetDialog->setLevel(config.presetLevel);
         }
@@ -770,9 +770,8 @@ void Dialog::bringToFront()
 void Dialog::closeEvent(QCloseEvent *event)
 {
     if (ui->quitOnCloseCheck->isChecked()) {
-        // The user opted out of the system tray: closing the window quits the app.
-        // Ignore the event (instead of accepting it) so WA_DeleteOnClose does not
-        // delete this dialog here; main() deletes it after the event loop returns.
+        // 用户选择退出系统托盘：关闭窗口即退出程序。忽略该事件（而非接受），
+        // 避免 WA_DeleteOnClose 在此处删除本对话框；main() 会在事件循环返回后删除它。
         m_hideIcon->hide();
         event->ignore();
         qApp->quit();
@@ -826,7 +825,7 @@ void Dialog::on_startServerBtn_clicked()
 {
     outLog("start server...", false);
 
-    // this is ok that "original" toUshort is 0
+    // 这里“original”的 toUShort 结果为 0 也是可接受的情况
     quint16 videoSize = ui->maxSizeBox->currentText().trimmed().toUShort();
     qsc::DeviceParams params;
     params.serial = ui->serialBox->currentText().trimmed();
@@ -848,9 +847,9 @@ void Dialog::on_startServerBtn_clicked()
         params.captureOrientationLock = 1;
         params.captureOrientation = (ui->lockOrientationBox->currentIndex() - 1) * 90;
     }
-    // Camera sensors expose their video stream in landscape by default. Rotate
-    // the default camera preview to portrait, while preserving an explicit
-    // orientation selected by the user.
+    // 摄像头传感器默认以横屏方向输出视频流。在此把默认
+    // 摄像头预览旋转为竖屏，同时保留用户显式
+    // 选择的画面方向。
     if (camera && params.captureOrientationLock == 0) {
         params.captureOrientation = 90;
     }
@@ -863,11 +862,11 @@ void Dialog::on_startServerBtn_clicked()
     params.pushFilePath = Config::getInstance().getPushFilePath();
     params.gameScript = camera ? QString() : getGameScript(ui->gameBox->currentText());
     params.logLevel = Config::getInstance().getLogLevel();
-    // Apply an encoder preset (when a preset mode is selected) or the ini default.
+    // 应用编码预设（选中预设模式时）或 ini 中的默认值。
     const int codecModeIndex = ui->codecModeBox->currentIndex();
     if (codecModeIndex > 0) {
         const EncoderPreset &preset = EncoderPresetRegistry::all().at(codecModeIndex - 1);
-        // Restore from the open dialog's selection, or fall back to the saved tier.
+        // 优先取打开对话框的选择，否则回退到已保存的档位。
         int level = 1;
         if (m_presetDialog) {
             level = m_presetDialog->selectedLevel();
@@ -890,9 +889,9 @@ void Dialog::on_startServerBtn_clicked()
     }
     params.scid = QRandomGenerator::global()->bounded(1, 10000) & 0x7FFFFFFF;
     params.decodeMode = ui->decodeModeBox->currentIndex();
-    // Disabled widgets may remain checked from persisted settings. Advanced
-    // display options are not valid for camera capture, so never copy them
-    // into camera session parameters.
+    // 被禁用的控件可能因持久化设置而仍处于选中状态。高级
+    // 显示选项对摄像头采集无效，因此绝不把它们
+    // 写入摄像头会话参数。
     if (!camera && m_advancedDisplayGroup && m_advancedDisplayGroup->isChecked()) {
         const int displayMode = m_displayModeBox->currentIndex();
         if (displayMode == 1) {
@@ -906,8 +905,8 @@ void Dialog::on_startServerBtn_clicked()
         } else if (displayMode == 2) {
             params.newDisplay = m_newDisplayEdit->text().trimmed();
             if (params.newDisplay.isEmpty()) {
-                // Match scrcpy's flex default (1280x960 at 160 dpi) while
-                // keeping the command-line parameter explicit.
+                // 与 scrcpy 的 flex 默认值（160 dpi 下 1280x960）保持一致，
+                // 同时保留显式的命令行参数。
                 params.newDisplay = "1280x960/160";
             }
             params.flexDisplay = m_flexDisplayCheck->isChecked();
@@ -920,8 +919,8 @@ void Dialog::on_startServerBtn_clicked()
         if (params.startApp.isEmpty()) {
             params.startApp = m_startAppBox->currentText().trimmed();
         }
-        // scrcpy forbids crop with flex display. Preserve the entered value
-        // for a later non-flex session, but never pass it to the server.
+        // scrcpy 禁止在 flex 显示模式下裁剪。保留用户输入的值供后续非 flex
+        // 会话使用，但绝不将其传给服务端。
         params.crop = params.flexDisplay ? QString() : m_cropEdit->text().trimmed();
     }
     if (params.flexDisplay && (params.newDisplay.isEmpty() || !params.display || !params.crop.isEmpty())) {
@@ -1177,7 +1176,7 @@ void Dialog::on_startAdbdBtn_clicked()
         return;
     }
     outLog("start devices adbd...", false);
-    // adb tcpip 5555
+    // 通过 adb 开启 tcpip 监听（端口 5555）
     QStringList adbArgs;
     adbArgs << "tcpip";
     adbArgs << "5555";
@@ -1186,7 +1185,7 @@ void Dialog::on_startAdbdBtn_clicked()
 
 void Dialog::outLog(const QString &log, bool newLine)
 {
-    // avoid sub thread update ui
+    // 避免子线程直接更新界面
     QString backLog = log;
     QTimer::singleShot(0, this, [this, backLog, newLine]() {
         ui->outEdit->append(backLog);
@@ -1222,9 +1221,9 @@ void Dialog::on_getIPBtn_clicked()
     }
 
     outLog("get ip...", false);
-    // adb -s P7C0218510000537 shell ifconfig wlan0
+    // 示例：adb -s ... shell ifconfig wlan0（查询无线网卡地址）
     // or
-    // adb -s P7C0218510000537 shell ip -f inet addr show wlan0
+    // 示例：adb -s ... shell ip -f inet addr show wlan0（查询 IP 地址）
     QStringList adbArgs;
 #if 0
     adbArgs << "shell";
@@ -1275,7 +1274,7 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
     }
 
 #ifndef Q_OS_WIN32
-    // must be show before updateShowSize
+    // 必须在 updateShowSize 之前显示
     videoForm->show();
 #endif
     QString name = Config::getInstance().getNickName(serial);
@@ -1288,9 +1287,9 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
     bool deviceVer = size.height() > size.width();
     QRect rc = Config::getInstance().getRect(serial);
     bool rcVer = rc.height() > rc.width();
-    // same width/height rate
+    // 宽度与高度比例相同
     if (rc.isValid() && (deviceVer == rcVer)) {
-        // mark: resize is for fix setGeometry magneticwidget bug
+        // 备注：resize 用于修复 setGeometry 与 magneticwidget 的兼容问题
         videoForm->resize(rc.size());
         videoForm->setGeometry(rc);
     }
@@ -1302,27 +1301,26 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
 
     GroupController::instance().addDevice(serial);
 
-    // Closing a device window tears the sndcpy bridge down completely
+    // 关闭设备窗口会彻底拆除 sndcpy 音频桥接
     // (VideoForm::closeEvent -> AudioOutput::stopForDevice). Nothing used to
-    // bring it back on reconnect, so a freshly connected device stayed silent
-    // until "start audio" or a recording happened to start the bridge.
-    // Delay a little so the video window is visible before the (blocking)
-    // sndcpy setup runs; using the window as context cancels this when the
-    // device is closed again immediately.
+    // 重新连接时重建桥接，否则刚连接的设备会一直静音，
+    // 直到点击“开始音频”或开始录制才意外启动桥接。
+    // 稍作延迟，让视频窗口可见后再执行（阻塞的）sndcpy 初始化；
+    // 以窗口作为上下文，可在设备被立即关闭时取消该延时任务。
     QTimer::singleShot(300, videoForm, [serial]() {
         if (!Config::getInstance().getUserBootConfig().autoStartAudio) {
             return;
         }
         auto &audio = AudioOutput::instance();
         if (audio.isRunning()) {
-            // The bridge is process-wide: never steal sound from a device that
+            // 桥接是进程级的：绝不能从其他设备“抢走”声音
             // is already playing (another device may still be connected).
             qInfo() << "audio bridge already active for" << audio.serial()
                     << ", skip auto start for" << serial;
             return;
         }
         if (!qsc::IDeviceManage::getInstance().getDevice(serial)) {
-            return; // device disappeared during the delay
+            return; // 延迟期间设备已消失
         }
         if (!audio.start(serial, 28200)) {
             qWarning() << "auto start audio failed for" << serial;
@@ -1334,8 +1332,8 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
 
 void Dialog::onDeviceDisconnected(QString serial)
 {
-    // Covers every disconnect path (window X, stop server, unplugged cable):
-    // never leave the sndcpy audio bridge playing for a device that is gone.
+    // 覆盖所有断开路径（关闭窗口、停止服务、拔线）：
+    // 绝不能让已消失设备的 sndcpy 音频桥接继续播放。
     AudioOutput::instance().stopForDevice(serial);
     GroupController::instance().removeDevice(serial);
     auto device = qsc::IDeviceManage::getInstance().getDevice(serial);
@@ -1592,9 +1590,8 @@ void Dialog::on_startAudioBtn_clicked()
 
 void Dialog::on_stopAudioBtn_clicked()
 {
-    // Tear down the whole bridge (socket, playback, adb forward and the
-    // device-side capture), not just local playback. Otherwise the next
-    // connect would find a stale sndcpy session on tcp:28200.
+    // 拆除整个桥接（socket、播放、adb 转发以及设备端采集），
+    // 而不只是本地播放。否则下次连接会发现 tcp:28200 上残留的过期 sndcpy 会话。
     auto &audio = AudioOutput::instance();
     audio.stopForDevice(audio.serial());
 }
@@ -1610,8 +1607,8 @@ void Dialog::on_installSndcpyBtn_clicked()
 
 void Dialog::on_autoStartAudioCheck_toggled(bool checked)
 {
-    // The decision is made on the next device connect, which can happen long
-    // before updateBootConfig(false) persists the rest of the UI.
+    // 该决定在下一次设备连接时做出，这可能远早于
+    // updateBootConfig(false) 持久化其余界面设置。
     UserBootConfig config = Config::getInstance().getUserBootConfig();
     config.autoStartAudio = checked;
     Config::getInstance().setUserBootConfig(config);
@@ -1715,7 +1712,7 @@ void Dialog::showPortEditMenu(const QPoint &pos)
 
 void Dialog::on_codecModeBox_currentIndexChanged(int index)
 {
-    // Block signals while updating bitrate to avoid recursive calls
+    // 更新码率时阻塞信号，避免递归调用
     ui->bitRateEdit->blockSignals(true);
     ui->bitRateBox->blockSignals(true);
 
@@ -1725,7 +1722,7 @@ void Dialog::on_codecModeBox_currentIndexChanged(int index)
     }
 
     if (index == 0) {
-        // Default: restore previous settings
+        // 默认：恢复之前的设置
         if (m_prevBitRate == 0) {
             ui->bitRateEdit->setText("2");
             ui->bitRateBox->setCurrentText("Mbps");
@@ -1736,14 +1733,14 @@ void Dialog::on_codecModeBox_currentIndexChanged(int index)
             ui->bitRateEdit->setText(QString::number(m_prevBitRate / 1000));
             ui->bitRateBox->setCurrentText("Kbps");
         }
-        // Restore previous max size
+        // 恢复之前的最大尺寸
         ui->maxSizeBox->setCurrentIndex(m_prevMaxSizeIndex);
     } else {
-        // Preset mode: save current settings for Default-mode restoration
+        // 预设模式：保存当前设置，供默认模式恢复使用
         m_prevBitRate = getBitRate();
         m_prevMaxSizeIndex = ui->maxSizeBox->currentIndex();
 
-        // Sync bitrate & maxSize to match the saved encoder tier
+        // 同步码率与最大尺寸，使其与已保存的编码档位一致
         UserBootConfig config = Config::getInstance().getUserBootConfig();
         int level = config.presetLevel;
         quint32 bitrate = preset->levelBitRate(level);
@@ -1762,7 +1759,7 @@ void Dialog::on_codecModeBox_currentIndexChanged(int index)
         }
     }
 
-    // Show the encoder settings button only for presets with adjustable tiers
+    // 仅当预设包含可调档位时，才显示编码设置按钮
     ui->presetConfigBtn->setVisible(preset && preset->levelCount() >= 2);
 
     ui->bitRateEdit->blockSignals(false);
@@ -1780,20 +1777,20 @@ void Dialog::on_presetConfigBtn_clicked()
     // (Re)create the dialog when the selected preset changes.
     if (!m_presetDialog || m_presetDialog->presetId() != preset.id) {
         m_presetDialog = new PresetConfigDialog(preset, this);
-        // Only restore the saved tier on first creation — subsequent opens
-        // preserve the user's last selection in the dialog.
+        // 仅在首次创建时恢复已保存的档位——后续打开
+        // 保留用户在对话框中的上次选择。
         UserBootConfig bootConfig = Config::getInstance().getUserBootConfig();
         m_presetDialog->setLevel(bootConfig.presetLevel);
 
-        // Sync bitrate & maxSize UI in real-time as the user switches tiers.
+        // 用户切换档位时，实时同步码率与最大尺寸的界面
         connect(m_presetDialog.data(), &PresetConfigDialog::levelChanged,
                 this, &Dialog::syncPresetLevelToUi);
     }
 
     m_presetDialog->exec();
 
-    // Sync after dialog closes — covers the case where the initial tier was
-    // restored via setLevel() above and no levelChanged signal fired.
+    // 对话框关闭后同步——覆盖初始档位通过上面的 setLevel() 恢复、
+    // 且未触发 levelChanged 信号的情况。
     syncPresetLevelToUi();
 }
 
@@ -1806,7 +1803,7 @@ void Dialog::syncPresetLevelToUi()
     const EncoderPreset &preset = EncoderPresetRegistry::all().at(codecModeIndex - 1);
     int level = m_presetDialog->selectedLevel();
 
-    // Update bitrate
+    // 更新码率
     quint32 bitrate = preset.levelBitRate(level);
     if (bitrate > 0) {
         ui->bitRateEdit->blockSignals(true);
@@ -1822,7 +1819,7 @@ void Dialog::syncPresetLevelToUi()
         ui->bitRateBox->blockSignals(false);
     }
 
-    // Update max size (only when the tier prescribes one)
+    // 更新最大尺寸（仅当档位指定了尺寸时）
     int maxSizeIdx = preset.levelMaxSizeIndex(level);
     if (maxSizeIdx >= 0) {
         ui->maxSizeBox->setCurrentIndex(maxSizeIdx);

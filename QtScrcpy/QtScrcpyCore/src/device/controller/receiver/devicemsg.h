@@ -4,7 +4,7 @@
 #include <QBuffer>
 
 #define DEVICE_MSG_MAX_SIZE (1 << 18) // 256k
-// type: 1 byte; length: 4 bytes
+// 类型：1 字节；长度：4 字节
 #define DEVICE_MSG_TEXT_MAX_LENGTH (DEVICE_MSG_MAX_SIZE - 5)
 
 class DeviceMsg : public QObject

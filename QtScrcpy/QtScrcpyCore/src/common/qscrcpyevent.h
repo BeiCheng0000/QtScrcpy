@@ -13,7 +13,7 @@ public:
     QScrcpyEvent(Type type) : QEvent(QEvent::Type(type)) {}
 };
 
-// VideoSocketEvent
+// 视频 Socket 事件（VideoSocketEvent）
 class VideoSocketEvent : public QScrcpyEvent
 {
 public:

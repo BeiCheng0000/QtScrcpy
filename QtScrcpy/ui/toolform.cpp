@@ -24,10 +24,9 @@ ToolForm::ToolForm(QWidget *adsorbWidget, AdsorbPositions adsorbPos) : MagneticW
     setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
     //setWindowFlags(windowFlags() & ~Qt::WindowMinMaxButtonsHint);
 
-    // updateButtonSpacing() grows the layout spacing when the tool window is
-    // tall. With the default size constraint that inflates the layout's minimum
-    // size, so the window can no longer shrink back after the video window is
-    // restored. Keep the window size fully controlled by VideoForm instead.
+    // updateButtonSpacing() 会在工具栏较高时增大布局间距。默认的 SizeConstraint
+    // 会撑大布局的最小尺寸，导致视频窗口还原后工具栏无法缩回。因此强制由
+    // VideoForm 完全控制工具栏尺寸，不使用布局自带的尺寸约束。
     layout()->setSizeConstraint(QLayout::SetNoConstraint);
 
     updateGroupControl();
@@ -44,9 +43,8 @@ ToolForm::ToolForm(QWidget *adsorbWidget, AdsorbPositions adsorbPos) : MagneticW
     createSettingsMenu();
     ui->expandSettingsBtn->installEventFilter(this);
 
-    // A non-modal flyout is used instead of QMenu so clicking the settings
-    // button still opens the main settings page while hovering reveals the
-    // extra entries. The timer closes it once the pointer leaves both areas.
+    // 使用非模态浮层而非 QMenu，这样点击主设置按钮仍能直接进入系统设置页，
+    // 而悬停时才展开更多子项；定时器在指针离开按钮与浮层两个区域后自动关闭。
     m_settingsMenuTimer.setInterval(150);
     connect(&m_settingsMenuTimer, &QTimer::timeout, this, [this]() {
         if (!m_settingsMenu || !m_settingsMenu->isVisible()) {
@@ -566,8 +564,8 @@ void ToolForm::updateButtonSpacing()
     for (int i = 0; i < vbox->count(); ++i) {
         QLayoutItem *item = vbox->itemAt(i);
         QWidget *button = item ? item->widget() : nullptr;
-        // isHidden() rather than isVisible(): the tool window may not be shown
-        // yet, but the camera-mode visibility set is already final.
+        // 这里用 isHidden() 而非 isVisible()：工具栏窗口此刻可能尚未显示，
+        // 但相机模式下按钮的最终可见性集合已经确定。
         if (!button || button->isHidden()) {
             continue;
         }
@@ -581,8 +579,7 @@ void ToolForm::updateButtonSpacing()
     const QMargins margins = vbox->contentsMargins();
     const int gaps = buttonCount - 1;
     const int available = height() - margins.top() - margins.bottom() - buttonsHeight;
-    // Distribute all free space between buttons so the first button sits on the
-    // top edge and the last one reaches the bottom edge.
+    // 将全部剩余空间均匀分配到按钮之间，使第一个按钮贴顶边、最后一个按钮贴底边。
     const int spacing = qMax(0, available / gaps);
     if (vbox->spacing() != spacing) {
         vbox->setSpacing(spacing);

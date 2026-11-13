@@ -119,7 +119,7 @@ void QYUVOpenGLWidget::setFrameSize(const QSize &frameSize)
     if (m_frameSize != frameSize) {
         m_frameSize = frameSize;
         m_needUpdate = true;
-        // inittexture immediately
+        // 立即初始化纹理
         repaint();
     }
 }
@@ -131,12 +131,20 @@ const QSize &QYUVOpenGLWidget::frameSize()
 
 void QYUVOpenGLWidget::updateTextures(quint8 *dataY, quint8 *dataU, quint8 *dataV, quint32 linesizeY, quint32 linesizeU, quint32 linesizeV)
 {
-    if (m_textureInited) {
-        updateTexture(m_texture[0], 0, dataY, linesizeY);
-        updateTexture(m_texture[1], 1, dataU, linesizeU);
-        updateTexture(m_texture[2], 2, dataV, linesizeV);
+    if (!m_textureInited) {
+        // 纹理尚未初始化（例如控件还没渲染过一次）。原来这里会静默丢弃
+        // 整帧数据；主动请求一次绘制以便尽快初始化纹理，本帧丢弃，
+        // 后续帧正常上传。
+        m_needUpdate = true;
         update();
+        return;
     }
+    updateTexture(m_texture[0], 0, dataY, linesizeY);
+    updateTexture(m_texture[1], 1, dataU, linesizeU);
+    updateTexture(m_texture[2], 2, dataV, linesizeV);
+    // 真实画面数据已上传，此时展示才不会出现零填充纹理的“绿屏”
+    emit frameUpdated();
+    update();
 }
 
 void QYUVOpenGLWidget::initializeGL()

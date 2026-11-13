@@ -20,13 +20,12 @@ private:
     AndroidKeycode convertKeyCode(int key, Qt::KeyboardModifiers modifiers);
     AndroidMetastate convertMetastate(Qt::KeyboardModifiers modifiers);
 
-    // pinch-to-zoom / tilt simulation (ported from scrcpy)
-    // Hold Ctrl and drag the left button: a "virtual finger" is injected at
-    // the point symmetric to the dragging finger with respect to the center
-    // of the screen, which Android apps interpret as a two-finger pinch.
-    //   Ctrl        -> pinch-to-zoom / rotate (both axes inverted)
-    //   Shift       -> vertical tilt (x inverted only)
-    //   Ctrl+Shift  -> horizontal tilt (y inverted only)
+    // 双指缩放 / 倾斜模拟（移植自 scrcpy）
+    // 按住 Ctrl 并拖动左键：会在屏幕中心另一侧对称的位置
+    // 注入一个“虚拟手指”，Android 应用会将其识别为双指捏合。
+    //   Ctrl        -> 双指缩放 / 旋转（两个轴都反转）
+    //   Shift       -> 垂直倾斜（仅反转 x 轴）
+    //   Ctrl+Shift  -> 水平倾斜（仅反转 y 轴）
     void sendVirtualFingerEvent(AndroidMotioneventAction action, const QPoint &pos,
                                 const QSize &frameSize);
 

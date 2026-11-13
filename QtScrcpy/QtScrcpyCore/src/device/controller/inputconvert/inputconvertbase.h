@@ -16,8 +16,8 @@ public:
     InputConvertBase(Controller *controller);
     virtual ~InputConvertBase();
 
-    // the frame size may be different from the real device size, so we need the size
-    // to which the absolute position apply, to scale it accordingly
+    // 帧尺寸可能与设备真实尺寸不同，因此我们需要
+    // 绝对坐标所基于的尺寸，以便相应地缩放
     virtual void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
     virtual void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
     virtual void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
@@ -33,8 +33,8 @@ protected:
     void sendControlMsg(ControlMsg *msg);
 
     QPointer<Controller> m_controller;
-    // Qt reports repeated events as a boolean, but Android expects the actual
-    // number of repetitions. This variable keeps track of the count.
+    // Qt 把重复事件以布尔值上报，但 Android 期望的是实际的
+    // 重复次数。该变量用于记录这个计数。
     unsigned m_repeat = 0;
 };
 

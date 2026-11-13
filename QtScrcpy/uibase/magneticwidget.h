@@ -5,8 +5,8 @@
 #include <QWidget>
 
 /*
- * a magnetic widget
- * window title bar support not good
+ * 磁吸窗口（MagneticWidget）：可吸附到目标窗口边缘并自动贴合
+ * 对带系统标题栏窗口的吸附支持尚不完善
 */
 
 class MagneticWidget : public QWidget

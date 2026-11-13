@@ -10,9 +10,9 @@
 
 #define GROUP_COMMON "common"
 
-// config
+// 配置
 #define COMMON_LANGUAGE_KEY "Language"
-#define COMMON_LANGUAGE_DEF "Auto"
+#define COMMON_LANGUAGE_DEF "zh_CN"
 
 #define COMMON_TITLE_KEY "WindowTitle"
 #define COMMON_TITLE_DEF QCoreApplication::applicationName()
@@ -47,7 +47,7 @@
 #define COMMON_CODEC_NAME_KEY "CodecName"
 #define COMMON_CODEC_NAME_DEF ""
 
-// user config
+// 用户配置
 #define COMMON_RECORD_KEY "RecordPath"
 #define COMMON_RECORD_DEF ""
 
@@ -132,7 +132,7 @@
 #define COMMON_CAMERA_FACING_KEY "CameraFacing"
 #define COMMON_CAMERA_FACING_DEF 0
 
-// device config
+// 设备配置
 #define SERIAL_WINDOW_RECT_KEY_X "WindowRectX"
 #define SERIAL_WINDOW_RECT_KEY_Y "WindowRectY"
 #define SERIAL_WINDOW_RECT_KEY_W "WindowRectW"
@@ -146,7 +146,7 @@
 #define IP_HISTORY_DEF ""
 #define IP_HISTORY_MAX 10
 
-// Port history  
+// 端口历史
 #define PORT_HISTORY_KEY "PortHistory"
 #define PORT_HISTORY_DEF ""
 #define PORT_HISTORY_MAX 10
@@ -197,10 +197,9 @@ void Config::initializeConfig()
     const QString configFile = configPath + "/config.ini";
     const QString defaultConfigFile = getDefaultConfigPath() + "/config.ini";
 
-    // The application bundle is read-only in AppImage and should be treated as
-    // read-only on macOS. Seed a user-owned copy only once, preserving changes
-    // across upgrades. If a package lacks the template, create a complete
-    // default config so the directory always contains config.ini.
+    // AppImage 中的应用包是只读的，在 macOS 上也应视为只读。仅初始化一次
+    // 用户拥有的副本，使配置改动在升级后得以保留。若安装包缺少模板，
+    // 则创建一份完整的默认配置，确保目录中始终包含 config.ini。
     if (!QFileInfo::exists(configFile)) {
         if (QFileInfo(defaultConfigFile).isFile() && !QFile::copy(defaultConfigFile, configFile)) {
             qWarning() << "Failed to copy default configuration to:" << configFile;
@@ -305,8 +304,8 @@ UserBootConfig Config::getUserBootConfig()
     config.quitOnClose = m_userData->value(COMMON_QUIT_ON_CLOSE_KEY, COMMON_QUIT_ON_CLOSE_DEF).toBool();
     config.decodeMode = m_userData->value(COMMON_DECODE_MODE_KEY, COMMON_DECODE_MODE_DEF).toInt();
     config.codecModeIndex = m_userData->value(COMMON_CODEC_MODE_INDEX_KEY, COMMON_CODEC_MODE_INDEX_DEF).toInt();
-    // PresetLevel replaced the MTK-specific MtkLevel key; fall back to the old
-    // key so users who already picked a tier keep their selection.
+    // PresetLevel 取代了 MTK 专属的 MtkLevel 键；回退读取旧键，
+    // 以便已经选择过档位的用户保留其原有选项。
     config.presetLevel = m_userData->value(COMMON_PRESET_LEVEL_KEY, -1).toInt();
     if (config.presetLevel < 0) {
         config.presetLevel = m_userData->value("MtkLevel", COMMON_PRESET_LEVEL_DEF).toInt();
@@ -405,7 +404,7 @@ int Config::getDesktopOpenGL()
 
 int Config::getSkin()
 {
-    // force disable skin
+    // 强制禁用手机边框（皮肤）
     return 0;
     int skin = 1;
     m_settings->beginGroup(GROUP_COMMON);

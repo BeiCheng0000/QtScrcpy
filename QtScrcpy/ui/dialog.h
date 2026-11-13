@@ -38,7 +38,7 @@ public:
     void outLog(const QString &log, bool newLine = true);
     bool filterLog(const QString &log);
     void getIPbyIp();
-    // show the main window (e.g. when hidden in the tray) and give it focus
+    // 显示主窗口（例如从托盘隐藏状态恢复）并为其赋予焦点
     void bringToFront();
 
 private slots:

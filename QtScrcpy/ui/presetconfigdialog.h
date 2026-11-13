@@ -7,9 +7,8 @@
 
 class QComboBox;
 
-// Generic dialog for configuring a single EncoderPreset. It renders the
-// preset's warning and optimization tiers, so any registered preset can be
-// edited without dialog-specific code.
+// 用于配置单个 EncoderPreset 的通用对话框。它会渲染预设的警示文本与优化档位，
+// 因此任何已注册的预设都无需专门编写对话框代码即可编辑。
 class PresetConfigDialog : public QDialog
 {
     Q_OBJECT

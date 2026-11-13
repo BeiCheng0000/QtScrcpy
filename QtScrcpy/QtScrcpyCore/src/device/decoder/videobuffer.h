@@ -8,7 +8,7 @@
 #include <functional>
 #include "fpscounter.h"
 
-// forward declarations
+// 前向声明
 typedef struct AVFrame AVFrame;
 
 class VideoBuffer : public QObject
@@ -25,20 +25,19 @@ public:
     void setRenderExpiredFrames(bool renderExpiredFrames);
 
     AVFrame *decodingFrame();
-    // set the decoder frame as ready for rendering
-    // this function locks m_mutex during its execution
-    // returns true if the previous frame had been consumed
+    // 将解码帧标记为可渲染
+    // 该函数执行期间会锁定 m_mutex
+    // 若上一帧已被消费则返回 true
     void offerDecodedFrame(bool &previousFrameSkipped);
 
-    // mark the rendering frame as consumed and return it
-    // MUST be called with m_mutex locked!!!
-    // the caller is expected to render the returned frame to some texture before
-    // unlocking m_mutex
+    // 将渲染帧标记为已消费并返回它
+    // 必须在持有 m_mutex 锁的情况下调用！！！
+    // 调用方应在解锁 m_mutex 之前，将返回的帧渲染到某个纹理上
     const AVFrame *consumeRenderedFrame();
 
     void peekRenderedFrame(std::function<void(int width, int height, uint8_t* dataRGB32)> onFrame);
 
-    // wake up and avoid any blocking call
+    // 唤醒并避免任何阻塞调用
     void interrupt();
 
 signals:
@@ -57,8 +56,8 @@ private:
     bool m_renderExpiredFrames = false;
     QWaitCondition m_renderingFrameConsumedCond;
 
-    // interrupted is not used if expired frames are not rendered
-    // since offering a frame will never block
+    // 若不渲染过期帧，则不会用到 interrupted
+    // 因为提供一帧永远不会阻塞
     bool m_interrupted = false;
 };
 

@@ -48,12 +48,12 @@ public:
     {
         ActionType type = AT_INVALID;
         int key = Qt::Key_unknown;
-        QPointF pos = QPointF(0, 0);                           // normal key
-        QPointF extendPos = QPointF(0, 0);                     // for drag
-        double extendOffset = 0.0;                             // for steerWheel
-        DelayClickNode delayClickNodes[MAX_DELAY_CLICK_NODES]; // for multi clicks
+        QPointF pos = QPointF(0, 0);                           // 普通按键
+        QPointF extendPos = QPointF(0, 0);                     // 用于拖拽
+        double extendOffset = 0.0;                             // 用于方向盘
+        DelayClickNode delayClickNodes[MAX_DELAY_CLICK_NODES]; // 用于多点点击
         int delayClickNodesCount = 0;
-        AndroidKeycode androidKey = AKEYCODE_UNKNOWN;          // for key press
+        AndroidKeycode androidKey = AKEYCODE_UNKNOWN;          // 用于按键
 
         KeyNode(
             ActionType type = AT_INVALID,
@@ -93,8 +93,8 @@ public:
             struct
             {
                 KeyNode keyNode;
-                quint32 startDelay = 0;      // delay before starting drag movement
-                float dragSpeed = 1.0;       // speed of the drag (0-1, 1=fastest)
+                quint32 startDelay = 0;      // 开始拖拽前的延迟
+                float dragSpeed = 1.0;       // 拖拽速度（0-1，1 为最快）
             } drag;
             struct
             {
@@ -129,17 +129,17 @@ public:
     const KeyMap::KeyMapNode &getMouseMoveMap();
 
 private:
-    // set up the reverse map from key/event event to keyMapNode
+    // 建立从按键/事件到 keyMapNode 的反向映射
     void makeReverseMap();
 
-    // safe check for base
+    // 基础项的安全检查
     bool checkItemString(const QJsonObject &node, const QString &name);
     bool checkItemDouble(const QJsonObject &node, const QString &name);
     bool checkItemBool(const QJsonObject &node, const QString &name);
     bool checkItemObject(const QJsonObject &node, const QString &name);
     bool checkItemPos(const QJsonObject &node, const QString &name);
 
-    // safe check for KeyMapNode
+    // KeyMapNode 的安全检查
     bool checkForClick(const QJsonObject &node);
     bool checkForClickMulti(const QJsonObject &node);
     bool checkForDelayClickNode(const QJsonObject &node);
@@ -148,7 +148,7 @@ private:
     bool checkForDrag(const QJsonObject &node);
     bool checkForAndroidKey(const QJsonObject &node);
 
-    // get keymap from json object
+    // 从 json 对象中获取按键映射
     QString getItemString(const QJsonObject &node, const QString &name);
     double getItemDouble(const QJsonObject &node, const QString &name);
     bool getItemBool(const QJsonObject &node, const QString &name);
@@ -163,20 +163,20 @@ private:
     QVector<KeyMapNode> m_keyMapNodes;
     KeyNode m_switchKey = { AT_KEY, Qt::Key_QuoteLeft };
 
-    // just for return
+    // 仅用于返回
     KeyMapNode m_invalidNode;
 
-    // steer wheel index
+    // 方向盘索引
     int m_idxSteerWheel = -1;
 
-    // mouse move index
+    // 鼠标移动索引
     int m_idxMouseMove = -1;
 
-    // mapping of key/mouse event name to index
+    // 按键/鼠标事件名称到索引的映射
     QMetaEnum m_metaEnumKey = QMetaEnum::fromType<Qt::Key>();
     QMetaEnum m_metaEnumMouseButtons = QMetaEnum::fromType<Qt::MouseButtons>();
     QMetaEnum m_metaEnumKeyMapType = QMetaEnum::fromType<KeyMap::KeyMapType>();
-    // reverse map of key/mouse event
+    // 按键/鼠标事件的反向映射
     QMultiHash<int, KeyMapNode *> m_rmapKey;
     QMultiHash<int, KeyMapNode *> m_rmapMouse;
 };

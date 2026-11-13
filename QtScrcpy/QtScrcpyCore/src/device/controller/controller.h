@@ -48,13 +48,13 @@ public:
     void cameraZoomIn();
     void cameraZoomOut();
 
-    // for input convert
+    // 用于输入转换
     void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize);
     void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize);
     void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize);
 
-    // turn the screen on if it was off, press BACK otherwise
-    // If the screen is off, it is turned on only on down
+    // 若屏幕处于关闭状态则点亮，否则等同于按下返回键
+    // 屏幕只有在 ACTION_DOWN 时才会被点亮
     void postBackOrScreenOn(bool down);
     void requestDeviceClipboard();
     void getDeviceClipboard(bool cut = false);

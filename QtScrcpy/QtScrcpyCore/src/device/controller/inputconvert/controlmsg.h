@@ -14,14 +14,14 @@
 #define CONTROL_MSG_INJECT_TEXT_MAX_LENGTH 300
 #define CONTROL_MSG_START_APP_MAX_LENGTH 255
 #define CONTROL_MSG_SCAN_FILE_PATH_MAX_LENGTH 256
-// type: 1 byte; sequence: 8 bytes; paste flag: 1 byte; length: 4 bytes
+// 类型：1 字节；序号：8 字节；粘贴标志：1 字节；长度：4 字节
 #define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH \
     (CONTROL_MSG_MAX_SIZE - 14)
 
 #define POINTER_ID_MOUSE static_cast<quint64>(-1)
 #define POINTER_ID_GENERIC_FINGER static_cast<quint64>(-2)
 
-// Used for injecting an additional virtual pointer for pinch-to-zoom
+// 用于注入额外的虚拟指针以实现双指缩放
 #define POINTER_ID_VIRTUAL_MOUSE static_cast<quint64>(-3)
 #define POINTER_ID_VIRTUAL_FINGER static_cast<quint64>(-4)
 
@@ -128,8 +128,8 @@ private:
             } injectScroll;
             struct
             {
-                AndroidKeyeventAction action; // action for the BACK key
-                // screen may only be turned on on ACTION_DOWN
+                AndroidKeyeventAction action; // 返回键对应的动作
+                // 屏幕只有在 ACTION_DOWN 时才会被点亮
             } backOrScreenOn;
             struct
             {

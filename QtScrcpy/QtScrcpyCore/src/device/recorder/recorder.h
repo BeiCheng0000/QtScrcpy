@@ -58,13 +58,13 @@ private:
     RecorderFormat m_format = RECORDER_FORMAT_NULL;
     QMutex m_mutex;
     QWaitCondition m_recvDataCond;
-    bool m_stopped = false; // set on recorder_stop() by the stream reader
-    bool m_failed = false;  // set on packet write failure
+    bool m_stopped = false; // 由流读取方在 recorder_stop() 时设置
+    bool m_failed = false;  // 在数据包写入失败时设置
     QQueue<AVPacket *> m_queue;
-    // we can write a packet only once we received the next one so that we can
-    // set its duration (next_pts - current_pts)
-    // "previous" is only accessed from the recorder thread, so it does not
-    // need to be protected by the mutex
+    // 只有收到下一个数据包后才能写入当前数据包，这样才能
+    // 计算它的时长（next_pts - current_pts）
+    // "previous" 只会被录制线程访问，因此不需要
+    // 用互斥锁保护
     AVPacket *m_previous = Q_NULLPTR;
 };
 

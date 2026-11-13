@@ -688,8 +688,8 @@ enum AndroidMotioneventAxis
      */
     AMOTION_EVENT_AXIS_GENERIC_16 = 47,
 
-    // NOTE: If you add a new axis here you must also add it to several other files.
-    //       Refer to frameworks/base/core/java/android/view/MotionEvent.java for the full list.
+    // 注意：在此处新增一个轴时，还必须将其同步到另外几个文件中。
+    //       完整列表请参考 frameworks/base/core/java/android/view/MotionEvent.java。
 };
 
 /**

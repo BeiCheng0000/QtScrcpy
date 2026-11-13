@@ -27,11 +27,11 @@ class Server : public QObject
 public:
     struct ServerParams
     {
-        // necessary
+        // 必填
         QString serial = "";              // 设备序列号
         QString serverLocalPath = "";     // 本地安卓server路径
 
-        // optional
+        // 可选
         QString serverRemotePath = "/data/local/tmp/scrcpy-server.jar";    // 要推送到远端设备的server路径
         quint16 localPort = 27183;     // reverse时本地监听端口
         quint16 maxSize = 720;         // 视频分辨率
@@ -105,7 +105,7 @@ private:
 private:
     qsc::AdbProcess m_workProcess;
     qsc::AdbProcess m_serverProcess;
-    TcpServer m_serverSocket; // only used if !tunnel_forward
+    TcpServer m_serverSocket; // 仅在 !tunnel_forward 时使用
     QPointer<VideoSocket> m_videoSocket = Q_NULLPTR;
     QPointer<QTcpSocket> m_controlSocket = Q_NULLPTR;
     bool m_tunnelEnabled = false;

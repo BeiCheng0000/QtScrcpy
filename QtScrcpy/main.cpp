@@ -12,6 +12,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTranslator>
+#include <QLibraryInfo>
 #include <QDateTime>
 
 #include "config.h"
@@ -46,9 +47,9 @@ int main(int argc, char *argv[])
         ? repositoryDir.filePath("config")
         : QDir(executableDir).filePath("config");
 
-    // Keep packaged defaults separate from mutable user data. Development
-    // builds use the repository templates, while release packages use files
-    // beside the executable. AppImage AppRun may override these paths.
+    // 将打包的默认配置与可变的用户数据分开。开发构建
+    // 使用仓库中的模板，而发布包使用位于可执行文件
+    // 旁边的文件。AppImage 的 AppRun 可能会覆盖这些路径。
     if (qgetenv("QTSCRCPY_DEFAULT_KEYMAP_PATH").isEmpty()) {
         qputenv("QTSCRCPY_DEFAULT_KEYMAP_PATH", defaultKeymapPath.toLocal8Bit());
     }
@@ -185,15 +186,59 @@ int main(int argc, char *argv[])
     return ret;
 }
 
+// Qt 5.15 的简体中文翻译文件缺失 QWidgetTextControl 上下文：文本编辑框
+// 右键菜单（复制/粘贴/全选等）运行时使用 QWidgetTextControl 上下文，而官方
+// qt_zh_CN.qm 里这些文案在旧上下文 QTextControl 下，永远无法命中，导致
+// 右键菜单始终显示英文。这里用自定义翻译器为该上下文补齐标准文案，
+// 译法与官方简体中文翻译保持一致。
+class TextControlTranslator : public QTranslator
+{
+public:
+    QString translate(const char *context, const char *sourceText,
+                      const char *disambiguation = nullptr, int n = -1) const override
+    {
+        if (qstrcmp(context, "QWidgetTextControl") == 0) {
+            const QLatin1String src(sourceText);
+            if (src == QLatin1String("&Copy")) {
+                return QString::fromUtf8("复制(&C)");
+            }
+            if (src == QLatin1String("Cu&t")) {
+                return QString::fromUtf8("剪切(&T)");
+            }
+            if (src == QLatin1String("&Paste")) {
+                return QString::fromUtf8("粘贴(&P)");
+            }
+            if (src == QLatin1String("&Undo")) {
+                return QString::fromUtf8("撤消(&U)");
+            }
+            if (src == QLatin1String("&Redo")) {
+                return QString::fromUtf8("恢复(&R)");
+            }
+            if (src == QLatin1String("Delete")) {
+                return QString::fromUtf8("删除");
+            }
+            if (src == QLatin1String("Select All")) {
+                return QString::fromUtf8("选择全部");
+            }
+            if (src == QLatin1String("Copy & Link Location")) {
+                return QString::fromUtf8("复制链接位置(&L)");
+            }
+        }
+        return QTranslator::translate(context, sourceText, disambiguation, n);
+    }
+};
+
 void installTranslator()
 {
     static QTranslator translator;
-    QLocale locale;
-    QLocale::Language language = locale.language();
+    static QTranslator qtTranslator;
+    static TextControlTranslator textControlTranslator;
+    // 默认简体中文：旧配置中可能保存了 "Auto"（跟随系统区域），系统为英文时
+    // 界面会显示英文。这里把默认语言固定为中文，仅当用户在设置里显式选择
+    // 其他语言时才切换。
+    QLocale::Language language = QLocale::Chinese;
 
-    if (Config::getInstance().getLanguage() == "zh_CN") {
-        language = QLocale::Chinese;
-    } else if (Config::getInstance().getLanguage() == "en_US") {
+    if (Config::getInstance().getLanguage() == "en_US") {
         language = QLocale::English;
     } else if (Config::getInstance().getLanguage() == "ja_JP") {
         language = QLocale::Japanese;
@@ -202,19 +247,24 @@ void installTranslator()
     }
 
     QString languagePath = ":/i18n/";
+    QString qtLang;
     switch (language) {
     case QLocale::Chinese:
         languagePath += "zh_CN.qm";
+        qtLang = "qt_zh_CN";
         break;
     case QLocale::Japanese:
         languagePath += "ja_JP.qm";
+        qtLang = "qt_ja";
         break;
     case QLocale::Korean:
         languagePath += "ko_KR.qm";
+        qtLang = "qt_ko";
         break;
     case QLocale::English:
     default:
         languagePath += "en_US.qm";
+        qtLang = "qt_en";
         break;
     }
 
@@ -223,6 +273,27 @@ void installTranslator()
         qWarning() << "Failed to load translation file:" << languagePath;
     }
     qApp->installTranslator(&translator);
+
+    // 加载 Qt 自带的基础翻译（如输入框右键菜单的“复制/粘贴/撤销”等标准控件文字）
+    // 优先从应用资源加载（已打包 qt_zh_CN.qm，不依赖 Qt 安装路径），失败时回退到
+    // Qt 安装目录下的翻译文件夹。
+    bool qtTrLoaded = false;
+    if (language == QLocale::Chinese) {
+        qtTrLoaded = qtTranslator.load(QStringLiteral(":/i18n/qt_zh_CN.qm"));
+    }
+    if (!qtTrLoaded) {
+        const QString qtTrPath = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+        qtTrLoaded = qtTranslator.load(qtLang, qtTrPath);
+    }
+    if (!qtTrLoaded) {
+        qWarning() << "Failed to load Qt base translation:" << qtLang;
+    }
+    qApp->installTranslator(&qtTranslator);
+
+    // 中文界面下补齐 Qt 缺失的标准文本控件右键菜单文案
+    if (language == QLocale::Chinese) {
+        qApp->installTranslator(&textControlTranslator);
+    }
 }
 
 QtMsgType covertLogLevel(const QString &logLevel)

@@ -29,9 +29,9 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-// FFmpeg 5.1 moved the channel layout fields of AVCodecContext/AVFrame to
-// AVChannelLayout. Keep both code paths so the same source builds against the
-// scrcpy packaged FFmpeg (4.x) and newer builds.
+// FFmpeg 5.1 将 AVCodecContext/AVFrame 的声道布局字段迁移到了
+// AVChannelLayout。保留两套代码路径，使同一份源码既能针对 scrcpy 打包的
+// FFmpeg（4.x）编译，也能针对更新版本编译。
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 28, 100)
 #define FFMPEG_HAS_CH_LAYOUT 1
 #else
@@ -40,11 +40,11 @@ extern "C" {
 
 namespace
 {
-const int kMaxVideoQueue = 8;          // frames, ~250ms at 30fps
-const int kAudioPendingMaxMs = 250;    // jitter buffer ceiling for sndcpy's TCP stream
-const int kAudioWarmupMs = 100;        // discard the sndcpy startup backlog
-const int kAudioPumpPeriodMs = 5;      // audio clock pump interval
-const int kAudioCatchUpMaxMs = 200;    // max catch-up after a stalled encoder
+const int kMaxVideoQueue = 8;          // 帧数，30fps 下约 250ms
+const int kAudioPendingMaxMs = 250;    // sndcpy TCP 流的抖动缓冲上限
+const int kAudioWarmupMs = 100;        // 丢弃 sndcpy 启动时的积压数据
+const int kAudioPumpPeriodMs = 5;      // 音频时钟泵送间隔
+const int kAudioCatchUpMaxMs = 200;    // 编码器卡顿后最多追帧时长
 
 const char *kVideoEncoderCandidates[] = {
     "libx264",
@@ -110,12 +110,12 @@ public:
     SwrContext *swr = nullptr;
 
     std::deque<VideoFrame> vQueue;
-    // sndcpy delivers a raw byte stream: keep bytes until a whole PCM frame
+    // sndcpy 提供的是原始字节流：需缓存字节直到凑满一整帧 PCM
     // (or a whole AAC frame) can be consumed. Never split on TCP boundaries.
     std::vector<uint8_t> audioPending;
-    std::vector<int16_t> audioAccum; // interleaved s16 samples, worker only
+    std::vector<int16_t> audioAccum; // 交错存放的 s16 样本，仅工作线程使用
     int audioFrameSize = 1024;
-    qint64 audioWrittenSamples = 0; // logical audio timeline, worker/stop only
+    qint64 audioWrittenSamples = 0; // 逻辑音频时间轴，仅工作线程/停止时使用
     std::mutex queueMutex;
     std::condition_variable queueCv;
     std::thread worker;
@@ -123,7 +123,7 @@ public:
     std::atomic<bool> running{false};
     std::atomic<bool> stopping{false};
     VideoRecorder *owner = nullptr;
-    bool started = false; // start() succeeded, stop() must join the worker
+    bool started = false; // start() 成功后置 true，stop() 必须等待工作线程结束
     bool headerWritten = false;
     bool failed = false;
     QString error;
@@ -179,7 +179,7 @@ bool VideoRecorder::Impl::open(const QString &path, int width, int height, int v
         return false;
     }
 
-    // Audio is best effort: a missing AAC encoder must not break video capture.
+    // 音频是尽力而为：缺少 AAC 编码器时不得影响视频采集。
     audioEnabled = (sampleRate > 0 && channels > 0) && initAudio(audioBitrate);
     if (!audioEnabled) {
         qWarning() << "VideoRecorder: audio track disabled";
@@ -373,8 +373,8 @@ bool VideoRecorder::Impl::initAudio(int audioBitrate)
         return false;
     }
 
-    // The stream must only be added once the encoder is fully initialized,
-    // otherwise avformat_write_header() fails on the empty stream.
+    // 流必须在编码器完全初始化后才能添加，否则 avformat_write_header()
+    // 会因空流而失败。
     aStream = avformat_new_stream(fmt, nullptr);
     if (!aStream) {
         av_frame_free(&aFrame);
@@ -412,8 +412,8 @@ void VideoRecorder::Impl::workerLoop()
         bool hasV = false;
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            // Audio is driven by the wall clock, not by packet arrival, so the
-            // worker also wakes periodically to pad silence during sndcpy gaps.
+            // 音频由墙上时钟驱动，而非由数据包到达驱动，因此工作线程会周期性
+            // 唤醒，在 sndcpy 出现空隙时填充静音。
             queueCv.wait_for(lock, std::chrono::milliseconds(kAudioPumpPeriodMs),
                              [this]() { return stopping.load() || !vQueue.empty(); });
             if (!vQueue.empty()) {
@@ -535,8 +535,8 @@ bool VideoRecorder::Impl::encodeAudioFrame(const int16_t *samples, int nbSamples
         return false;
     }
 
-    // Always feed a full AAC frame: short frames make the encoder pad silence
-    // after every TCP packet, which stretches and chops the audio.
+    // 始终喂入完整的 AAC 帧：过短的帧会让编码器在每收到一个 TCP 包后都填充静音，
+    // 导致音频被拉长并割裂。
     const uint8_t *inData[1] = {reinterpret_cast<const uint8_t *>(samples)};
     ret = swr_convert(swr, aFrame->data, nbSamples, inData, nbSamples);
     if (ret < 0) {
@@ -574,8 +574,8 @@ bool VideoRecorder::Impl::pumpAudio()
         return true;
     }
 
-    // Audio PTS follows the same wall clock as the video PTS. Any missing
-    // sndcpy data is padded with silence instead of shortening the timeline.
+    // 音频 PTS 与视频 PTS 使用同一个墙上时钟。任何缺失的 sndcpy 数据都用静音填充，
+    // 而不是缩短时间轴。
     const qint64 elapsedMs = clock.elapsed();
     const qint64 expected = elapsedMs * sampleRate / 1000;
     qint64 due = expected - audioWrittenSamples;
@@ -593,17 +593,17 @@ bool VideoRecorder::Impl::pumpAudio()
     int silence = 0;
     {
         std::lock_guard<std::mutex> lock(queueMutex);
-        // sndcpy dumps its startup buffer in one burst. Drop that backlog so
-        // the audio content is not 100-200ms behind the video from frame one.
+        // sndcpy 在启动时会一次性倾泻其缓冲区。丢弃这笔积压，
+        // 避免音频从第一帧起就落后视频 100-200ms。
         size_t discard = 0;
-        // Keep a small (40ms) jitter buffer even during warmup: dropping every
-        // byte would create an audible silence gap until the next burst.
+        // 即便在预热阶段也保留一个较小的（40ms）抖动缓冲：若每个
+        // 字节都丢弃，下一次突发到来前会出现可察觉的静音空隙。
         const size_t targetPending = static_cast<size_t>(sampleRate) * bytesPerSample * 40 / 1000;
         const size_t maxPending = static_cast<size_t>(sampleRate) * bytesPerSample * kAudioPendingMaxMs / 1000;
         const size_t limit = (elapsedMs < kAudioWarmupMs) ? targetPending : maxPending;
         if (audioPending.size() > limit) {
             discard = audioPending.size() - limit;
-            discard -= discard % bytesPerSample; // keep the PCM sample boundary
+            discard -= discard % bytesPerSample; // 保持 PCM 采样边界对齐
         }
         if (discard > 0) {
             audioPending.erase(audioPending.begin(), audioPending.begin() + discard);
@@ -782,7 +782,7 @@ void VideoRecorder::pushVideoFrame(const uint8_t *dataY, const uint8_t *dataU, c
 
     std::lock_guard<std::mutex> lock(m_impl->queueMutex);
     if (m_impl->vQueue.size() >= static_cast<size_t>(kMaxVideoQueue)) {
-        m_impl->vQueue.pop_front(); // drop the oldest frame, never block the decoder
+        m_impl->vQueue.pop_front(); // 丢弃最旧的帧，绝不阻塞解码器
     }
     m_impl->vQueue.emplace_back(std::move(frame));
     m_impl->queueCv.notify_one();
@@ -801,8 +801,7 @@ void VideoRecorder::pushAudioData(const char *data, int size)
 
     const uint8_t *begin = reinterpret_cast<const uint8_t *>(data);
     std::lock_guard<std::mutex> lock(m_impl->queueMutex);
-    // Keep a byte level stream. TCP read boundaries are arbitrary: a leftover
-    // half sample must stay until the next packet arrives.
+    // 保持字节级流。TCP 读取边界是任意的：残留的半个样本必须保留到下一个包到达。
     m_impl->audioPending.insert(m_impl->audioPending.end(), begin, begin + size);
 
     const size_t maxPending =
@@ -835,8 +834,8 @@ void VideoRecorder::stop()
     const qint64 durationMs = m_impl->clock.elapsed();
     bool ok = !m_impl->failed;
     if (m_impl->headerWritten) {
-        // Align the audio timeline with the final video frame and emit the
-        // last (silence padded) AAC frame before closing the file.
+        // 将音频时间轴与最后一帧视频对齐，并在关闭文件前输出最后一帧
+        //（已用静音填充）AAC 帧。
         ok = m_impl->pumpAudio() && ok;
         m_impl->flushAudioAccumulator();
         ok = m_impl->flushEncoders() && ok;
@@ -861,8 +860,7 @@ void VideoRecorder::stop()
         return;
     }
     if (!ok) {
-        // Keep the unfinished file next to the target so the user can still try
-        // to recover it, and report the failure.
+        // 将未完成的文件保留在目标文件旁边，方便用户尝试恢复，并上报失败。
         QFile::remove(finalPath);
         const QString partPath = finalPath + ".part";
         if (tempPath != partPath) {

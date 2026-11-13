@@ -36,13 +36,13 @@ void InputConvertGame::mouseEvent(const QMouseEvent *from, const QSize &frameSiz
 
     if (!m_needBackMouseMove && m_gameMap) {
         updateSize(frameSize, showSize);
-        // mouse move
+        // 鼠标移动
         if (m_keyMap.isValidMouseMoveMap()) {
             if (processMouseMove(from)) {
                 return;
             }
         }
-        // mouse click
+        // 鼠标点击
         if (processMouseClick(from)) {
             return;
         }
@@ -87,7 +87,7 @@ void InputConvertGame::keyEvent(const QKeyEvent *from, const QSize &frameSize, c
             return;
         }
 
-        // small eyes
+        // 小眼睛（辅助按键）
         if (m_keyMap.isValidMouseMoveMap() && from->key() == m_keyMap.getMouseMoveMap().data.mouseMove.smallEyes.key) {
             m_ctrlMouseMove.smallEyes = (QEvent::KeyPress == from->type());
 
@@ -154,7 +154,7 @@ void InputConvertGame::updateSize(const QSize &frameSize, const QSize &showSize)
     if (showSize != m_showSize) {
         if (m_gameMap && m_keyMap.isValidMouseMoveMap()) {
 #ifdef QT_NO_DEBUG
-            // show size change, resize grab cursor
+            // 显示尺寸变化，重置抓取光标
             emit grabCursor(true);
 #endif
         }
@@ -320,18 +320,18 @@ void InputConvertGame::processSteerWheel(const KeyMap::KeyMapNode &node, const Q
 {
     int key = from->key();
     bool flag = from->type() == QEvent::KeyPress;
-    // identify keys
+    // 识别按键
     if (key == node.data.steerWheel.up.key) {
         m_ctrlSteerWheel.pressedUp = flag;
     } else if (key == node.data.steerWheel.right.key) {
         m_ctrlSteerWheel.pressedRight = flag;
     } else if (key == node.data.steerWheel.down.key) {
         m_ctrlSteerWheel.pressedDown = flag;
-    } else { // left
+    } else { // 左
         m_ctrlSteerWheel.pressedLeft = flag;
     }
 
-    // calc offset and pressed number
+    // 计算偏移量与按下的按键数
     QPointF offset(0.0, 0.0);
     int pressedNum = 0;
     if (m_ctrlSteerWheel.pressedUp) {
@@ -352,7 +352,7 @@ void InputConvertGame::processSteerWheel(const KeyMap::KeyMapNode &node, const Q
     }
     m_ctrlSteerWheel.delayData.pressedNum = pressedNum;
 
-    // last key release and timer no active, active timer to detouch
+    // 最后一个按键松开且定时器未激活时，启动定时器解除触控
     if (pressedNum == 0) {
         if (m_ctrlSteerWheel.delayData.timer->isActive()) {
             m_ctrlSteerWheel.delayData.timer->stop();
@@ -365,12 +365,12 @@ void InputConvertGame::processSteerWheel(const KeyMap::KeyMapNode &node, const Q
         return;
     }
 
-    // process steer wheel key event
+    // 处理方向盘按键事件
     m_ctrlSteerWheel.delayData.timer->stop();
     m_ctrlSteerWheel.delayData.queueTimer.clear();
     m_ctrlSteerWheel.delayData.queuePos.clear();
 
-    // first press, get key and touch down
+    // 首次按下，获取按键并落下触控
     if (pressedNum == 1 && flag) {
         m_ctrlSteerWheel.touchKey = from->key();
         int id = attachTouchID(m_ctrlSteerWheel.touchKey);
@@ -434,7 +434,7 @@ void InputConvertGame::processKeyClickMulti(const KeyMap::DelayClickNode *nodes,
             sendTouchDownEvent(id, clickPos);
         });
 
-        // Don't up it too fast
+        // 不要过快抬起
         delay += 20;
         QTimer::singleShot(delay, this, [this, key, clickPos]() {
             int id = getTouchID(key);
@@ -472,7 +472,7 @@ void InputConvertGame::onDragTimer() {
 void InputConvertGame::processKeyDrag(const QPointF &startPos, QPointF endPos, quint32 startDelay, float dragSpeed, const QKeyEvent *from)
 {
     if (QEvent::KeyPress == from->type()) {
-        // stop last
+        // 停止上一次
         if (m_dragDelayData.timer && m_dragDelayData.timer->isActive()) {
             m_dragDelayData.timer->stop();
             delete m_dragDelayData.timer;
@@ -487,7 +487,7 @@ void InputConvertGame::processKeyDrag(const QPointF &startPos, QPointF endPos, q
             m_dragDelayData.pressKey = 0;
         }
 
-        // start this
+        // 启动本次
         int id = attachTouchID(from->key());
         sendTouchDownEvent(id, startPos);
 
@@ -499,14 +499,14 @@ void InputConvertGame::processKeyDrag(const QPointF &startPos, QPointF endPos, q
         m_dragDelayData.queuePos.clear();
         m_dragDelayData.queueTimer.clear();
 
-        // Clamp dragSpeed to 0-1 range
+        // 将 dragSpeed 限制在 0-1 范围
         const float speed = qBound(0.0f, static_cast<float>(dragSpeed), 1.0f);
         
-        // Calculate delays based on dragSpeed
-        // dragSpeed = 1 -> minDelay = 1, maxDelay = 2 (fastest)
-        // dragSpeed = 0 -> minDelay = 30, maxDelay = 40 (slowest)
+        // 根据 dragSpeed 计算延迟
+        // dragSpeed = 1 -> minDelay = 1, maxDelay = 2（最快）
+        // dragSpeed = 0 -> minDelay = 30, maxDelay = 40（最慢）
         const quint32 minDelay = static_cast<quint32>(1 + (1.0f - speed) * 29);  // 1 to 30
-        const quint32 maxDelay = minDelay + static_cast<quint32>((1.0f - speed) * 9) + 1;  // // min + (0 to 9) + 1
+        const quint32 maxDelay = minDelay + static_cast<quint32>((1.0f - speed) * 9) + 1;  // 最小值 + (0 到 9) + 1
 
         getDelayQueue(startPos, endPos,
                       0.01f, 0.0005f,
@@ -661,14 +661,13 @@ void InputConvertGame::moveCursorTo(const QMouseEvent *from, const QPoint &local
     globalPos -= posOffset;
     //qDebug()<<"move cursor to "<<globalPos<<" offset "<<posOffset;
 #ifdef Q_OS_MACOS
-    // On macOS, QCursor::setPos() posts a synthetic mouse-moved event (CGEventPost)
-    // and does NOT re-associate the hardware mouse with the on-screen cursor, so the
-    // warp does not "stick": the next hardware delta snaps the cursor back. That makes
-    // mouseMoveMap re-centering a no-op, and the camera can no longer pan past the edge.
-    // CGWarpMouseCursorPosition performs a real warp, and
-    // CGAssociateMouseAndMouseCursorPosition(true) immediately restores the
-    // mouse<->cursor association so subsequent hardware deltas keep flowing. This
-    // mirrors the approach already used in util/mousetap/cocoamousetap.mm.
+    // 在 macOS 上，QCursor::setPos() 会发送一个合成的鼠标移动事件（CGEventPost），
+    // 且不会将硬件鼠标与屏幕光标重新关联，因此光标“瞬移”不会保持：下一次硬件位移
+    // 会把光标拉回原位。这使得 mouseMoveMap 的重新居中失效，相机也无法再平移越过边缘。
+    // CGWarpMouseCursorPosition 执行真正的瞬移，而
+    // CGAssociateMouseAndMouseCursorPosition(true) 会立即恢复
+    // 鼠标<->光标的关联，使后续的硬件位移持续生效。这
+    // 与 util/mousetap/cocoamousetap.mm 中已采用的实现方式一致。
     CGWarpMouseCursorPosition(CGPointMake(globalPos.x(), globalPos.y()));
     CGAssociateMouseAndMouseCursorPosition(true);
 #else
@@ -721,7 +720,7 @@ bool InputConvertGame::switchGameMap()
         return m_gameMap;
     }
 #ifdef QT_NO_DEBUG
-    // grab cursor and set cursor only mouse move map
+    // 仅在鼠标移动映射时抓取并设置光标
     emit grabCursor(m_gameMap);
 #endif
     hideMouseCursor(m_gameMap);
@@ -751,7 +750,7 @@ void InputConvertGame::timerEvent(QTimerEvent *event)
 {
     if (m_ctrlMouseMove.timer == event->timerId()) {
         stopMouseMoveTimer();
-        // Don't auto-reset view when smallEyes mode is active
+        // 小眼睛模式激活时不自动重置视角
         if (!m_ctrlMouseMove.smallEyes) {
             mouseMoveStopTouch();
         }

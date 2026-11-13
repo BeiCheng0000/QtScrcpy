@@ -50,17 +50,17 @@ void KeepRatioWidget::adjustSubWidget()
     int width = 0;
     int height = 0;
     if (m_widthHeightRatio > 1.0f) {
-        // base width
+        // 基准宽度
         width = curSize.width();
         height = curSize.width() / m_widthHeightRatio;
         pos.setY((curSize.height() - height) / 2);
     } else if (m_widthHeightRatio > 0.0f) {
-        // base height
+        // 基准高度
         height = curSize.height();
         width = curSize.height() * m_widthHeightRatio;
         pos.setX((curSize.width() - width) / 2);
     } else {
-        // full widget
+        // 完整控件
         height = curSize.height();
         width = curSize.width();
     }
