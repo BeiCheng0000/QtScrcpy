@@ -562,6 +562,27 @@ void Dialog::saveAdvancedConfig()
         pushPath += '/';
     }
 
+    // ADB 路径：允许填目录（自动补 adb.exe），并校验文件确实存在，
+    // 避免保存一个无效路径后在运行时被静默忽略、退回内置 adb。
+    QString adbPath = m_configAdbPathEdit->text().trimmed();
+    if (!adbPath.isEmpty()) {
+        QFileInfo adbInfo(adbPath);
+        if (adbInfo.isDir()) {
+#ifdef Q_OS_WIN32
+            adbInfo = QFileInfo(QDir(adbPath).absoluteFilePath("adb.exe"));
+#else
+            adbInfo = QFileInfo(QDir(adbPath).absoluteFilePath("adb"));
+#endif
+        }
+        if (!adbInfo.isFile()) {
+            QMessageBox::warning(this, tr("Invalid ADB path"),
+                                 tr("ADB executable not found:\n%1").arg(adbPath));
+            return;
+        }
+        adbPath = adbInfo.absoluteFilePath();
+        m_configAdbPathEdit->setText(adbPath);
+    }
+
     QMap<QString, QVariant> values;
     values.insert("Language", m_configLanguageBox->currentData());
     values.insert("WindowTitle", m_configTitleEdit->text().trimmed());
@@ -570,7 +591,7 @@ void Dialog::saveAdvancedConfig()
     values.insert("RenderExpiredFrames", m_configRenderExpiredCheck->isChecked() ? 1 : 0);
     values.insert("UseDesktopOpenGL", m_configOpenGlBox->currentData());
     values.insert("ServerPath", m_configServerPathEdit->text().trimmed());
-    values.insert("AdbPath", m_configAdbPathEdit->text().trimmed());
+    values.insert("AdbPath", adbPath);
     values.insert("CodecOptions", m_configCodecOptionsEdit->text().trimmed());
     values.insert("CodecName", m_configCodecNameEdit->text().trimmed());
     values.insert("LogLevel", m_configLogLevelBox->currentData());
@@ -579,6 +600,9 @@ void Dialog::saveAdvancedConfig()
         QMessageBox::warning(this, tr("Save failed"), tr("Unable to save config.ini."));
         return;
     }
+    // 立即应用新的 ADB 路径，无需重启；路径为空表示回退到内置 adb
+    qsc::AdbProcess::setAdbPath(adbPath);
+    outLog(adbPath.isEmpty() ? tr("ADB path: bundled adb") : tr("ADB path: %1").arg(adbPath));
     m_configPushPathEdit->setText(pushPath);
     QMessageBox::information(this, tr("Configuration saved"),
                              tr("The settings were saved to config.ini. Restart QtScrcpy for all changes to take effect."));

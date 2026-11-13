@@ -29,8 +29,11 @@ AdbProcessImpl::~AdbProcessImpl()
 const QString &AdbProcessImpl::getAdbPath()
 {
     if (s_adbPath.isEmpty()) {
+        // 优先级：用户在高级设置中显式配置的路径 > 环境变量 > 程序目录自带的 adb。
+        // 注意：显式配置必须排在最前，否则会被 main() 里设置的默认环境变量长期压住。
         QStringList potentialPaths;
-        potentialPaths << QString::fromLocal8Bit(qgetenv("QTSCRCPY_ADB_PATH")) << g_adbPath
+        potentialPaths << g_adbPath
+                       << QString::fromLocal8Bit(qgetenv("QTSCRCPY_ADB_PATH"))
 #ifdef Q_OS_WIN32
                        << QCoreApplication::applicationDirPath() + "/adb.exe";
 #else
@@ -38,9 +41,20 @@ const QString &AdbProcessImpl::getAdbPath()
 #endif
 
         for (const QString &path : potentialPaths) {
+            if (path.trimmed().isEmpty()) {
+                continue;
+            }
             QFileInfo fileInfo(path);
-            if (!path.isEmpty() && fileInfo.isFile()) {
-                s_adbPath = path;
+            // 用户可能填的是目录（例如 C:\Windows\System32），自动补上可执行文件名
+            if (fileInfo.isDir()) {
+#ifdef Q_OS_WIN32
+                fileInfo = QFileInfo(QDir(path).absoluteFilePath("adb.exe"));
+#else
+                fileInfo = QFileInfo(QDir(path).absoluteFilePath("adb"));
+#endif
+            }
+            if (fileInfo.isFile()) {
+                s_adbPath = fileInfo.absoluteFilePath();
                 break;
             }
         }
@@ -53,6 +67,11 @@ const QString &AdbProcessImpl::getAdbPath()
         }
     }
     return s_adbPath;
+}
+
+void AdbProcessImpl::resetAdbPath()
+{
+    s_adbPath.clear();
 }
 
 void AdbProcessImpl::initSignals()

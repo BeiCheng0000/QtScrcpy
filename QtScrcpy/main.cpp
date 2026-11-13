@@ -58,14 +58,23 @@ int main(int argc, char *argv[])
     }
 
     // set env
+    // 只在未设置时填充默认值，避免覆盖用户环境变量/高级设置中显式配置的路径。
 #ifdef Q_OS_WIN32
-    qputenv("QTSCRCPY_ADB_PATH", "../../../QtScrcpy/QtScrcpyCore/src/third_party/adb/win/adb.exe");
-    qputenv("QTSCRCPY_SERVER_PATH", "../../../QtScrcpy/QtScrcpyCore/src/third_party/scrcpy-server");
+    if (qgetenv("QTSCRCPY_ADB_PATH").isEmpty()) {
+        qputenv("QTSCRCPY_ADB_PATH", "../../../QtScrcpy/QtScrcpyCore/src/third_party/adb/win/adb.exe");
+    }
+    if (qgetenv("QTSCRCPY_SERVER_PATH").isEmpty()) {
+        qputenv("QTSCRCPY_SERVER_PATH", "../../../QtScrcpy/QtScrcpyCore/src/third_party/scrcpy-server");
+    }
 #endif
 
 #ifdef Q_OS_MACOS
-    qputenv("QTSCRCPY_ADB_PATH", "../../../../../../QtScrcpy/QtScrcpyCore/src/third_party/adb/mac/adb");
-    qputenv("QTSCRCPY_SERVER_PATH", "../../../../../../QtScrcpy/QtScrcpyCore/src/third_party/scrcpy-server");
+    if (qgetenv("QTSCRCPY_ADB_PATH").isEmpty()) {
+        qputenv("QTSCRCPY_ADB_PATH", "../../../../../../QtScrcpy/QtScrcpyCore/src/third_party/adb/mac/adb");
+    }
+    if (qgetenv("QTSCRCPY_SERVER_PATH").isEmpty()) {
+        qputenv("QTSCRCPY_SERVER_PATH", "../../../../../../QtScrcpy/QtScrcpyCore/src/third_party/scrcpy-server");
+    }
 #endif
 
 #ifdef Q_OS_LINUX

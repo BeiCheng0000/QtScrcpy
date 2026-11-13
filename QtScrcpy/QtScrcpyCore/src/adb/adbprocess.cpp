@@ -29,6 +29,8 @@ AdbProcess::~AdbProcess()
 void AdbProcess::setAdbPath(const QString &adbPath)
 {
     g_adbPath = adbPath;
+    // 清除缓存，使新设置的路径立即生效（否则进程内会一直沿用首次解析的结果）
+    AdbProcessImpl::resetAdbPath();
 }
 
 void AdbProcess::execute(const QString &serial, const QStringList &args)

@@ -28,6 +28,8 @@ public:
     QString getErrorOut();
 
     static const QString &getAdbPath();
+    // 清除已解析的 adb 路径缓存，使新的配置立即生效
+    static void resetAdbPath();
 
 signals:
     void adbProcessImplResult(qsc::AdbProcess::ADB_EXEC_RESULT processResult);
