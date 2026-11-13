@@ -54,6 +54,12 @@ private:
     QString buildRecordFilePath() const;
     void openRecordFolder(const QString &filePath) const;
 
+    // Keep the window geometry in sync with the video aspect ratio. Without
+    // this, maximizing (or restoring from minimize) leaves a huge letterbox.
+    QSize fittedWindowSize(bool fillScreen);
+    void fitWindowToFrame(bool fillScreen);
+    bool hasExcessiveLetterbox() const;
+
     void onFrame(int width, int height, uint8_t* dataY, uint8_t* dataU, uint8_t* dataV,
                  int linesizeY, int linesizeU, int linesizeV) override;
     // VideoToolbox Metal 路径帧回调（仅 macOS arm64）
@@ -86,6 +92,7 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
 
     void paintEvent(QPaintEvent *) override;
+    void changeEvent(QEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
@@ -116,6 +123,15 @@ private:
     QPointer<VideoRecorder> m_recorder;
     QString m_recordAudioKey;
     bool m_closing = false;
+
+    // Smart-maximize toggle state. On maximize we grow the picture to the
+    // largest size the screen can hold (instead of leaving black bands) but
+    // keep the window in the normal state, so the native maximize/restore
+    // button still toggles it. These fields remember the pre-maximize geometry
+    // and whether a smart maximize is currently active.
+    bool m_smartMaximized = false;
+    QRect m_restoredGeometry;
+    bool m_stateAdjusting = false;
 
     //inside member
     QSize m_frameSize;

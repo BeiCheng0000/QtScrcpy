@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QEvent>
 #include <QFileInfo>
 #include <QLabel>
 #include <QMessageBox>
@@ -602,51 +603,116 @@ QMargins VideoForm::getMargins(bool vertical)
     return margins;
 }
 
+QSize VideoForm::fittedWindowSize(bool fillScreen)
+{
+    if (m_frameSize.isEmpty() || m_widthHeightRatio <= 0.0f) {
+        return QSize();
+    }
+    const QRect screenRect = getScreenRect();
+    if (screenRect.isEmpty()) {
+        return QSize();
+    }
+
+    const bool vertical = m_widthHeightRatio < 1.0f;
+    // Skin margins are drawn as the phone frame; they are part of the window
+    // but not part of the picture, so exclude them from the available area.
+    const QMargins skin = m_skin ? getMargins(vertical) : QMargins();
+    const int availW = screenRect.width() - skin.left() - skin.right();
+    const int availH = screenRect.height() - skin.top() - skin.bottom();
+    if (availW <= 0 || availH <= 0) {
+        return QSize();
+    }
+
+    QSize videoSize;
+    if (fillScreen) {
+        // "Maximize" should grow the picture, not the black borders: take the
+        // largest rectangle with the device aspect ratio that still fits the
+        // screen's available geometry.
+        const int maxW = qMax(1, availW - 20);
+        const int maxH = qMax(1, availH - 20);
+        int w = maxW;
+        int h = static_cast<int>(w / m_widthHeightRatio + 0.5);
+        if (h > maxH) {
+            h = maxH;
+            w = static_cast<int>(h * m_widthHeightRatio + 0.5);
+        }
+        videoSize = QSize(w, h);
+    } else if (vertical) {
+        const int h = qMin(m_frameSize.height(), screenRect.height() - 200);
+        videoSize = QSize(static_cast<int>(h * m_widthHeightRatio + 0.5), h);
+    } else {
+        const int w = qMin(m_frameSize.width(), screenRect.width() / 2);
+        videoSize = QSize(w, static_cast<int>(w / m_widthHeightRatio + 0.5));
+    }
+
+    QSize windowSize(videoSize.width() + skin.left() + skin.right(),
+                     videoSize.height() + skin.top() + skin.bottom());
+    windowSize.setWidth(qMin(windowSize.width(), screenRect.width()));
+    windowSize.setHeight(qMin(windowSize.height(), screenRect.height()));
+    return windowSize;
+}
+
+bool VideoForm::hasExcessiveLetterbox() const
+{
+    const QSize container = ui->keepRatioWidget->size();
+    const QSize video = ui->keepRatioWidget->goodSize();
+    if (container.isEmpty() || video.isEmpty()) {
+        return false;
+    }
+    const qreal fill = qreal(video.width()) * video.height() /
+                       (qreal(container.width()) * container.height());
+    // The phone skin occupies the margins, so a healthy window is nearly
+    // 100% picture; anything below 70% is a visible empty band.
+    return fill < 0.70;
+}
+
+void VideoForm::fitWindowToFrame(bool fillScreen)
+{
+    if (isMinimized() || isFullScreen()) {
+        return;
+    }
+    const bool wasMaximized = isMaximized();
+    if (wasMaximized) {
+        showNormal();
+    }
+    const QSize fitted = fittedWindowSize(fillScreen);
+    if (fitted.isEmpty()) {
+        return;
+    }
+
+    // resizeEvent used to pin a minimum size derived from the maximized
+    // video; clear it so the window may shrink back to the fitted size.
+    setMinimumSize(0, 0);
+    if (!wasMaximized && fitted == size()) {
+        return;
+    }
+    resize(fitted);
+    if (m_skin) {
+        updateStyleSheet(m_widthHeightRatio < 1.0f);
+    }
+    moveCenter();
+}
+
 void VideoForm::updateShowSize(const QSize &newSize)
 {
-    if (m_frameSize != newSize) {
-        m_frameSize = newSize;
-
-        m_widthHeightRatio = 1.0f * newSize.width() / newSize.height();
-        ui->keepRatioWidget->setWidthHeightRatio(m_widthHeightRatio);
-
-        bool vertical = m_widthHeightRatio < 1.0f ? true : false;
-        QSize showSize = newSize;
-        QRect screenRect = getScreenRect();
-        if (screenRect.isEmpty()) {
-            qWarning() << "getScreenRect is empty";
-            return;
-        }
-        if (vertical) {
-            showSize.setHeight(qMin(newSize.height(), screenRect.height() - 200));
-            showSize.setWidth(showSize.height() * m_widthHeightRatio);
-        } else {
-            showSize.setWidth(qMin(newSize.width(), screenRect.width() / 2));
-            showSize.setHeight(showSize.width() / m_widthHeightRatio);
-        }
-
-        if (isFullScreen() && qsc::IDeviceManage::getInstance().getDevice(m_serial)) {
-            switchFullScreen();
-        }
-
-        if (isMaximized()) {
-            showNormal();
-        }
-
-        if (m_skin) {
-            QMargins m = getMargins(vertical);
-            showSize.setWidth(showSize.width() + m.left() + m.right());
-            showSize.setHeight(showSize.height() + m.top() + m.bottom());
-        }
-
-        if (showSize != size()) {
-            resize(showSize);
-            if (m_skin) {
-                updateStyleSheet(vertical);
-            }
-            moveCenter();
-        }
+    // Also called from the frame callbacks: a same-size call must stay a
+    // no-op, otherwise the window would fight any manual resize by the user.
+    if (m_frameSize == newSize) {
+        return;
     }
+    m_frameSize = newSize;
+
+    m_widthHeightRatio = 1.0f * newSize.width() / newSize.height();
+    ui->keepRatioWidget->setWidthHeightRatio(m_widthHeightRatio);
+
+    if (isFullScreen() && qsc::IDeviceManage::getInstance().getDevice(m_serial)) {
+        switchFullScreen();
+    }
+
+    if (isMaximized()) {
+        showNormal();
+    }
+    fitWindowToFrame(false);
 }
 
 void VideoForm::onVideoSessionChanged(const QSize &size, bool clientResized)
@@ -1190,6 +1256,61 @@ void VideoForm::paintEvent(QPaintEvent *paint)
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
+void VideoForm::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (m_stateAdjusting || event->type() != QEvent::WindowStateChange) {
+        return;
+    }
+    if (isFullScreen() || isMinimized()) {
+        return;  // Full screen / minimize are handled by their own paths.
+    }
+    const auto *stateEvent = static_cast<QWindowStateChangeEvent *>(event);
+    const bool wasMax = stateEvent->oldState() & Qt::WindowMaximized;
+    const bool isMax = windowState() & Qt::WindowMaximized;
+
+    if (isMax && !m_smartMaximized) {
+        // First maximize click: remember the geometry to restore, then grow the
+        // picture to the largest size the screen can hold instead of leaving
+        // huge black bands. The window stays in the normal state, so the native
+        // maximize/restore button keeps working as a real toggle.
+        m_restoredGeometry = normalGeometry();
+        m_smartMaximized = true;
+        m_stateAdjusting = true;
+        showNormal();
+        fitWindowToFrame(true);
+        m_stateAdjusting = false;
+    } else if (isMax && m_smartMaximized) {
+        // Second maximize click while already grown: restore the pre-maximize
+        // geometry so the button behaves like a real maximize/restore toggle.
+        m_smartMaximized = false;
+        m_stateAdjusting = true;
+        showNormal();
+        if (m_restoredGeometry.isValid()) {
+            setGeometry(m_restoredGeometry);
+        } else {
+            fitWindowToFrame(false);
+        }
+        if (m_skin) {
+            updateStyleSheet(m_widthHeightRatio < 1.0f);
+        }
+        m_stateAdjusting = false;
+    } else if (wasMax) {
+        // Leaving a real maximized state via the restore button.
+        m_smartMaximized = false;
+        m_stateAdjusting = true;
+        if (m_restoredGeometry.isValid()) {
+            setGeometry(m_restoredGeometry);
+        }
+        if (m_skin) {
+            updateStyleSheet(m_widthHeightRatio < 1.0f);
+        }
+        m_stateAdjusting = false;
+    } else if (hasExcessiveLetterbox()) {
+        fitWindowToFrame(false);
+    }
+}
+
 void VideoForm::showEvent(QShowEvent *event)
 {
     Q_UNUSED(event)
@@ -1201,7 +1322,14 @@ void VideoForm::showEvent(QShowEvent *event)
     ensureOnScreen();
     // 窗口显示后 Qt 仍可能根据尺寸/边框策略再做一次位置调整，
     // 故稍后复查一次，确保最终位置落在屏内。
-    QTimer::singleShot(300, this, [this]() { ensureOnScreen(); });
+    QTimer::singleShot(300, this, [this]() {
+        ensureOnScreen();
+        // A geometry saved from a maximized session can be far larger than the
+        // picture; shrink it back instead of showing huge black bars.
+        if (!isMaximized() && !isFullScreen() && !m_closing && hasExcessiveLetterbox()) {
+            fitWindowToFrame(false);
+        }
+    });
     if (!isFullScreen() && this->show_toolbar) {
         QTimer::singleShot(500, this, [this](){
             showToolForm(this->show_toolbar);
@@ -1220,27 +1348,11 @@ void VideoForm::resizeEvent(QResizeEvent *event)
         return;
     }
 
-    QSize goodSize = ui->keepRatioWidget->goodSize();
-    if (goodSize.isEmpty()) {
-        return;
-    }
-    QSize curSize = size();
-    // 限制VideoForm尺寸不能小于keepRatioWidget good size
-    if (m_widthHeightRatio > 1.0f) {
-        // hor
-        if (curSize.height() <= goodSize.height()) {
-            setMinimumHeight(goodSize.height());
-        } else {
-            setMinimumHeight(0);
-        }
-    } else {
-        // ver
-        if (curSize.width() <= goodSize.width()) {
-            setMinimumWidth(goodSize.width());
-        } else {
-            setMinimumWidth(0);
-        }
-    }
+    // KeepRatioWidget scales the picture to whatever space is available, so
+    // no minimum window size is needed. The old logic pinned a minimum derived
+    // from the *previous* (maximized) video size and prevented the window from
+    // shrinking back -- that was the source of the huge black borders after
+    // maximize/minimize.
 }
 
 void VideoForm::closeEvent(QCloseEvent *event)
@@ -1261,7 +1373,10 @@ void VideoForm::closeEvent(QCloseEvent *event)
     if (!device) {
         return;
     }
-    Config::getInstance().setRect(device->getSerial(), geometry());
+    // Never persist the maximized geometry: restoring it on the next connect
+    // would recreate an oversized window with large letterbox areas.
+    const QRect savedRect = isMaximized() ? normalGeometry() : geometry();
+    Config::getInstance().setRect(device->getSerial(), savedRect);
     device->disconnectDevice();
 }
 
