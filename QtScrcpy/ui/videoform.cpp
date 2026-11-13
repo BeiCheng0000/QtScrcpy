@@ -1324,10 +1324,18 @@ void VideoForm::showEvent(QShowEvent *event)
     // 故稍后复查一次，确保最终位置落在屏内。
     QTimer::singleShot(300, this, [this]() {
         ensureOnScreen();
-        // A geometry saved from a maximized session can be far larger than the
-        // picture; shrink it back instead of showing huge black bars.
-        if (!isMaximized() && !isFullScreen() && !m_closing && hasExcessiveLetterbox()) {
-            fitWindowToFrame(false);
+        // A geometry left over from a "smart maximized" session can be nearly
+        // as large as the screen. Dialog restores it verbatim with setGeometry,
+        // so the window starts grown while the toggle flag is reset: the first
+        // maximize click then appears to do nothing. Shrink such leftovers
+        // back to the normal fitted size on first show.
+        if (!isMaximized() && !isFullScreen() && !m_closing) {
+            const QSize fitted = fittedWindowSize(false);
+            const bool oversized = !fitted.isEmpty() &&
+                (width() > fitted.width() * 1.25 || height() > fitted.height() * 1.25);
+            if (hasExcessiveLetterbox() || oversized) {
+                fitWindowToFrame(false);
+            }
         }
     });
     if (!isFullScreen() && this->show_toolbar) {
@@ -1373,9 +1381,14 @@ void VideoForm::closeEvent(QCloseEvent *event)
     if (!device) {
         return;
     }
-    // Never persist the maximized geometry: restoring it on the next connect
-    // would recreate an oversized window with large letterbox areas.
-    const QRect savedRect = isMaximized() ? normalGeometry() : geometry();
+    // Never persist a grown geometry. "Smart maximize" keeps the window in the
+    // normal state, so an isMaximized() check alone would save the enlarged
+    // size and the next connect would start grown while the toggle flag is
+    // reset -- making the maximize/restore button look broken.
+    QRect savedRect = isMaximized() ? normalGeometry() : geometry();
+    if (m_smartMaximized && m_restoredGeometry.isValid()) {
+        savedRect = m_restoredGeometry;
+    }
     Config::getInstance().setRect(device->getSerial(), savedRect);
     device->disconnectDevice();
 }
