@@ -125,6 +125,7 @@ public:
     virtual void collapsePanel() = 0;
     virtual void rotateDevice() = 0;
     virtual void startApp(const QString &name) = 0;
+    virtual void startActivity(const QString &action) = 0;
     virtual void resizeDisplay(const QSize &size) = 0;
     virtual void postBackOrScreenOn(bool down) = 0;
     virtual void postTextInput(QString &text) = 0;
@@ -134,7 +135,7 @@ public:
     virtual void pushFileRequest(const QString &file, const QString &devicePath = "") = 0;
     virtual void installApkRequest(const QString &apkFile) = 0;
 
-    virtual void screenshot() = 0;
+    virtual bool screenshot() = 0;
     virtual void showTouch(bool show) = 0;
     virtual void setCameraTorch(bool on) { Q_UNUSED(on); }
     virtual void cameraZoomIn() {}

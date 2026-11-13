@@ -73,6 +73,7 @@ private:
     void initUI();
 
     void showToolForm(bool show = true);
+    void syncToolFormGeometry();
     void moveCenter();
     void installShortcut();
     QRect getScreenRect();

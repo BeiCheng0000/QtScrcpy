@@ -1,4 +1,7 @@
+#include <QApplication>
+#include <QClipboard>
 #include <QDir>
+#include <QImage>
 #include <QMessageBox>
 #include <QTimer>
 
@@ -155,16 +158,45 @@ void Device::updateScript(QString script)
     }
 }
 
-void Device::screenshot()
+bool Device::screenshot()
 {
     if (!m_decoder) {
+        return false;
+    }
+
+    bool copied = false;
+    m_decoder->peekFrame([&copied](int width, int height, uint8_t* dataRGB32) {
+        if (!dataRGB32 || width <= 0 || height <= 0) {
+            return;
+        }
+        QClipboard *clipboard = QApplication::clipboard();
+        if (!clipboard) {
+            return;
+        }
+
+        // VideoBuffer deletes the RGB buffer as soon as this callback returns,
+        // so the image must own a deep copy of the pixels before it reaches the
+        // system clipboard.
+        QImage image(dataRGB32, width, height, QImage::Format_RGB32);
+        clipboard->setImage(image.copy());
+        copied = true;
+    });
+    return copied;
+}
+
+void Device::startActivity(const QString &action)
+{
+    if (isCameraMode() || action.isEmpty()) {
         return;
     }
 
-    // screenshot
-    m_decoder->peekFrame([this](int width, int height, uint8_t* dataRGB32) {
-       saveFrame(width, height, dataRGB32);
+    AdbProcess *adb = new qsc::AdbProcess();
+    connect(adb, &qsc::AdbProcess::adbProcessResult, adb, [adb](qsc::AdbProcess::ADB_EXEC_RESULT result) {
+        if (qsc::AdbProcess::AER_SUCCESS_START != result) {
+            adb->deleteLater();
+        }
     });
+    adb->execute(getSerial(), QStringList() << "shell" << "am" << "start" << "-a" << action);
 }
 
 void Device::showTouch(bool show)
@@ -848,38 +880,6 @@ bool Device::isCurrentCustomKeymap()
         return false;
     }
     return m_controller->isCurrentCustomKeymap();
-}
-
-bool Device::saveFrame(int width, int height, uint8_t* dataRGB32)
-{
-    if (!dataRGB32) {
-        return false;
-    }
-
-    QImage rgbImage(dataRGB32, width, height, QImage::Format_RGB32);
-
-    // save
-    QString absFilePath;
-    QString fileDir(m_params.recordPath);
-    if (fileDir.isEmpty()) {
-        qWarning() << "please select record save path!!!";
-        return false;
-    }
-    QDateTime dateTime = QDateTime::currentDateTime();
-    QString fileName = dateTime.toString("_yyyyMMdd_hhmmss_zzz");
-    fileName = m_params.serial + fileName;
-    fileName.replace(":", "_");
-    fileName.replace(".", "_");
-    fileName += ".png";
-    QDir dir(fileDir);
-    absFilePath = dir.absoluteFilePath(fileName);
-    int ret = rgbImage.save(absFilePath, "PNG", 100);
-    if (!ret) {
-        return false;
-    }
-
-    qInfo() << "screenshot save to " << absFilePath;
-    return true;
 }
 
 }

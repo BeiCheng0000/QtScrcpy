@@ -2,6 +2,7 @@
 #define TOOLFORM_H
 
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QPointer>
 #include <QTimer>
 #include <QWidget>
@@ -15,6 +16,7 @@ namespace Ui
 }
 
 class Device;
+class QLabel;
 class ToolForm : public MagneticWidget
 {
     Q_OBJECT
@@ -30,6 +32,8 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
     void showEvent(QShowEvent *event);
     void hideEvent(QHideEvent *event);
@@ -55,13 +59,18 @@ private slots:
     void on_cameraZoomInBtn_clicked();
     void on_groupControlBtn_clicked();
     void on_openScreenBtn_clicked();
-    void on_clipboardBtn_clicked();
 
 private:
     void initStyle();
     void updateGroupControl();
     void updateCameraMode();
     void updateRecordUi();
+    void updateButtonSpacing();
+    void createSettingsMenu();
+    void showSettingsMenu();
+    void hideSettingsMenu();
+    void startActivity(const QString &action);
+    void showScreenshotHint();
 
 private:
     Ui::ToolForm *ui;
@@ -72,7 +81,11 @@ private:
     bool m_isHost = false;
     bool m_recording = false;
     QTimer m_recordTimer;
+    QTimer m_settingsMenuTimer;
+    QTimer m_toastTimer;
     QElapsedTimer m_recordElapsed;
+    QWidget *m_settingsMenu = nullptr;
+    QLabel *m_toast = nullptr;
 };
 
 #endif // TOOLFORM_H

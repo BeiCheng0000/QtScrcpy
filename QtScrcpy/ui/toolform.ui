@@ -17,8 +17,20 @@
    <string notr="true"/>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin">
+    <number>9</number>
+   </property>
    <property name="topMargin">
-    <number>30</number>
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>9</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>8</number>
    </property>
    <item>
     <widget class="QPushButton" name="groupControlBtn">
@@ -41,19 +53,6 @@
     </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item>
     <widget class="QPushButton" name="expandNotifyBtn">
      <property name="toolTip">
       <string>expand notify (Ctrl+N)</string>
@@ -66,7 +65,7 @@
    <item>
     <widget class="QPushButton" name="expandSettingsBtn">
      <property name="toolTip">
-      <string>expand settings panel (Ctrl+Alt+N)</string>
+      <string>系统设置（Ctrl+Alt+N，悬停展开更多）</string>
      </property>
      <property name="text">
       <string/>
@@ -186,7 +185,7 @@
    <item>
     <widget class="QPushButton" name="screenShotBtn">
      <property name="toolTip">
-      <string>screen shot</string>
+      <string>截图（复制到剪贴板）</string>
      </property>
      <property name="text">
       <string/>
@@ -233,16 +232,6 @@
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QPushButton" name="clipboardBtn">
-     <property name="toolTip">
-      <string>copy clipboard text</string>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-    </item>
   </layout>
  </widget>
  <resources/>

@@ -59,6 +59,7 @@ public:
     void collapsePanel() override;
     void rotateDevice() override;
     void startApp(const QString &name) override;
+    void startActivity(const QString &action) override;
     void resizeDisplay(const QSize &size) override;
     void postBackOrScreenOn(bool down) override;
     void postTextInput(QString &text) override;
@@ -68,7 +69,7 @@ public:
     void pushFileRequest(const QString &file, const QString &devicePath = "") override;
     void installApkRequest(const QString &apkFile) override;
 
-    void screenshot() override;
+    bool screenshot() override;
     void showTouch(bool show) override;
     void setCameraTorch(bool on) override;
     void cameraZoomIn() override;
@@ -84,7 +85,6 @@ public:
 
 private:
     void initSignals();
-    bool saveFrame(int width, int height, uint8_t* dataRGB32);
 
 private:
     // server relevant
