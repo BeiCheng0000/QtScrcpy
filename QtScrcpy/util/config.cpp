@@ -67,10 +67,13 @@
 #define COMMON_AUTO_START_AUDIO_DEF true
 
 #define COMMON_BITRATE_KEY "BitRate"
-#define COMMON_BITRATE_DEF 2000000
+// 12 Mbps：2 Mbps 在原生 1200×2000 分辨率下画面明显模糊（块效应 + 细节丢失）。
+// USB 与 5G Wi-Fi 的带宽都远高于此，提高码率不会降低画面同步率。
+#define COMMON_BITRATE_DEF 12000000
 
+// 默认按设备原生分辨率投屏（0=max_size 不限制），避免先缩放再放大造成的模糊。
 #define COMMON_MAX_SIZE_INDEX_KEY "MaxSizeIndex"
-#define COMMON_MAX_SIZE_INDEX_DEF 2
+#define COMMON_MAX_SIZE_INDEX_DEF 5
 
 #define COMMON_RECORD_FORMAT_INDEX_KEY "RecordFormatIndex"
 #define COMMON_RECORD_FORMAT_INDEX_DEF 0
@@ -164,6 +167,27 @@ Config::Config(QObject *parent) : QObject(parent)
 #endif
 
     qDebug()<<m_userData->childGroups();
+    migrateLegacyVideoQuality();
+}
+
+// 旧版本的默认码率只有 2 Mbps，在原生分辨率下画面明显模糊。
+// 这里把“仍是旧默认值”的用户一次性迁移到新的默认码率；
+// 用户显式设置过的其它码率保持不变。
+void Config::migrateLegacyVideoQuality()
+{
+    static const quint32 legacyDefaultBitRate = 2000000;
+
+    m_userData->beginGroup(GROUP_COMMON);
+    bool changed = false;
+    if (m_userData->contains(COMMON_BITRATE_KEY)
+        && m_userData->value(COMMON_BITRATE_KEY).toUInt() == legacyDefaultBitRate) {
+        m_userData->setValue(COMMON_BITRATE_KEY, COMMON_BITRATE_DEF);
+        changed = true;
+    }
+    m_userData->endGroup();
+    if (changed) {
+        m_userData->sync();
+    }
 }
 
 Config &Config::getInstance()

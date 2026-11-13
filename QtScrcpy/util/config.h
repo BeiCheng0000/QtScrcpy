@@ -15,7 +15,9 @@ struct UserBootConfig
     int recordFps = 30;
     int recordAudioBitrate = 128000;
     bool autoStartAudio    = true; // 设备连接后立刻启动 sndcpy 音频桥接
-    quint32 bitRate = 2000000;
+    // 12 Mbps：原画（1200×2000 级别）分辨率下 2 Mbps 会明显模糊；
+    // USB/Wi-Fi 带宽都足以承载，且不增加编码/传输延迟。
+    quint32 bitRate = 12000000;
     int maxSizeIndex = 0;
     int recordFormatIndex = 0;
     int lockOrientationIndex = 0;
@@ -103,6 +105,8 @@ private:
     const QString &getConfigPath();
     QString getDefaultConfigPath() const;
     void initializeConfig();
+    // 旧版本 2 Mbps 默认码率的一次性迁移
+    void migrateLegacyVideoQuality();
 
 private:
     static QString s_configPath;

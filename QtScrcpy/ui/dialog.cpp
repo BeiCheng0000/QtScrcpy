@@ -254,6 +254,27 @@ void Dialog::initUI()
     ui->maxSizeBox->addItem("1920");
     ui->maxSizeBox->addItem(tr("original"));
 
+    // 码率与分辨率联动：高分辨率（1920/原画）下码率过低会明显模糊，
+    // 这里只纠正“明显不匹配”的组合到可用下限，不影响画面同步率
+    //（USB 与 Wi-Fi 带宽远高于 12 Mbps，编码器码控也不是延迟瓶颈）。
+    ui->bitRateEdit->setToolTip(tr("建议 12 Mbps 或更高；原画分辨率下低于 8 Mbps 会明显模糊"));
+    connect(ui->maxSizeBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (index < 4) { // 0..3 依次为 640/720/1080/1280
+            return;
+        }
+        const quint32 current = getBitRate();
+        if (current >= 8000000) {
+            return;
+        }
+        ui->bitRateEdit->blockSignals(true);
+        ui->bitRateBox->blockSignals(true);
+        ui->bitRateEdit->setText(QString::number(12000000 / 1000000));
+        ui->bitRateBox->setCurrentText("Mbps");
+        ui->bitRateEdit->blockSignals(false);
+        ui->bitRateBox->blockSignals(false);
+        outLog(tr("已为高分辨率自动提升码率至 12 Mbps（可在设置中调整）"));
+    });
+
     ui->videoSourceBox->addItem(tr("display"));
     ui->videoSourceBox->addItem(tr("camera"));
     ui->cameraFacingBox->addItem(tr("back"));
@@ -1724,7 +1745,7 @@ void Dialog::on_codecModeBox_currentIndexChanged(int index)
     if (index == 0) {
         // 默认：恢复之前的设置
         if (m_prevBitRate == 0) {
-            ui->bitRateEdit->setText("2");
+            ui->bitRateEdit->setText("12");
             ui->bitRateBox->setCurrentText("Mbps");
         } else if (m_prevBitRate % 1000000 == 0) {
             ui->bitRateEdit->setText(QString::number(m_prevBitRate / 1000000));
