@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QCursor>
 #include <QEvent>
 #include <QFileInfo>
 #include <QLabel>
@@ -21,6 +22,7 @@
 #include <QStyleOption>
 #include <QTimer>
 #include <QUrl>
+#include <QVariantAnimation>
 #include <QWindow>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -48,6 +50,9 @@ VideoForm::VideoForm(bool framelessWindow, bool skin, bool showToolbar, int deco
     ui->setupUi(this);
     m_flexResizeTimer.setSingleShot(true);
     m_flexResizeTimer.setInterval(300);
+    // 全屏模式：轮询全局光标实现“贴屏幕右缘唤出工具栏，移出即收起”
+    m_fullscreenToolbarTimer.setInterval(80);
+    connect(&m_fullscreenToolbarTimer, &QTimer::timeout, this, &VideoForm::updateFullscreenToolbar);
     connect(&m_flexResizeTimer, &QTimer::timeout, this, [this]() {
         auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
         if (device && device->isFlexDisplay() && !m_pendingDisplaySize.isEmpty()) {
@@ -361,6 +366,170 @@ void VideoForm::syncToolFormGeometry()
     // 工具栏按钮就能贴到上下两端而不会出现空白条带。
     m_toolForm->resize(m_toolForm->width(), frameGeometry().height());
     m_toolForm->move(pos().x() + geometry().width(), pos().y());
+}
+
+#ifdef Q_OS_WIN32
+// 通过 Win32 分层窗口样式切换点击穿透。绝不能用 Qt 窗口标志实现
+//（改标志会销毁重建原生窗口，重新引发黑闪）；SetWindowLongPtr 原地
+// 修改扩展样式，无任何窗口重建。
+static void setToolbarInputTransparent(QWidget *widget, bool transparent)
+{
+    if (!widget || !widget->testAttribute(Qt::WA_WState_Created)) {
+        return;
+    }
+    HWND hwnd = reinterpret_cast<HWND>(widget->winId());
+    const LONG_PTR ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+    LONG_PTR next = ex;
+    if (transparent) {
+        next |= (WS_EX_TRANSPARENT | WS_EX_LAYERED);
+    } else {
+        next &= ~static_cast<LONG_PTR>(WS_EX_TRANSPARENT);
+    }
+    if (next != ex) {
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next);
+    }
+}
+#else
+static void setToolbarInputTransparent(QWidget *, bool)
+{
+}
+#endif
+
+void VideoForm::prepareFullscreenToolbar()
+{
+    if (!m_toolForm) {
+        return;
+    }
+    m_fsToolbarResident = false;
+#ifdef Q_OS_WIN32
+    // 预驻留方案：进入全屏的瞬间就把工具栏窗口以全透明显示在屏幕右缘。
+    // “新窗口覆盖全屏 OpenGL 画面”引发的 DWM 合成切换一次性发生在这里，
+    // 与全屏切换本身重叠，肉眼不可感知；此后唤出/收起只改透明度，
+    // 不再有新窗口出现，黑闪失去发生机制。
+    // 透明驻留期间开启点击穿透，不吞画面右侧的触摸/点击。
+    // 左缘刻意留在屏幕内 1px，避免 MagneticWidget 判定为“吸附在窗口
+    // 外侧”而把它挪到屏幕外（move 同时会解除普通模式遗留的吸附状态）。
+    const QRect scr = screen()->geometry();
+    m_toolForm->resize(m_toolForm->width(), scr.height());
+    m_toolForm->move(scr.right() - m_toolForm->width() + 1, scr.top());
+    m_toolForm->setWindowOpacity(0.0);
+    m_toolForm->show();
+    m_toolForm->raise();
+    setToolbarInputTransparent(m_toolForm, true);
+    m_fsToolbarResident = true;
+#endif
+}
+
+void VideoForm::updateFullscreenToolbar()
+{
+    if (!isFullScreen() || !m_toolForm) {
+        m_fullscreenToolbarTimer.stop();
+        return;
+    }
+
+    // 全屏窗口铺满屏幕，全局光标落在右缘 2px 内才触发
+    const QPoint cur = QCursor::pos();
+    const QRect scr = screen()->geometry();
+    if (!scr.contains(cur)) {
+        return; // 光标已移到其它显示器，保持当前状态
+    }
+
+    if (!m_fullscreenToolbarShown) {
+        // 触发条件必须是屏幕最右侧边界：光标 x 落在右缘 2px 内才唤出
+        if (cur.x() >= scr.right() - 1) {
+            showFullscreenToolbar();
+        }
+        return;
+    }
+
+    // 已显示：光标移出工具栏范围（含少量缓冲）即收起。
+    // 工具栏是独立悬浮窗口，geometry() 是全局坐标，与 cur 一致
+    const QRect keepArea = m_toolForm->geometry().adjusted(-16, -16, 16, 16);
+    if (!keepArea.contains(cur)) {
+        hideFullscreenToolbar();
+    }
+}
+
+void VideoForm::showFullscreenToolbar()
+{
+    if (!m_toolForm || m_fullscreenToolbarShown) {
+        return;
+    }
+    const QRect scr = screen()->geometry();
+    // 同步几何（屏幕分辨率/方向可能在中途变化）
+    m_toolForm->resize(m_toolForm->width(), scr.height());
+    m_toolForm->move(scr.right() - m_toolForm->width() + 1, scr.top());
+    if (!m_fsToolbarResident) {
+        // 非驻留平台：透明出现后淡入
+        m_toolForm->setWindowOpacity(0.0);
+        m_toolForm->show();
+        m_toolForm->raise();
+    } else {
+        m_toolForm->raise();
+    }
+    setToolbarInputTransparent(m_toolForm, false);
+    m_fullscreenToolbarShown = true;
+    startFullscreenToolbarFade(m_toolForm->windowOpacity(), 1.0);
+}
+
+void VideoForm::hideFullscreenToolbar()
+{
+    if (!m_toolForm || !m_fullscreenToolbarShown) {
+        return;
+    }
+    m_fullscreenToolbarShown = false;
+    startFullscreenToolbarFade(m_toolForm->windowOpacity(), 0.0);
+}
+
+void VideoForm::exitFullscreenToolbar()
+{
+    if (m_toolbarFade) {
+        m_toolbarFade->stop();
+    }
+    if (m_toolForm) {
+        setToolbarInputTransparent(m_toolForm, false);
+        m_toolForm->setWindowOpacity(1.0);
+        m_toolForm->hide();
+    }
+    m_fsToolbarResident = false;
+    m_fullscreenToolbarShown = false;
+}
+
+void VideoForm::startFullscreenToolbarFade(double from, double to)
+{
+    if (!m_toolForm) {
+        return;
+    }
+    if (!m_toolbarFade) {
+        m_toolbarFade = new QVariantAnimation(m_toolForm);
+        m_toolbarFade->setDuration(120);
+        connect(m_toolbarFade, &QVariantAnimation::valueChanged, this, [this](const QVariant &v) {
+            if (m_toolForm && isFullScreen()) {
+                m_toolForm->setWindowOpacity(v.toDouble());
+            }
+        });
+        connect(m_toolbarFade, &QVariantAnimation::finished, this, [this]() {
+            if (!m_toolForm || !isFullScreen()) {
+                return;
+            }
+            if (m_fullscreenToolbarShown) {
+                // 渐显完成：工具栏可交互
+                setToolbarInputTransparent(m_toolForm, false);
+                m_toolForm->setWindowOpacity(1.0);
+            } else if (m_fsToolbarResident) {
+                // 渐隐完成：回到全透明点击穿透驻留（窗口不隐藏、不重建）
+                m_toolForm->setWindowOpacity(0.0);
+                setToolbarInputTransparent(m_toolForm, true);
+            } else {
+                m_toolForm->setWindowOpacity(0.0);
+                m_toolForm->hide();
+            }
+        });
+    }
+    m_toolbarFade->stop();
+    m_toolbarFade->setStartValue(from);
+    m_toolbarFade->setEndValue(to);
+    m_toolbarFade->start();
 }
 
 void VideoForm::moveCenter()
@@ -830,6 +999,9 @@ void VideoForm::switchFullScreen()
         if (m_skin) {
             updateStyleSheet(m_frameSize.height() > m_frameSize.width());
         }
+        // 退出全屏：停止边缘唤出轮询，恢复普通模式的工具栏行为
+        m_fullscreenToolbarTimer.stop();
+        exitFullscreenToolbar();
         showToolForm(this->show_toolbar);
 #ifdef Q_OS_WIN32
         ::SetThreadExecutionState(ES_CONTINUOUS);
@@ -854,6 +1026,10 @@ void VideoForm::switchFullScreen()
             layout()->setContentsMargins(0, 0, 0, 0);
         }
         showFullScreen();
+
+        // 预驻留工具栏窗口（全透明），并启用边缘唤出轮询
+        prepareFullscreenToolbar();
+        m_fullscreenToolbarTimer.start();
 
         // 全屏状态禁止电脑休眠、息屏
 #ifdef Q_OS_WIN32

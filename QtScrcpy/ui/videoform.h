@@ -17,6 +17,7 @@ class FileHandler;
 class QYUVOpenGLWidget;
 class QLabel;
 class MetalVideoWidget;
+class QVariantAnimation;
 class VideoRecorder;
 class VideoForm : public QWidget, public qsc::DeviceObserver
 {
@@ -76,6 +77,15 @@ private:
 
     void showToolForm(bool show = true);
     void syncToolFormGeometry();
+    // 全屏模式下的边缘唤出工具栏：鼠标贴到屏幕最右侧边界才出现，
+    // 移出工具栏范围即收起
+    void updateFullscreenToolbar();
+    void showFullscreenToolbar();
+    void hideFullscreenToolbar();
+    // 进入全屏时以全透明预驻留工具栏窗口（消化 DWM 合成切换，避免黑闪）
+    void prepareFullscreenToolbar();
+    void exitFullscreenToolbar();
+    void startFullscreenToolbarFade(double from, double to);
     void moveCenter();
     void installShortcut();
     QRect getScreenRect();
@@ -148,6 +158,15 @@ private:
     bool m_preventAutoResize = false;
     QTimer m_flexResizeTimer;
     QSize m_pendingDisplaySize;
+
+    // 全屏模式边缘唤出工具栏：轮询全局光标位置（全屏时窗口收不到
+    // 屏幕边缘之外区域的鼠标事件，轮询是最可靠的方式）
+    QTimer m_fullscreenToolbarTimer;
+    bool m_fullscreenToolbarShown = false;
+    // 工具栏悬浮淡入动画（父对象为 m_toolForm，随其销毁）
+    QVariantAnimation *m_toolbarFade = nullptr;
+    // 工具栏是否以全透明驻留在屏幕右缘（Windows 预驻留方案）
+    bool m_fsToolbarResident = false;
 
     //Whether to display the toolbar when connecting a device.
     bool show_toolbar = true;
