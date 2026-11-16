@@ -34,6 +34,7 @@
 #include "audio/audiooutput.h"
 #include "config.h"
 #include "iconhelper.h"
+#include "loadingoverlay.h"
 #include "qyuvopenglwidget.h"
 #include "recorder/videorecorder.h"
 #include "toolform.h"
@@ -176,64 +177,23 @@ void VideoForm::initUI()
         // 真实帧数据上传完成才撤掉加载遮罩：仅凭“首帧回调”不够，
         // 此时纹理里可能还是零填充数据（渲染为绿色占位屏）。
         connect(m_videoWidget, &QYUVOpenGLWidget::frameUpdated, this, [this]() {
-            if (m_loadingWidget) {
-                m_loadingWidget->deleteLater();
+            if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
+                overlay->fadeOutAndDelete();
             }
         });
     }
     ui->keepRatioWidget->setMouseTracking(true);
 
-    // 连接过程中的加载遮罩：首帧画面到达前覆盖画面区域，
-    // 避免窗口显示成一块空背景，让用户误以为程序异常。
+    // 连接过程中的加载遮罩（方案A：手机轮廓+数据流，三阶段递进动画）：
+    // 首帧画面到达前覆盖画面区域，避免窗口显示成一块空背景。
     // 注意 keepRatioWidget 是 QScrollArea，直接挂成它的子控件在滚动区上显示/置顶不可靠，
     // 因此挂在它的同级父控件上，用其 geometry() 对齐覆盖。
-    m_loadingWidget = new QWidget(ui->keepRatioWidget->parentWidget());
+    m_loadingWidget = new LoadingOverlay(ui->keepRatioWidget->parentWidget());
     m_loadingWidget->setObjectName(QStringLiteral("loadingOverlay"));
-    // 背景接近不透明：皮肤图的屏幕区域是绿色占位图，半透明遮罩会透出绿色，
-    // 视觉上仍然突兀，因此用近实色的深色背景将其完全盖住。
-    m_loadingWidget->setStyleSheet(QStringLiteral(
-        "#loadingOverlay{background: rgba(18, 20, 26, 246); border-radius: 12px;}"));
-    auto *loadingLayout = new QVBoxLayout(m_loadingWidget);
-    loadingLayout->setContentsMargins(0, 0, 0, 0);
-    loadingLayout->setAlignment(Qt::AlignCenter);
-
-    auto *spinner = new QLabel(m_loadingWidget);
-    spinner->setFixedSize(72, 72);
-    spinner->setAlignment(Qt::AlignCenter);
-    spinner->setStyleSheet(QStringLiteral("background: transparent;"));
-
-    auto *loadingText = new QLabel(tr("正在连接设备…"), m_loadingWidget);
-    loadingText->setObjectName(QStringLiteral("loadingTextLabel"));
-    loadingText->setStyleSheet(QStringLiteral(
-        "QLabel{color: #D8DCE0; font-size: 14px; background: transparent;}"));
-    loadingText->setAlignment(Qt::AlignCenter);
-
-    loadingLayout->addWidget(spinner, 0, Qt::AlignCenter);
-    loadingLayout->addSpacing(14);
-    loadingLayout->addWidget(loadingText, 0, Qt::AlignCenter);
     // 立即置为可见：窗口显示时遮罩随之出现，不依赖 showEvent 的调用顺序。
     // 几何尺寸由 syncLoadingOverlay 在 showEvent/resizeEvent 中同步。
     syncLoadingOverlay();
     m_loadingWidget->show();
-
-    // 转圈动画：定时器重绘旋转圆弧，遮罩销毁时定时器随之销毁
-    auto *spinnerTimer = new QTimer(m_loadingWidget);
-    spinnerTimer->setInterval(33);
-    connect(spinnerTimer, &QTimer::timeout, spinner, [spinner]() {
-        const int phase = spinner->property("phase").toInt() + 30;
-        spinner->setProperty("phase", phase);
-
-        QPixmap pm(spinner->size());
-        pm.fill(Qt::transparent);
-        QPainter p(&pm);
-        p.setRenderHint(QPainter::Antialiasing);
-        QPen pen(QColor(64, 158, 255), 6);
-        pen.setCapStyle(Qt::RoundCap);
-        p.setPen(pen);
-        p.drawArc(QRect(8, 8, 56, 56), phase * 16, 110 * 16);
-        spinner->setPixmap(pm);
-    });
-    spinnerTimer->start();
 }
 
 void VideoForm::syncLoadingOverlay()
@@ -966,6 +926,10 @@ void VideoForm::updateShowSize(const QSize &newSize)
 
 void VideoForm::onVideoSessionChanged(const QSize &size, bool clientResized)
 {
+    // 视频通道建立：加载动画推进到阶段2（通道建立）
+    if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
+        overlay->advancePhase(1);
+    }
     if (m_flexDisplay) {
         m_frameSize = size;
         m_preventAutoResize = clientResized;
@@ -1252,6 +1216,11 @@ void VideoForm::openRecordFolder(const QString &filePath) const
 
 void VideoForm::onFrame(int width, int height, uint8_t *dataY, uint8_t *dataU, uint8_t *dataV, int linesizeY, int linesizeU, int linesizeV)
 {
+    // 首个视频帧回调到达：加载动画推进到阶段3（首帧解码）。
+    // advancePhase 只前进不回退，后续帧重复调用无副作用。
+    if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
+        overlay->advancePhase(2);
+    }
     updateRender(width, height, dataY, dataU, dataV, linesizeY, linesizeU, linesizeV);
     if (m_recorder && m_recorder->isRecording()) {
         m_recorder->pushVideoFrame(dataY, dataU, dataV, width, height, linesizeY, linesizeU, linesizeV);
@@ -1267,9 +1236,9 @@ void VideoForm::onFrameMetal(void *cvPixelBuffer, int width, int height)
 
     if (m_metalFirstFrame) {
         m_metalFirstFrame = false;
-        if (m_loadingWidget) {
-            // 首帧到达，销毁遮罩（其子定时器随之销毁）
-            m_loadingWidget->deleteLater();
+        // Metal 模式的退场时机（OpenGL 模式走 frameUpdated 信号退场）
+        if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
+            overlay->fadeOutAndDelete();
         }
         ui->keepRatioWidget->updateGeometry();
     }
@@ -1582,9 +1551,9 @@ void VideoForm::showEvent(QShowEvent *event)
         m_loadingWidget->show();
         // 15 秒仍未出画时更新文案，安抚等待中的用户
         QTimer::singleShot(15000, m_loadingWidget, [this]() {
-            if (m_loadingWidget && m_loadingWidget->isVisible()) {
-                if (auto *label = m_loadingWidget->findChild<QLabel *>(QStringLiteral("loadingTextLabel"))) {
-                    label->setText(tr("仍在连接，请检查设备与 USB 调试授权…"));
+            if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
+                if (overlay->isVisible()) {
+                    overlay->setText(tr("仍在连接，请检查设备与 USB 调试授权…"));
                 }
             }
         });

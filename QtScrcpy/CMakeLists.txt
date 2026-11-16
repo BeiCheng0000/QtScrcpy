@@ -186,6 +186,8 @@ set(QC_UI_SOURCES
     ui/encoderpreset.cpp
     ui/presetconfigdialog.h
     ui/presetconfigdialog.cpp
+    ui/loadingoverlay.h
+    ui/loadingoverlay.cpp
     render/qyuvopenglwidget.h
     render/qyuvopenglwidget.cpp
 )
