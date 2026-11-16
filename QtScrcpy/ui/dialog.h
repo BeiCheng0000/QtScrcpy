@@ -12,6 +12,7 @@
 
 
 #include "adbprocess.h"
+#include "wirelesscontroller.h"
 #include "../QtScrcpyCore/include/QtScrcpyCore.h"
 #include "audio/audiooutput.h"
 #include "presetconfigdialog.h"
@@ -89,6 +90,13 @@ private slots:
     void showIpEditMenu(const QPoint &pos);
     void on_fileManagerBtn_clicked();
 
+    // ---- 无线调试（Android 11+ 配对）----
+    void on_deviceIpEdt_activated(int index);
+    void onWirelessStateChanged(int state, const QString &text);
+    void onWirelessFailed(const QString &reason);
+    void onWirelessConnected(const QString &addr);
+    void onWirelessPaired(const QString &pairAddr);
+
 private:
     bool checkAdbRun();
     void initUI();
@@ -113,6 +121,12 @@ private:
     void loadPortHistory();
     void savePortHistory(const QString &port);
 
+    // 无线调试
+    void setupWirelessUi();
+    quint16 wirelessConnectPort() const;
+    void applyWirelessTargetToUi(const QString &ip, quint16 connectPort, quint16 pairPort);
+    void updateWirelessControls();
+
     void showPortEditMenu(const QPoint &pos);
     void syncPresetLevelToUi();
 
@@ -122,6 +136,7 @@ protected:
 private:
     Ui::Widget *ui;
     qsc::AdbProcess m_adb;
+    WirelessController *m_wireless = nullptr;
     QSystemTrayIcon *m_hideIcon;
     QGroupBox *m_advancedDisplayGroup = nullptr;
     QComboBox *m_configLanguageBox = nullptr;

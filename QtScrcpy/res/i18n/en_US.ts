@@ -539,6 +539,18 @@ Audio: %3</source>
         <translation>wireless disconnect</translation>
     </message>
     <message>
+        <source>pair port</source>
+        <translation>pair port</translation>
+    </message>
+    <message>
+        <source>pair code</source>
+        <translation>pair code</translation>
+    </message>
+    <message>
+        <source>pair and connect</source>
+        <translation>pair and connect</translation>
+    </message>
+    <message>
         <source>Start Config</source>
         <translation>Start Config</translation>
     </message>

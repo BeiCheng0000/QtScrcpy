@@ -531,6 +531,19 @@ Audio: %3</source>
         <translation>ワイヤレスを切断</translation>
     </message>
     <message>
+        <source>pair port</source>
+        <translation>ペアリングポート</translation>
+    </message>
+    <message>
+        <source>pair code</source>
+        <translation>ペアリングコード</translation>
+    </message>
+    <message>
+        <source>pair and connect</source>
+        <translation>ペアリング接続</translation>
+    </message>
+
+    <message>
         <source>Start Config</source>
         <translation>構成を開始</translation>
     </message>

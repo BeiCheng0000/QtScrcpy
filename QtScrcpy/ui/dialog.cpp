@@ -317,6 +317,9 @@ void Dialog::initUI()
     // 加载端口历史记录
     loadPortHistory();
 
+    // 无线调试（Android 11+ 配对）控件与控制器
+    setupWirelessUi();
+
     // 为deviceIpEdt添加右键菜单
     if (ui->deviceIpEdt->lineEdit()) {
         ui->deviceIpEdt->lineEdit()->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -367,8 +370,9 @@ void Dialog::initUI()
     ui->leftWidget->setMinimumWidth(0);
     ui->horizontalLayout_11->setStretch(0, 1);
     ui->horizontalLayout_11->setStretch(1, 2);
-    ui->horizontalLayout->setStretch(0, 1);
-    ui->horizontalLayout->setStretch(2, 0);
+    // 无线区域第一行：IP 输入框占剩余宽度，其余控件按内容宽度排列
+    ui->wirelessRow1->setStretch(0, 1);
+    ui->wirelessRow1->setStretch(2, 0);
 
     for (QComboBox *comboBox : findChildren<QComboBox *>()) {
         comboBox->view()->setItemDelegate(new ComboBoxItemDelegate(comboBox->view()));
@@ -1197,43 +1201,52 @@ void Dialog::on_stopServerBtn_clicked()
 
 void Dialog::on_wirelessConnectBtn_clicked()
 {
-    if (checkAdbRun()) {
+    // 控制器使用独立的 adb 进程 + 超时兜底，不再与主界面命令抢 m_adb 的单实例通道
+    if (m_wireless->isBusy()) {
+        outLog(tr("无线操作进行中，请稍候…"));
         return;
     }
-    QString addr = ui->deviceIpEdt->currentText().trimmed();
-    if (addr.isEmpty()) {
+
+    const QString ip = ui->deviceIpEdt->currentText().trimmed();
+    if (ip.isEmpty()) {
         outLog("error: device ip is null", false);
         return;
     }
-
-    if (!ui->devicePortEdt->currentText().isEmpty()) {
-        addr += ":";
-        addr += ui->devicePortEdt->currentText().trimmed();
-    } else if (!ui->devicePortEdt->lineEdit()->placeholderText().isEmpty()) {
-        addr += ":";
-        addr += ui->devicePortEdt->lineEdit()->placeholderText().trimmed();
-    } else {
-        outLog("error: device port is null", false);
+    if (!WirelessController::isValidHost(ip)) {
+        outLog(tr("error: 设备 IP 不合法"), false);
         return;
     }
 
-    // 保存IP历史记录 - 只保存IP部分,不包含端口
-    QString ip = addr.split(":").first();
-    if (!ip.isEmpty()) {
-        saveIpHistory(ip);
-    }
-    
-    // 保存端口历史记录
-    QString port = addr.split(":").last();
-    if (!port.isEmpty() && port != ip) {
-        savePortHistory(port);
-    }
+    const quint16 connectPort = wirelessConnectPort();
+    const QString pairPortText = ui->pairPortEdt->currentText().trimmed();
+    const QString code = ui->pairCodeEdt->text().trimmed();
 
-    outLog("wireless connect...", false);
-    QStringList adbArgs;
-    adbArgs << "connect";
-    adbArgs << addr;
-    m_adb.execute("", adbArgs);
+    saveIpHistory(ip);
+    savePortHistory(QString::number(connectPort));
+
+    WirelessController::Target target;
+    target.ip = ip;
+    target.connectPort = connectPort;
+
+    if (!pairPortText.isEmpty() || !code.isEmpty()) {
+        // Android 11+ 无线调试：配对端口与配对码是成对的选填项——填一个就必须都填
+        if (pairPortText.isEmpty() || code.isEmpty()) {
+            outLog(tr("error: 配对端口与配对码需同时填写（或都留空仅做直连）"), false);
+            QMessageBox::warning(this, tr("信息不完整"),
+                                 tr("配对端口与配对码是一组配对信息，需要同时填写；若设备已配对过，请将两项都清空后直接连接。"));
+            return;
+        }
+        const uint pairPort = pairPortText.toUInt();
+        if (0 == pairPort || pairPort > 65535) {
+            outLog(tr("error: 配对端口不合法，请填写手机「使用配对码配对设备」弹窗中的端口"), false);
+            return;
+        }
+        target.pairPort = quint16(pairPort);
+        m_wireless->pairAndConnect(target, code);
+    } else {
+        // Android 10 及以下 / 已配对设备：直接连接（连接端口留空按 5555 处理）
+        m_wireless->connectOnly(target);
+    }
 }
 
 void Dialog::on_startAdbdBtn_clicked()
@@ -1463,15 +1476,142 @@ void Dialog::on_fileManagerBtn_clicked()
 
 void Dialog::on_wirelessDisConnectBtn_clicked()
 {
-    if (checkAdbRun()) {
+    if (m_wireless->isBusy()) {
+        outLog(tr("无线操作进行中，请稍候…"));
         return;
     }
-    QString addr = ui->deviceIpEdt->currentText().trimmed();
-    outLog("wireless disconnect...", false);
-    QStringList adbArgs;
-    adbArgs << "disconnect";
-    adbArgs << addr;
-    m_adb.execute("", adbArgs);
+    const QString ip = ui->deviceIpEdt->currentText().trimmed();
+    if (ip.isEmpty()) {
+        outLog("error: device ip is null", false);
+        return;
+    }
+    // 带上端口断开：只传 IP 会把同一 IP 的其它端口一起断掉（旧实现的问题）
+    WirelessController::Target target;
+    target.ip = ip;
+    target.connectPort = wirelessConnectPort();
+    m_wireless->disconnectTarget(target);
+}
+
+void Dialog::setupWirelessUi()
+{
+    // 端口提示与输入约束
+    if (ui->devicePortEdt->lineEdit()) {
+        ui->devicePortEdt->lineEdit()->setToolTip(
+            tr("无线调试：「无线调试」主界面 IP 地址后的端口；Android 10 及以下留空按 5555"));
+    }
+    // 配对端口/配对码是成对的选填项：仅首次连接 Android 11+ 设备时填写
+    if (ui->pairPortEdt->lineEdit()) {
+        ui->pairPortEdt->lineEdit()->setFrame(false);
+        ui->pairPortEdt->lineEdit()->setTextMargins(0, 0, 0, 0);
+        ui->pairPortEdt->lineEdit()->setMaxLength(6);
+        ui->pairPortEdt->lineEdit()->setValidator(new QIntValidator(1, 65535, this));
+    }
+    ui->pairPortEdt->setToolTip(tr("选填：手机「无线调试 → 使用配对码配对设备」弹窗中的端口，需与配对码同时填写"));
+    if (ui->devicePortEdt->lineEdit()) {
+        ui->devicePortEdt->lineEdit()->setValidator(new QIntValidator(1, 65535, this));
+    }
+    ui->pairCodeEdt->setPlaceholderText(tr("6 位数字"));
+    ui->pairCodeEdt->setToolTip(tr("选填：手机「无线调试 → 使用配对码配对设备」中显示的 6 位配对码，需与配对端口同时填写；仅用于本次配对，不会被保存"));
+    ui->pairCodeEdt->setValidator(new QIntValidator(0, 999999999, this));
+
+    m_wireless = new WirelessController(&m_adb, this);
+    connect(m_wireless, &WirelessController::stateChanged, this, &Dialog::onWirelessStateChanged);
+    connect(m_wireless, &WirelessController::paired, this, &Dialog::onWirelessPaired);
+    connect(m_wireless, &WirelessController::failed, this, &Dialog::onWirelessFailed);
+    connect(m_wireless, &WirelessController::connected, this, &Dialog::onWirelessConnected);
+
+    // 带入上次成功连接的无线目标（不含配对码）
+    const QStringList targets = Config::getInstance().getWirelessTargets();
+    if (!targets.isEmpty()) {
+        const QStringList fields = targets.first().split('|');
+        if (fields.size() >= 3) {
+            applyWirelessTargetToUi(fields.at(0), fields.at(1).toUShort(), fields.at(2).toUShort());
+        }
+    }
+    updateWirelessControls();
+}
+
+quint16 Dialog::wirelessConnectPort() const
+{
+    const QString text = ui->devicePortEdt->currentText().trimmed();
+    if (text.isEmpty()) {
+        // 老流程（USB + tcpip）沿用 5555 默认端口
+        return 5555;
+    }
+    const uint port = text.toUInt();
+    return (port > 0 && port <= 65535) ? quint16(port) : 0;
+}
+
+void Dialog::applyWirelessTargetToUi(const QString &ip, quint16 connectPort, quint16 pairPort)
+{
+    Q_UNUSED(pairPort) // 配对是一次性的，历史记录不再带出配对端口/配对码
+    ui->deviceIpEdt->setCurrentText(ip);
+    if (connectPort > 0) {
+        ui->devicePortEdt->setCurrentText(QString::number(connectPort));
+    }
+}
+
+void Dialog::updateWirelessControls()
+{
+    const bool busy = m_wireless && m_wireless->isBusy();
+    ui->wirelessConnectBtn->setEnabled(!busy);
+    ui->wirelessDisConnectBtn->setEnabled(!busy);
+}
+
+void Dialog::on_deviceIpEdt_activated(int index)
+{
+    Q_UNUSED(index)
+    // 用户从历史里选了 IP：带出该 IP 最近一次成功使用的端口
+    const QString ip = ui->deviceIpEdt->currentText().trimmed();
+    for (const QString &entry : Config::getInstance().getWirelessTargets()) {
+        const QStringList fields = entry.split('|');
+        if (fields.size() >= 3 && fields.at(0) == ip) {
+            applyWirelessTargetToUi(fields.at(0), fields.at(1).toUShort(), fields.at(2).toUShort());
+            break;
+        }
+    }
+}
+
+void Dialog::onWirelessStateChanged(int state, const QString &text)
+{
+    static const QMap<int, QString> colors = {
+        {int(WirelessController::Idle), "#9e9e9e"},
+        {int(WirelessController::Discovering), "#42a5f5"},
+        {int(WirelessController::Pairing), "#42a5f5"},
+        {int(WirelessController::Connecting), "#42a5f5"},
+        {int(WirelessController::Connected), "#4caf50"},
+        {int(WirelessController::Failed), "#e57373"},
+    };
+    ui->wirelessStateLabel->setStyleSheet(QString("color:%1;").arg(colors.value(state, "#ffffff")));
+    ui->wirelessStateLabel->setText(text);
+    ui->wirelessStateLabel->setToolTip(text);
+    outLog(text);
+    updateWirelessControls();
+}
+
+void Dialog::onWirelessPaired(const QString &pairAddr)
+{
+    outLog(tr("配对成功：%1").arg(pairAddr));
+}
+
+void Dialog::onWirelessFailed(const QString &reason)
+{
+    outLog(tr("无线调试失败：%1").arg(reason));
+    QMessageBox::warning(this, tr("无线调试失败"), reason);
+}
+
+void Dialog::onWirelessConnected(const QString &addr)
+{
+    // 配对是一次性的：连接成功后清空配对端口与配对码，避免下次误触发配对流程
+    ui->pairPortEdt->clearEditText();
+    ui->pairCodeEdt->clear();
+
+    on_updateDevice_clicked();
+    // 连接成功后直接在设备列表里选中该 IP:port，省去用户再点一次
+    const int index = ui->serialBox->findText(addr);
+    if (index >= 0) {
+        ui->serialBox->setCurrentIndex(index);
+    }
 }
 
 void Dialog::on_selectRecordPathBtn_clicked()
@@ -1596,6 +1736,12 @@ int Dialog::findDeviceFromeSerialBox(bool wifi)
 
 void Dialog::on_wifiConnectBtn_clicked()
 {
+    // 已填写配对端口/配对码：这是 Android 11+ 无线调试，直接走配对流程（免 USB）
+    if (!ui->pairPortEdt->currentText().trimmed().isEmpty() || !ui->pairCodeEdt->text().trimmed().isEmpty()) {
+        on_wirelessConnectBtn_clicked();
+        return;
+    }
+
     on_stopAllServerBtn_clicked();
     delayMs(200);
 
@@ -1737,9 +1883,24 @@ void Dialog::on_autoUpdatecheckBox_toggled(bool checked)
 
 void Dialog::loadIpHistory()
 {
-    QStringList ipList = Config::getInstance().getIpHistory();
+    // 无线调试目标里的 IP 优先，随后合并旧 IP 历史，保证两种连接流程的下拉都可用
+    QStringList ipList;
+    for (const QString &entry : Config::getInstance().getWirelessTargets()) {
+        const QString ip = entry.split('|').value(0).trimmed();
+        if (!ip.isEmpty() && !ipList.contains(ip)) {
+            ipList << ip;
+        }
+    }
+    for (const QString &ip : Config::getInstance().getIpHistory()) {
+        if (!ip.isEmpty() && !ipList.contains(ip)) {
+            ipList << ip;
+        }
+    }
+
+    const QString current = ui->deviceIpEdt->currentText();
     ui->deviceIpEdt->clear();
     ui->deviceIpEdt->addItems(ipList);
+    ui->deviceIpEdt->setEditText(current);
 
     if (ui->deviceIpEdt->lineEdit()) {
         ui->deviceIpEdt->lineEdit()->setFrame(false);

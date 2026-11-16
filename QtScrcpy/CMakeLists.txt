@@ -190,6 +190,8 @@ set(QC_UI_SOURCES
     ui/loadingoverlay.cpp
     ui/filemanagerwindow.h
     ui/filemanagerwindow.cpp
+    ui/wirelesscontroller.h
+    ui/wirelesscontroller.cpp
     render/qyuvopenglwidget.h
     render/qyuvopenglwidget.cpp
 )

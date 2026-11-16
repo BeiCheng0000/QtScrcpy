@@ -2,6 +2,7 @@
 #define ADBPROCESS_H
 
 #include <QObject>
+#include <functional>
 
 class AdbProcessImpl;
 namespace qsc {
@@ -26,6 +27,13 @@ public:
     static void setAdbPath(const QString& adbPath);
 
     void execute(const QString &serial, const QStringList &args);
+
+    /// 带超时的一次性执行：内部使用独立 QProcess（stdout/stderr 合并），
+    /// 不占用 execute() 的单实例通道，可与主界面的串行命令并行。
+    /// ok 仅代表退出码为 0 —— adb 部分子命令（如 connect）失败时退出码仍为 0，
+    /// 调用方必须结合 out 文本判定真实结果。timedOut 为超时被强制结束。
+    void executeWithTimeout(const QString &serial, const QStringList &args, int timeoutMs,
+                            const std::function<void(bool ok, bool timedOut, const QString &out)> &done);
     void forward(const QString &serial, quint16 localPort, const QString &deviceSocketName);
     void forwardRemove(const QString &serial, quint16 localPort);
     void reverse(const QString &serial, const QString &deviceSocketName, quint16 localPort);

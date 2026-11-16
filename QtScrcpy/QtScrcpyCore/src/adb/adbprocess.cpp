@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
+#include <QTimer>
 
 #include "adbprocess.h"
 #include "adbprocessimpl.h"
@@ -36,6 +37,66 @@ void AdbProcess::setAdbPath(const QString &adbPath)
 void AdbProcess::execute(const QString &serial, const QStringList &args)
 {
     m_adbImpl->execute(serial, args);
+}
+
+void AdbProcess::executeWithTimeout(const QString &serial, const QStringList &args, int timeoutMs,
+                                    const std::function<void(bool ok, bool timedOut, const QString &out)> &done)
+{
+    // 独立 QProcess：无线配对/连接这类"可能卡 20 秒以上"的命令不能挤占主页面的
+    // 串行通道，否则整个界面（含投屏）都在等它；超时由自身定时器兜底。
+    auto *proc = new QProcess(this);
+    proc->setProgram(AdbProcessImpl::getAdbPath());
+
+    QStringList adbArgs;
+    if (!serial.isEmpty()) {
+        adbArgs << "-s" << serial;
+    }
+    adbArgs << args;
+    proc->setArguments(adbArgs);
+    proc->setProcessChannelMode(QProcess::MergedChannels);
+    qDebug() << QString("adb(timeout %1ms): %2 %3").arg(timeoutMs).arg(proc->program(), adbArgs.join(" "));
+
+    auto timedOut = std::make_shared<bool>(false);
+    auto delivered = std::make_shared<bool>(false);
+
+    auto *timer = new QTimer(proc);
+    timer->setSingleShot(true);
+    QObject::connect(timer, &QTimer::timeout, proc, [proc, timedOut]() {
+        *timedOut = true;
+        proc->kill();
+    });
+
+    QObject::connect(proc, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), proc,
+                     [proc, timer, timedOut, delivered, done](int exitCode, QProcess::ExitStatus) {
+                         if (*delivered) {
+                             return;
+                         }
+                         *delivered = true;
+                         timer->stop();
+                         const QString out = QString::fromUtf8(proc->readAll()).trimmed();
+                         if (done) {
+                             done(0 == exitCode, *timedOut, out);
+                         }
+                         proc->deleteLater();
+                     });
+
+    QObject::connect(proc, &QProcess::errorOccurred, proc,
+                     [proc, timer, delivered, done](QProcess::ProcessError error) {
+                         if (*delivered) {
+                             return;
+                         }
+                         if (QProcess::FailedToStart == error) {
+                             *delivered = true;
+                             timer->stop();
+                             if (done) {
+                                 done(false, false, QStringLiteral("failed to start adb"));
+                             }
+                             proc->deleteLater();
+                         }
+                     });
+
+    timer->start(qMax(1000, timeoutMs));
+    proc->start();
 }
 
 bool AdbProcess::isRuning()

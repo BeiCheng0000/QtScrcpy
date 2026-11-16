@@ -546,6 +546,18 @@ Choose No to record video only.</source>
         <translation>无线断开</translation>
     </message>
     <message>
+        <source>pair port</source>
+        <translation>配对端口</translation>
+    </message>
+    <message>
+        <source>pair code</source>
+        <translation>配对码</translation>
+    </message>
+    <message>
+        <source>pair and connect</source>
+        <translation>配对并连接</translation>
+    </message>
+    <message>
         <source>Start Config</source>
         <translation>启动配置</translation>
     </message>

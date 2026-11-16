@@ -101,6 +101,12 @@ public:
     QStringList getPortHistory(); 
     void clearPortHistory();
 
+    // 无线调试目标（Android 11+ 配对流程）：每项 "ip|连接端口|配对端口|时间戳"。
+    // 不保存配对码（安全红线）。
+    void saveWirelessTarget(const QString &ip, quint16 connectPort, quint16 pairPort);
+    QStringList getWirelessTargets();
+    void clearWirelessTargets();
+
 private:
     explicit Config(QObject *parent = nullptr);
     const QString &getConfigPath();
