@@ -1,4 +1,5 @@
 ﻿#include <QCoreApplication>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QSettings>
 #include <QDebug>
@@ -157,6 +158,11 @@
 #define PORT_HISTORY_KEY "PortHistory"
 #define PORT_HISTORY_DEF ""
 #define PORT_HISTORY_MAX 10
+
+// 无线调试目标（不含配对码）
+#define WIRELESS_TARGET_KEY "WirelessTargets"
+#define WIRELESS_TARGET_DEF ""
+#define WIRELESS_TARGET_MAX 10
 
 QString Config::s_configPath = "";
 
@@ -618,5 +624,46 @@ QStringList Config::getPortHistory()
 void Config::clearPortHistory()
 {
     m_userData->remove(PORT_HISTORY_KEY);
+    m_userData->sync();
+}
+
+void Config::saveWirelessTarget(const QString &ip, quint16 connectPort, quint16 pairPort)
+{
+    if (ip.trimmed().isEmpty()) {
+        return;
+    }
+    const QString entry = QString("%1|%2|%3|%4")
+                              .arg(ip.trimmed())
+                              .arg(connectPort)
+                              .arg(pairPort)
+                              .arg(QDateTime::currentSecsSinceEpoch());
+
+    QStringList targets = getWirelessTargets();
+    // 同一 ip:连接端口 只保留最新一条
+    const QString prefix = ip.trimmed() + "|" + QString::number(connectPort) + "|";
+    for (int i = targets.size() - 1; i >= 0; --i) {
+        if (targets.at(i).startsWith(prefix)) {
+            targets.removeAt(i);
+        }
+    }
+    targets.prepend(entry);
+    while (targets.size() > WIRELESS_TARGET_MAX) {
+        targets.removeLast();
+    }
+
+    m_userData->setValue(WIRELESS_TARGET_KEY, targets);
+    m_userData->sync();
+}
+
+QStringList Config::getWirelessTargets()
+{
+    QStringList targets = m_userData->value(WIRELESS_TARGET_KEY, WIRELESS_TARGET_DEF).toStringList();
+    targets.removeAll("");
+    return targets;
+}
+
+void Config::clearWirelessTargets()
+{
+    m_userData->remove(WIRELESS_TARGET_KEY);
     m_userData->sync();
 }
