@@ -35,6 +35,10 @@
 #define COMMON_RENDER_EXPIRED_FRAMES_KEY "RenderExpiredFrames"
 #define COMMON_RENDER_EXPIRED_FRAMES_DEF 0
 
+// FFmpeg 解码线程数：0=自动按核数，1=单线程（旧行为，最低延迟），N=指定
+#define COMMON_DECODER_THREADS_KEY "DecoderThreads"
+#define COMMON_DECODER_THREADS_DEF 4
+
 #define COMMON_ADB_PATH_KEY "AdbPath"
 #define COMMON_ADB_PATH_DEF ""
 
@@ -444,6 +448,15 @@ int Config::getRenderExpiredFrames()
     renderExpiredFrames = m_settings->value(COMMON_RENDER_EXPIRED_FRAMES_KEY, COMMON_RENDER_EXPIRED_FRAMES_DEF).toInt();
     m_settings->endGroup();
     return renderExpiredFrames;
+}
+
+int Config::getDecoderThreads()
+{
+    int threads = 4;
+    m_settings->beginGroup(GROUP_COMMON);
+    threads = m_settings->value(COMMON_DECODER_THREADS_KEY, COMMON_DECODER_THREADS_DEF).toInt();
+    m_settings->endGroup();
+    return qBound(0, threads, 16);
 }
 
 QString Config::getPushFilePath()
