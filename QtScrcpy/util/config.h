@@ -17,7 +17,11 @@ struct UserBootConfig
     bool autoStartAudio    = true; // 设备连接后立刻启动 sndcpy 音频桥接
     // 12 Mbps：原画（1200×2000 级别）分辨率下 2 Mbps 会明显模糊；
     // USB/Wi-Fi 带宽都足以承载，且不增加编码/传输延迟。
+    // 该值仅在 USB（serial 无端口）连接时生效。
     quint32 bitRate = 12000000;
+    // 无线（adb connect ip:port）连接专用比特率：Wi-Fi 链路受信号、
+    // 干扰与路由器吞吐影响，默认给一档更保守的 6 Mbps。
+    quint32 wirelessBitRate = 6000000;
     int maxSizeIndex = 0;
     int recordFormatIndex = 0;
     int lockOrientationIndex = 0;

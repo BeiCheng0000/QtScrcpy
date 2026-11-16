@@ -539,6 +539,18 @@ Audio: %3</source>
         <translation>wireless disconnect</translation>
     </message>
     <message>
+        <source>usb bit rate:</source>
+        <translation>usb bit rate:</translation>
+    </message>
+    <message>
+        <source>wireless bit rate:</source>
+        <translation>wireless bit rate:</translation>
+    </message>
+    <message>
+        <source>used for Wi-Fi (ip:port) devices, 2-8 Mbps recommended</source>
+        <translation>used for Wi-Fi (ip:port) devices, 2-8 Mbps recommended</translation>
+    </message>
+    <message>
         <source>pair port</source>
         <translation>pair port</translation>
     </message>
@@ -691,10 +703,6 @@ Audio: %3</source>
     <message>
         <source>device serial:</source>
         <translation>device serial:</translation>
-    </message>
-    <message>
-        <source>bit rate:</source>
-        <translation>bit rate:</translation>
     </message>
     <message>
         <source>start adbd</source>

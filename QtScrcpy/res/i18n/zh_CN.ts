@@ -546,6 +546,18 @@ Choose No to record video only.</source>
         <translation>无线断开</translation>
     </message>
     <message>
+        <source>usb bit rate:</source>
+        <translation>USB 比特率:</translation>
+    </message>
+    <message>
+        <source>wireless bit rate:</source>
+        <translation>无线比特率:</translation>
+    </message>
+    <message>
+        <source>used for Wi-Fi (ip:port) devices, 2-8 Mbps recommended</source>
+        <translation>用于无线（IP:端口）设备，建议 2~8 Mbps</translation>
+    </message>
+    <message>
         <source>pair port</source>
         <translation>配对端口</translation>
     </message>
@@ -698,10 +710,6 @@ Choose No to record video only.</source>
     <message>
         <source>device serial:</source>
         <translation>设备序列号：</translation>
-    </message>
-    <message>
-        <source>bit rate:</source>
-        <translation>比特率：</translation>
     </message>
     <message>
         <source>start adbd</source>

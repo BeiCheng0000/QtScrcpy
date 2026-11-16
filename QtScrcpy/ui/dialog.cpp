@@ -239,6 +239,7 @@ void Dialog::initUI()
 #endif
 
     ui->bitRateEdit->setValidator(new QIntValidator(1, 99999, this));
+    ui->wirelessBitRateEdit->setValidator(new QIntValidator(1, 99999, this));
 
     ui->presetConfigBtn->setVisible(false);
 
@@ -265,7 +266,10 @@ void Dialog::initUI()
     // 码率与分辨率联动：高分辨率（1920/原画）下码率过低会明显模糊，
     // 这里只纠正“明显不匹配”的组合到可用下限，不影响画面同步率
     //（USB 与 Wi-Fi 带宽远高于 12 Mbps，编码器码控也不是延迟瓶颈）。
-    ui->bitRateEdit->setToolTip(tr("建议 12 Mbps 或更高；原画分辨率下低于 8 Mbps 会明显模糊"));
+    ui->bitRateEdit->setToolTip(tr("USB 连接使用；建议 12 Mbps 或更高，原画分辨率下低于 8 Mbps 会明显模糊"));
+    ui->wirelessBitRateEdit->setToolTip(
+        tr("无线（IP:端口）连接使用；Wi-Fi 带宽与稳定性受限，建议 2~8 Mbps，过高会卡顿或花屏"));
+    ui->wirelessBitRateLabel->setToolTip(ui->wirelessBitRateEdit->toolTip());
     connect(ui->maxSizeBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         if (index < 4) { // 0..3 依次为 640/720/1080/1280
             return;
@@ -671,6 +675,17 @@ void Dialog::updateBootConfig(bool toView)
             ui->bitRateBox->setCurrentText("Kbps");
         }
 
+        // 无线（ip:port）专用比特率
+        if (config.wirelessBitRate == 0) {
+            ui->wirelessBitRateBox->setCurrentText("Mbps");
+        } else if (config.wirelessBitRate % 1000000 == 0) {
+            ui->wirelessBitRateEdit->setText(QString::number(config.wirelessBitRate / 1000000));
+            ui->wirelessBitRateBox->setCurrentText("Mbps");
+        } else {
+            ui->wirelessBitRateEdit->setText(QString::number(config.wirelessBitRate / 1000));
+            ui->wirelessBitRateBox->setCurrentText("Kbps");
+        }
+
         ui->maxSizeBox->setCurrentIndex(config.maxSizeIndex);
         ui->formatBox->setCurrentIndex(config.recordFormatIndex);
         ui->recordPathEdt->setText(config.recordPath);
@@ -716,6 +731,7 @@ void Dialog::updateBootConfig(bool toView)
         UserBootConfig config = Config::getInstance().getUserBootConfig();
 
         config.bitRate = getBitRate();
+        config.wirelessBitRate = getWirelessBitRate();
         config.maxSizeIndex = ui->maxSizeBox->currentIndex();
         config.recordFormatIndex = ui->formatBox->currentIndex();
         config.recordPath = ui->recordPathEdt->text();
@@ -897,7 +913,12 @@ void Dialog::on_startServerBtn_clicked()
     qsc::DeviceParams params;
     params.serial = ui->serialBox->currentText().trimmed();
     params.maxSize = videoSize;
-    params.bitRate = getBitRate();
+    // 比特率按连接方式区分：无线设备 serial 形如 ip:port，用无线专用档位；
+    // USB 设备用主档位。（编码预设若自带码率，下面会覆盖该值）
+    const bool wifiDevice = params.serial.contains(QLatin1Char(':'));
+    params.bitRate = wifiDevice ? getWirelessBitRate() : getBitRate();
+    outLog(tr("bitrate: %1 Mbps (%2)").arg(params.bitRate / 1000000.0, 0, 'g', 4)
+               .arg(wifiDevice ? tr("wireless") : tr("usb")), false);
     // on devices with Android >= 10, the capture frame rate can be limited
     params.maxFps = static_cast<quint32>(Config::getInstance().getMaxFps());
     params.decodeThreads = Config::getInstance().getDecoderThreads();
@@ -950,7 +971,9 @@ void Dialog::on_startServerBtn_clicked()
         if (!preset.codecName.isEmpty()) {
             params.codecName = preset.codecName;
         }
-        if (bitRate > 0) {
+        // 编码预设的码率只作用于 USB：无线（Wi-Fi）链路上预设的高码率
+        // 会直接导致卡顿，因此无线始终使用「无线比特率」档位
+        if (bitRate > 0 && !wifiDevice) {
             params.bitRate = bitRate;
         }
     } else {
@@ -1501,10 +1524,14 @@ void Dialog::setupWirelessUi()
     }
     // 配对端口/配对码是成对的选填项：仅首次连接 Android 11+ 设备时填写
     if (ui->pairPortEdt->lineEdit()) {
-        ui->pairPortEdt->lineEdit()->setFrame(false);
-        ui->pairPortEdt->lineEdit()->setTextMargins(0, 0, 0, 0);
-        ui->pairPortEdt->lineEdit()->setMaxLength(6);
-        ui->pairPortEdt->lineEdit()->setValidator(new QIntValidator(1, 65535, this));
+        auto *lineEdit = ui->pairPortEdt->lineEdit();
+        lineEdit->setFrame(false);
+        lineEdit->setTextMargins(0, 0, 0, 0);
+        lineEdit->setMaxLength(6);
+        lineEdit->setValidator(new QIntValidator(1, 65535, this));
+        // 空 item 列表的可编辑 QComboBox 内部 lineEdit 会被压得很窄，
+        // 导致输入的数字只露出几位；按 6 位数字宽度兜底，保证完整可见
+        lineEdit->setMinimumWidth(lineEdit->fontMetrics().horizontalAdvance(QStringLiteral("000000")) + 12);
     }
     ui->pairPortEdt->setToolTip(tr("选填：手机「无线调试 → 使用配对码配对设备」弹窗中的端口，需与配对码同时填写"));
     if (ui->devicePortEdt->lineEdit()) {
@@ -1583,7 +1610,11 @@ void Dialog::onWirelessStateChanged(int state, const QString &text)
         {int(WirelessController::Failed), "#e57373"},
     };
     ui->wirelessStateLabel->setStyleSheet(QString("color:%1;").arg(colors.value(state, "#ffffff")));
-    ui->wirelessStateLabel->setText(text);
+    // 状态行宽度固定（Ignoring 策略）：超长文本截断省略显示，悬停 tooltip 看全文，
+    // 避免连接失败等原因文案把无线区布局撑爆
+    const QString shown = ui->wirelessStateLabel->fontMetrics().elidedText(
+        text, Qt::ElideRight, qMax(80, ui->wirelessStateLabel->width() - 4));
+    ui->wirelessStateLabel->setText(shown);
     ui->wirelessStateLabel->setToolTip(text);
     outLog(text);
     updateWirelessControls();
@@ -1821,6 +1852,12 @@ quint32 Dialog::getBitRate()
 {
     return ui->bitRateEdit->text().trimmed().toUInt() *
             (ui->bitRateBox->currentText() == QString("Mbps") ? 1000000 : 1000);
+}
+
+quint32 Dialog::getWirelessBitRate()
+{
+    return ui->wirelessBitRateEdit->text().trimmed().toUInt() *
+            (ui->wirelessBitRateBox->currentText() == QString("Mbps") ? 1000000 : 1000);
 }
 
 const QString &Dialog::getServerPath()

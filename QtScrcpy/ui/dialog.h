@@ -107,6 +107,7 @@ private:
     void slotActivated(QSystemTrayIcon::ActivationReason reason);
     int findDeviceFromeSerialBox(bool wifi);
     quint32 getBitRate();
+    quint32 getWirelessBitRate();
     const QString &getServerPath();
     void initAdvancedConfigUi(QWidget *parent);
     void loadAdvancedConfig();

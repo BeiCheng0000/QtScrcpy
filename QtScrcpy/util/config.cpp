@@ -72,6 +72,8 @@
 #define COMMON_AUTO_START_AUDIO_DEF true
 
 #define COMMON_BITRATE_KEY "BitRate"
+#define COMMON_WIRELESS_BITRATE_KEY "WirelessBitRate"
+#define COMMON_WIRELESS_BITRATE_DEF 6000000
 // 12 Mbps：2 Mbps 在原生 1200×2000 分辨率下画面明显模糊（块效应 + 细节丢失）。
 // USB 与 5G Wi-Fi 的带宽都远高于此，提高码率不会降低画面同步率。
 #define COMMON_BITRATE_DEF 12000000
@@ -274,6 +276,7 @@ void Config::setUserBootConfig(const UserBootConfig &config)
     m_userData->setValue(COMMON_RECORD_AUDIO_BITRATE_KEY, config.recordAudioBitrate);
     m_userData->setValue(COMMON_AUTO_START_AUDIO_KEY, config.autoStartAudio);
     m_userData->setValue(COMMON_BITRATE_KEY, config.bitRate);
+    m_userData->setValue(COMMON_WIRELESS_BITRATE_KEY, config.wirelessBitRate);
     m_userData->setValue(COMMON_MAX_SIZE_INDEX_KEY, config.maxSizeIndex);
     m_userData->setValue(COMMON_RECORD_FORMAT_INDEX_KEY, config.recordFormatIndex);
     m_userData->setValue(COMMON_FRAMELESS_WINDOW_KEY, config.framelessWindow);
@@ -321,6 +324,8 @@ UserBootConfig Config::getUserBootConfig()
         m_userData->value(COMMON_RECORD_AUDIO_BITRATE_KEY, COMMON_RECORD_AUDIO_BITRATE_DEF).toInt();
     config.autoStartAudio = m_userData->value(COMMON_AUTO_START_AUDIO_KEY, COMMON_AUTO_START_AUDIO_DEF).toBool();
     config.bitRate = m_userData->value(COMMON_BITRATE_KEY, COMMON_BITRATE_DEF).toUInt();
+    config.wirelessBitRate =
+        m_userData->value(COMMON_WIRELESS_BITRATE_KEY, COMMON_WIRELESS_BITRATE_DEF).toUInt();
     config.maxSizeIndex = m_userData->value(COMMON_MAX_SIZE_INDEX_KEY, COMMON_MAX_SIZE_INDEX_DEF).toInt();
     config.recordFormatIndex = m_userData->value(COMMON_RECORD_FORMAT_INDEX_KEY, COMMON_RECORD_FORMAT_INDEX_DEF).toInt();
     config.lockOrientationIndex = m_userData->value(COMMON_LOCK_ORIENTATION_INDEX_KEY, COMMON_LOCK_ORIENTATION_INDEX_DEF).toInt();

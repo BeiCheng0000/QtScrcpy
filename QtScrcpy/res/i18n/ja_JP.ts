@@ -531,6 +531,18 @@ Audio: %3</source>
         <translation>ワイヤレスを切断</translation>
     </message>
     <message>
+        <source>usb bit rate:</source>
+        <translation>USB ビットレート:</translation>
+    </message>
+    <message>
+        <source>wireless bit rate:</source>
+        <translation>ワイヤレスビットレート:</translation>
+    </message>
+    <message>
+        <source>used for Wi-Fi (ip:port) devices, 2-8 Mbps recommended</source>
+        <translation>Wi-Fi（IP:ポート）接続用、2~8 Mbps 推奨</translation>
+    </message>
+    <message>
         <source>pair port</source>
         <translation>ペアリングポート</translation>
     </message>

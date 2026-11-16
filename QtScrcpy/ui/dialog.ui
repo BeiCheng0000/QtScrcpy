@@ -379,7 +379,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>bit rate:</string>
+               <string>usb bit rate:</string>
               </property>
              </widget>
             </item>
@@ -445,6 +445,92 @@
               </property>
               <property name="toolTip">
                <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="configWidgetBitRateWifi" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_bitRateWifi">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="wirelessBitRateLabel">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>wireless bit rate:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="wirelessBitRateEdit">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string notr="true">6</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="wirelessBitRateBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="currentText">
+               <string notr="true">Mbps</string>
+              </property>
+              <item>
+               <property name="text">
+                <string notr="true">Mbps</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string notr="true">Kbps</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="wirelessBitRateHint">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>1</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>used for Wi-Fi (ip:port) devices, 2-8 Mbps recommended</string>
               </property>
              </widget>
             </item>
@@ -1415,13 +1501,13 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>100</width>
+               <width>120</width>
                <height>0</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>100</width>
+               <width>120</width>
                <height>16777215</height>
               </size>
              </property>
@@ -1474,7 +1560,7 @@
            <item>
             <widget class="QLabel" name="wirelessStateLabel">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
                <horstretch>2</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>

@@ -531,6 +531,18 @@ Audio: %3</source>
         <translation>무선 연결 끊기</translation>
     </message>
     <message>
+        <source>usb bit rate:</source>
+        <translation>USB 비트레이트:</translation>
+    </message>
+    <message>
+        <source>wireless bit rate:</source>
+        <translation>무선 비트레이트:</translation>
+    </message>
+    <message>
+        <source>used for Wi-Fi (ip:port) devices, 2-8 Mbps recommended</source>
+        <translation>Wi-Fi(IP:포트) 연결용, 2~8 Mbps 권장</translation>
+    </message>
+    <message>
         <source>pair port</source>
         <translation>페어링 포트</translation>
     </message>
