@@ -32,7 +32,9 @@ public:
     /// A new scrcpy video session starts after encoder/display reconfiguration.
     virtual void onVideoSessionChanged(const QSize &size) { Q_UNUSED(size); }
     virtual void setRenderExpiredFrames(bool enabled) { Q_UNUSED(enabled); }
+    /// 设置解码线程数：0=FFmpeg 自动，1=单线程（旧行为，最低延迟），N=指定
+    virtual void setThreads(int threads) { Q_UNUSED(threads); }
 
 signals:
-    void updateFPS(quint32 fps);
+    void updateFPS(quint32 fps, quint32 skipped);
 };

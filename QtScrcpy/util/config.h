@@ -66,6 +66,7 @@ public:
     int getDesktopOpenGL();
     int getSkin();
     int getRenderExpiredFrames();
+    int getDecoderThreads();
     QString getPushFilePath();
     QString getServerPath();
     QString getAdbPath();

@@ -482,6 +482,14 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     m_configRenderExpiredCheck = new QCheckBox(tr("Render expired video frames"), group);
     layout->addRow(m_configRenderExpiredCheck);
 
+    m_configDecoderThreadsSpin = new QSpinBox(group);
+    m_configDecoderThreadsSpin->setRange(0, 16);
+    m_configDecoderThreadsSpin->setSpecialValueText(tr("Auto"));
+    m_configDecoderThreadsSpin->setToolTip(
+        tr("FFmpeg decoder threads. 1 = single thread (old behavior, lowest latency); "
+           "frame threading adds about 1-2 frames of pipeline latency. Takes effect on next connection."));
+    layout->addRow(tr("Decoder threads"), m_configDecoderThreadsSpin);
+
     m_configOpenGlBox = new QComboBox(group);
     m_configOpenGlBox->addItem(tr("Automatic"), -1);
     m_configOpenGlBox->addItem(tr("Software OpenGL"), 0);
@@ -547,6 +555,7 @@ void Dialog::loadAdvancedConfig()
     m_configPushPathEdit->setText(config.getPushFilePath());
     m_configMaxFpsSpin->setValue(qBound(0, config.getMaxFps(), m_configMaxFpsSpin->maximum()));
     m_configRenderExpiredCheck->setChecked(config.getRenderExpiredFrames() != 0);
+    m_configDecoderThreadsSpin->setValue(qBound(0, config.getDecoderThreads(), m_configDecoderThreadsSpin->maximum()));
     m_configOpenGlBox->setCurrentIndex(qMax(0, m_configOpenGlBox->findData(config.getDesktopOpenGL())));
     m_configServerPathEdit->setText(config.getServerPath());
     m_configAdbPathEdit->setText(config.getAdbPath());
@@ -589,6 +598,7 @@ void Dialog::saveAdvancedConfig()
     values.insert("PushFilePath", pushPath);
     values.insert("MaxFps", m_configMaxFpsSpin->value());
     values.insert("RenderExpiredFrames", m_configRenderExpiredCheck->isChecked() ? 1 : 0);
+    values.insert("DecoderThreads", m_configDecoderThreadsSpin->value());
     values.insert("UseDesktopOpenGL", m_configOpenGlBox->currentData());
     values.insert("ServerPath", m_configServerPathEdit->text().trimmed());
     values.insert("AdbPath", adbPath);
@@ -878,6 +888,7 @@ void Dialog::on_startServerBtn_clicked()
     params.bitRate = getBitRate();
     // on devices with Android >= 10, the capture frame rate can be limited
     params.maxFps = static_cast<quint32>(Config::getInstance().getMaxFps());
+    params.decodeThreads = Config::getInstance().getDecoderThreads();
     params.videoSource = static_cast<qsc::VideoSource>(ui->videoSourceBox->currentIndex());
     params.cameraFacing = ui->cameraFacingBox->currentIndex() == 1
             ? qsc::CAMERA_FACING_FRONT
@@ -1303,6 +1314,13 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
 {
     Q_UNUSED(deviceName);
     if (!success) {
+        // 服务端启动失败（内部已自动重试若干次）：原来静默返回，用户只能看到
+        // 镜像窗口始终打不开，被感知为"启动不成功且没有原因"。这里给出明确反馈。
+        const QString message = tr("设备 %1 启动投屏服务失败，请检查 USB 连接后重试").arg(serial);
+        outLog(QString("[错误] %1").arg(message), true);
+        if (m_hideIcon) {
+            m_hideIcon->showMessage(tr("投屏服务启动失败"), message, QSystemTrayIcon::Warning, 6000);
+        }
         return;
     }
     auto videoForm = new VideoForm(ui->framelessCheck->isChecked(), Config::getInstance().getSkin(), ui->showToolbar->isChecked(), ui->decodeModeBox->currentIndex());

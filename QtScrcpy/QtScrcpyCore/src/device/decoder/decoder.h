@@ -25,6 +25,7 @@ public:
     void peekFrame(std::function<void(int width, int height, uint8_t* dataRGB32)> onFrame) override;
     void onVideoSessionChanged(const QSize &size) override;
     void setRenderExpiredFrames(bool enabled) override;
+    void setThreads(int threads) override;
 
 private slots:
     void onNewFrame();
@@ -39,6 +40,7 @@ private:
     VideoBuffer *m_vb = Q_NULLPTR;
     AVCodecContext *m_codecCtx = Q_NULLPTR;
     bool m_isCodecCtxOpen = false;
+    int m_threads = 0; // 0=FFmpeg 自动，1=单线程，N=指定；默认自动多线程
     std::function<void(int, int, uint8_t*, uint8_t*, uint8_t*, int, int, int)> m_onFrame = Q_NULLPTR;
 };
 

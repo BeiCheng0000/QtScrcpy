@@ -101,6 +101,11 @@ private:
     void startConnectTimeoutTimer();
     void stopConnectTimeoutTimer();
     void onConnectTimer();
+    // 启动失败后的统一重试入口：清理现场 -> 清理设备端残留 server -> 重新走启动流程；
+    // 重试次数用尽才 emit serverStarted(false)
+    void retryStart(const QString &reason);
+    // 清理设备端残留的 scrcpy server 进程（上次异常退出可能留下僵尸进程占住显示）
+    void killStaleServer();
 
 private:
     qsc::AdbProcess m_workProcess;
@@ -113,7 +118,17 @@ private:
     int m_acceptTimeoutTimer = 0;
     int m_connectTimeoutTimer = 0;
     quint32 m_connectCount = 0;
-    quint32 m_restartCount = 0;
+    // 启动阶段的自动重试计数（含清理设备端僵尸 server 后重试）
+    quint32 m_startRetryCount = 0;
+    // 已排定一次重试（期间重复的失败上报直接忽略，避免并发重启）
+    bool m_retryPending = false;
+    // 会话是否已真正建立（serverStarted(true) 已发出）。
+    // 用于区分"启动阶段进程退出"（应重试）与"运行中服务端停止"（应正常断开）
+    bool m_sessionActive = false;
+    // 是否已有明确的 stop 请求（用户断开/视频流结束触发的清理）。
+    // stop() 之后的进程退出信号只是清理的结果，绝不能再触发重试，
+    // 否则会在 Device 已断开后复活出无人管理的僵尸连接。
+    bool m_stopRequested = false;
     QString m_deviceName = "";
     QSize m_deviceSize = QSize();
     ServerParams m_params;

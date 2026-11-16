@@ -28,7 +28,9 @@ bool VideoBuffer::init()
     // 初始时尚未有渲染帧，因此视为该帧已被消费
     m_renderingFrameConsumed = true;
 
-    m_fpsCounter.start();
+    // FPS 统计不在此启动：VideoBuffer 在 Device 构造时就已创建，
+    // 提前启动会让尚未连接/连接失败的设备每秒刷出 FPS:0，既制造日志噪音，
+    // 也让真正"连上但不出帧"的故障难以辨识。改为首帧到达时惰性启动。
     return true;
 
 error:
@@ -72,6 +74,13 @@ AVFrame *VideoBuffer::decodingFrame()
 void VideoBuffer::offerDecodedFrame(bool &previousFrameSkipped)
 {
     m_mutex.lock();
+
+    // 首帧到达：此时才启动 FPS 统计（对应一次真实的视频会话）。
+    // 本函数运行在解码线程，而 FpsCounter 的线程亲和性在 GUI 线程，
+    // 必须跨线程投递启动调用（QObject::startTimer 不允许跨线程）
+    if (!m_fpsCounter.isStarted()) {
+        QMetaObject::invokeMethod(&m_fpsCounter, [this]() { m_fpsCounter.start(); }, Qt::QueuedConnection);
+    }
 
     if (m_renderExpiredFrames) {
         // if m_renderExpiredFrames is enable, then the decoder must wait for the current

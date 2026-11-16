@@ -1010,12 +1010,13 @@ bool VideoForm::isHost()
     return m_toolForm->isHost();
 }
 
-void VideoForm::updateFPS(quint32 fps)
+void VideoForm::updateFPS(quint32 fps, quint32 skipped)
 {
     if (!m_fpsLabel) {
         return;
     }
-    m_fpsLabel->setText(QString("FPS:%1").arg(fps));
+    // skipped = 每秒被新帧覆盖而未渲染的帧数，用于判断瓶颈在解码/渲染侧
+    m_fpsLabel->setText(QString("FPS:%1 SKIP:%2").arg(fps).arg(skipped));
 }
 
 void VideoForm::grabCursor(bool grab)
@@ -1549,11 +1550,12 @@ void VideoForm::showEvent(QShowEvent *event)
     if (m_loadingWidget) {
         syncLoadingOverlay();
         m_loadingWidget->show();
-        // 15 秒仍未出画时更新文案，安抚等待中的用户
+        // 15 秒仍未出画时更新文案，把"无画面"的常见原因说清楚：
+        // 设备屏幕熄灭、USB 调试授权未确认都会导致服务端连上但不出帧
         QTimer::singleShot(15000, m_loadingWidget, [this]() {
             if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
                 if (overlay->isVisible()) {
-                    overlay->setText(tr("仍在连接，请检查设备与 USB 调试授权…"));
+                    overlay->setText(tr("仍未收到画面：请确认设备屏幕已点亮、USB 调试已授权"));
                 }
             }
         });

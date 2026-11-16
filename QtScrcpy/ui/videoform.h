@@ -65,7 +65,7 @@ private:
                  int linesizeY, int linesizeU, int linesizeV) override;
     // VideoToolbox Metal 路径帧回调（仅 macOS arm64）
     void onFrameMetal(void* cvPixelBuffer, int width, int height) override;
-    void updateFPS(quint32 fps) override;
+    void updateFPS(quint32 fps, quint32 skipped) override;
     void onVideoSessionChanged(const QSize &size, bool clientResized) override;
     void grabCursor(bool grab) override;
 

@@ -41,7 +41,7 @@ public:
     void interrupt();
 
 signals:
-    void updateFPS(quint32 fps);
+    void updateFPS(quint32 fps, quint32 skipped);
 
 private:
     void swap();

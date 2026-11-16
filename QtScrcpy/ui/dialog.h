@@ -126,6 +126,7 @@ private:
     QLineEdit *m_configPushPathEdit = nullptr;
     QSpinBox *m_configMaxFpsSpin = nullptr;
     QCheckBox *m_configRenderExpiredCheck = nullptr;
+    QSpinBox *m_configDecoderThreadsSpin = nullptr;
     QComboBox *m_configOpenGlBox = nullptr;
     QLineEdit *m_configServerPathEdit = nullptr;
     QLineEdit *m_configAdbPathEdit = nullptr;

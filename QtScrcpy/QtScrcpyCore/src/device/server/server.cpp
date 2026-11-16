@@ -12,7 +12,13 @@
 #define VIDEO_META_LENGTH 16
 #define SOCKET_NAME_PREFIX "scrcpy"
 #define MAX_CONNECT_COUNT 30
-#define MAX_RESTART_COUNT 1
+// 启动阶段自动重试次数（每次重试前会清理设备端残留 server）
+#define MAX_START_RETRY 2
+// 重试前的退避时间：给设备端 adb/pkill 留出回收时间
+#define START_RETRY_DELAY_MS 500
+// reverse 模式的接受连接超时。原实现仅 1 秒，而 Android 14+/定制 ROM 上
+// app_process 冷启动 + MediaCodec 初始化经常超过 1 秒，会误判为启动失败。
+#define ACCEPT_TIMEOUT_MS 6000
 
 static quint32 bufferRead32be(quint8 *buf)
 {
@@ -29,8 +35,8 @@ Server::Server(QObject *parent) : QObject(parent)
         if (dynamic_cast<VideoSocket *>(tmp)) {
             m_videoSocket = dynamic_cast<VideoSocket *>(tmp);
             if (!m_videoSocket->isValid() || !readInfo(m_videoSocket, m_deviceName, m_deviceSize)) {
-                stop();
-                emit serverStarted(false);
+                // 读取设备信息失败：走统一重试，而不是直接宣告失败
+                retryStart("read device info failed");
             }
         } else {
             m_controlSocket = tmp;
@@ -41,10 +47,10 @@ Server::Server(QObject *parent) : QObject(parent)
                 // we don't need the adb tunnel anymore
                 disableTunnelReverse();
                 m_tunnelEnabled = false;
+                m_sessionActive = true;
                 emit serverStarted(true, m_deviceName, m_deviceSize);
             } else {
-                stop();
-                emit serverStarted(false);
+                retryStart("invalid control socket");
             }
             stopAcceptTimeoutTimer();
         }
@@ -260,6 +266,11 @@ bool Server::execute()
 bool Server::start(Server::ServerParams params)
 {
     m_params = params;
+    // 外部（重新）发起连接时才重置重试计数与挂起标记
+    m_startRetryCount = 0;
+    m_retryPending = false;
+    m_sessionActive = false;
+    m_stopRequested = false;
     m_serverStartStep = SSS_PUSH;
     return startServerByStep();
 }
@@ -294,7 +305,7 @@ void Server::timerEvent(QTimerEvent *event)
 {
     if (event && m_acceptTimeoutTimer == event->timerId()) {
         stopAcceptTimeoutTimer();
-        emit serverStarted(false);
+        retryStart("accept connection timeout");
     } else if (event && m_connectTimeoutTimer == event->timerId()) {
         onConnectTimer();
     }
@@ -314,6 +325,12 @@ QTcpSocket *Server::getControlSocket()
 
 void Server::stop()
 {
+    // 外部主动停止（用户点停止/断开/窗口关闭）时，取消尚未执行的自动重试，
+    // 避免停止后又被重试逻辑拉起来
+    m_retryPending = false;
+    m_sessionActive = false;
+    m_stopRequested = true;
+
     if (m_tunnelForward) {
         stopConnectTimeoutTimer();
     } else {
@@ -323,6 +340,12 @@ void Server::stop()
     if (m_controlSocket) {
         m_controlSocket->close();
         m_controlSocket->deleteLater();
+    }
+    // 连接失败路径上视频 socket 可能已建立但未被 Device 取走，这里一并释放
+    if (m_videoSocket) {
+        m_videoSocket->close();
+        m_videoSocket->deleteLater();
+        m_videoSocket = Q_NULLPTR;
     }
     // 忽略失败
     m_serverProcess.kill();
@@ -400,7 +423,7 @@ bool Server::readInfo(VideoSocket *videoSocket, QString &deviceName, QSize &size
 void Server::startAcceptTimeoutTimer()
 {
     stopAcceptTimeoutTimer();
-    m_acceptTimeoutTimer = startTimer(1000);
+    m_acceptTimeoutTimer = startTimer(ACCEPT_TIMEOUT_MS);
 }
 
 void Server::stopAcceptTimeoutTimer()
@@ -483,7 +506,8 @@ result:
         // we don't need the adb tunnel anymore
         disableTunnelForward();
         m_tunnelEnabled = false;
-        m_restartCount = 0;
+        m_startRetryCount = 0;
+        m_sessionActive = true;
         emit serverStarted(success, deviceName, deviceSize);
         return;
     }
@@ -497,15 +521,71 @@ result:
 
     if (MAX_CONNECT_COUNT <= m_connectCount++) {
         stopConnectTimeoutTimer();
-        stop();
-        if (MAX_RESTART_COUNT > m_restartCount++) {
-            qWarning("restart server auto");
-            start(m_params);
-        } else {
-            m_restartCount = 0;
-            emit serverStarted(false);
-        }
+        retryStart("connect to server timeout");
     }
+}
+
+void Server::retryStart(const QString &reason)
+{
+    // 已排定一次重试：期间重复的失败上报直接忽略，避免并发重启
+    if (m_retryPending) {
+        return;
+    }
+    m_serverStartStep = SSS_NULL;
+    // 清理本次尝试的残留：socket、adb 进程、隧道。
+    // stop() 会置位 m_stopRequested，这里是重试路径内部的清理，
+    // 需要复位该标记，否则后续步骤的失败会被误判为"已被外部停止"
+    stop();
+    m_stopRequested = false;
+
+    if (m_startRetryCount >= MAX_START_RETRY) {
+        qCritical("server start failed after %u retries: %s",
+                  m_startRetryCount,
+                  reason.toStdString().c_str());
+        m_startRetryCount = 0;
+        emit serverStarted(false);
+        return;
+    }
+
+    ++m_startRetryCount;
+    m_retryPending = true;
+    qWarning("restart server (%u/%u), reason: %s",
+             m_startRetryCount,
+             MAX_START_RETRY,
+             reason.toStdString().c_str());
+
+    // 设备端上一次的 app_process 可能还没退出（进程崩溃残留/被系统挂起），
+    // 它会占住显示与抽象 socket，导致本次启动直接失败。重试前先清理。
+    killStaleServer();
+
+    QTimer::singleShot(START_RETRY_DELAY_MS, this, [this]() {
+        // 期间被外部 stop() 取消了重试（m_retryPending 被置 false）
+        if (!m_retryPending || SSS_NULL != m_serverStartStep) {
+            m_retryPending = false;
+            return;
+        }
+        m_retryPending = false;
+        m_serverStartStep = SSS_PUSH;
+        startServerByStep();
+    });
+}
+
+void Server::killStaleServer()
+{
+    // 使用独立的 adb 进程，不占用 m_workProcess，也不阻塞启动流程；
+    // 失败（设备离线/无 pkill）时静默忽略，仅作为提高成功率的补救措施。
+    qsc::AdbProcess *adb = new qsc::AdbProcess();
+    connect(adb, &qsc::AdbProcess::adbProcessResult, this, [this](qsc::AdbProcess::ADB_EXEC_RESULT processResult) {
+        if (qsc::AdbProcess::AER_SUCCESS_START != processResult) {
+            sender()->deleteLater();
+        }
+    });
+    QStringList args;
+    args << "shell"
+         << "pkill"
+         << "-f"
+         << "com.genymobile.scrcpy";
+    adb->execute(m_params.serial, args);
 }
 
 void Server::onWorkProcessResult(qsc::AdbProcess::ADB_EXEC_RESULT processResult)
@@ -574,20 +654,28 @@ void Server::onWorkProcessResult(qsc::AdbProcess::ADB_EXEC_RESULT processResult)
                 m_serverStartStep = SSS_RUNNING;
                 m_tunnelEnabled = true;
                 connectTo();
-            } else if (qsc::AdbProcess::AER_ERROR_START == processResult) {
-                if (!m_tunnelForward) {
-                    m_serverSocket.close();
-                    disableTunnelReverse();
-                } else {
-                    disableTunnelForward();
-                }
-                qCritical("adb shell start server failed");
-                m_serverStartStep = SSS_NULL;
-                emit serverStarted(false);
+            } else if (qsc::AdbProcess::AER_SUCCESS_EXEC != processResult) {
+                // 进程在启动阶段就结束了：app_process 崩溃/CrashExit/被系统杀掉/
+                // adb 连接抖动。原实现只处理 AER_ERROR_START，AER_ERROR_EXEC 会
+                // 落空 -> 既不上报失败也不启动超时，界面永远停在加载中。
+                qCritical("adb shell start server failed (result=%d)", static_cast<int>(processResult));
+                retryStart("server exited during startup");
             }
         } else if (SSS_RUNNING == m_serverStartStep) {
             m_serverStartStep = SSS_NULL;
-            emit serverStoped();
+            if (!m_stopRequested && !m_sessionActive) {
+                // 会话尚未建立（还在等设备端反向连接/握手）进程就退出了，且
+                // 没有任何 stop 请求：典型是 app_process 崩溃（jar 损坏、被
+                // ROM 杀、SELinux 拒绝）。原实现直接静默断开，用户只看到
+                // "启动不成功"。这里走自动重试。
+                qCritical("server exited before session established");
+                retryStart("server exited before session established");
+            } else {
+                // 正常路径：会话已建立后服务端停止（用户断开/流结束触发的清理），
+                // 或者 stop() 已主动清理（此时进程退出只是清理的结果）
+                m_sessionActive = false;
+                emit serverStoped();
+            }
         }
     }
 }

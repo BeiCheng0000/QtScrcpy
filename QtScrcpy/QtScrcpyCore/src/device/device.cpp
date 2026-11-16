@@ -68,6 +68,7 @@ Device::Device(DeviceParams params, QObject *parent) : IDevice(parent), m_params
         }
         if (m_decoder) {
             m_decoder->setRenderExpiredFrames(m_params.renderExpiredFrames);
+            m_decoder->setThreads(m_params.decodeThreads);
         }
 
         m_fileHandler = new FileHandler(this);
@@ -392,9 +393,9 @@ void Device::initSignals()
     }
 
     if (m_decoder) {
-        connect(m_decoder, &IDecoder::updateFPS, this, [this](quint32 fps) {
+        connect(m_decoder, &IDecoder::updateFPS, this, [this](quint32 fps, quint32 skipped) {
             for (const auto& item : m_deviceObservers) {
-                item->updateFPS(fps);
+                item->updateFPS(fps, skipped);
             }
         });
     }

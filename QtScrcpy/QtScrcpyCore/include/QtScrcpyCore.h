@@ -32,7 +32,10 @@ public:
         Q_UNUSED(width);
         Q_UNUSED(height);
     }
-    virtual void updateFPS(quint32 fps) { Q_UNUSED(fps); }
+    virtual void updateFPS(quint32 fps, quint32 skipped) {
+        Q_UNUSED(fps);
+        Q_UNUSED(skipped);
+    }
     virtual void onVideoSessionChanged(const QSize &size, bool clientResized) {
         Q_UNUSED(size);
         Q_UNUSED(clientResized);

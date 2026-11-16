@@ -34,6 +34,14 @@ bool Decoder::open()
         qCritical("Could not allocate decoder context");
         return false;
     }
+    // FFmpeg 默认 thread_count=1（单线程解码）。除显式指定单线程外，
+    // 启用帧级/切片级多线程以吃满多核 CPU：高分辨率流上解码吞吐
+    // 是帧率瓶颈时收益显著。代价：帧级多线程引入约 1-2 帧流水线延迟，
+    // 低延迟场景可配置 DecoderThreads=1 回退旧行为。
+    if (m_threads != 1) {
+        m_codecCtx->thread_count = m_threads; // 0 = FFmpeg 自动按核数
+        m_codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+    }
     if (avcodec_open2(m_codecCtx, codec, NULL) < 0) {
         qCritical("Could not open H.264 codec");
         return false;
@@ -70,6 +78,12 @@ void Decoder::setRenderExpiredFrames(bool enabled)
     if (m_vb) {
         m_vb->setRenderExpiredFrames(enabled);
     }
+}
+
+void Decoder::setThreads(int threads)
+{
+    // 仅在 open() 之前设置有效
+    m_threads = threads;
 }
 
 bool Decoder::push(const AVPacket *packet)

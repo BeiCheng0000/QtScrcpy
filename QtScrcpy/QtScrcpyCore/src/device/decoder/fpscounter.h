@@ -16,7 +16,9 @@ public:
     void addSkippedFrame();
 
 signals:
-    void updateFPS(quint32 fps);
+    // fps = 每秒被渲染消费的帧数；skipped = 每秒被跳过（未及渲染即被
+    // 新帧覆盖）的帧数，二者之和近似为设备送出的帧率
+    void updateFPS(quint32 fps, quint32 skipped);
 
 protected:
     virtual void timerEvent(QTimerEvent *event);

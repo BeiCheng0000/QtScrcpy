@@ -139,9 +139,14 @@ void QYUVOpenGLWidget::updateTextures(quint8 *dataY, quint8 *dataU, quint8 *data
         update();
         return;
     }
+    // 三个平面上传包进同一次上下文激活：原先每个平面各做一次
+    // makeCurrent/doneCurrent，多出两次 GL 上下文切换开销，
+    // 高帧率下会拖累渲染消费速度并触发解码侧跳帧
+    makeCurrent();
     updateTexture(m_texture[0], 0, dataY, linesizeY);
     updateTexture(m_texture[1], 1, dataU, linesizeU);
     updateTexture(m_texture[2], 2, dataV, linesizeV);
+    doneCurrent();
     // 真实画面数据已上传，此时展示才不会出现零填充纹理的“绿屏”
     emit frameUpdated();
     update();
@@ -275,11 +280,11 @@ void QYUVOpenGLWidget::updateTexture(GLuint texture, quint32 textureType, quint8
     if (!pixels)
         return;
 
+    // 注意：必须在已持有 GL 上下文时调用（updateTextures 统一激活），
+    // 本函数自身不再做 makeCurrent/doneCurrent
     QSize size = 0 == textureType ? m_frameSize : m_frameSize / 2;
 
-    makeCurrent();
     glBindTexture(GL_TEXTURE_2D, texture);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, static_cast<GLint>(stride));
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.width(), size.height(), GL_LUMINANCE, GL_UNSIGNED_BYTE, pixels);
-    doneCurrent();
 }
