@@ -8,6 +8,7 @@
 #include <QSystemTrayIcon>
 #include <QListWidget>
 #include <QTimer>
+#include <QMap>
 
 
 #include "adbprocess.h"
@@ -27,6 +28,7 @@ class QCheckBox;
 class QGroupBox;
 class QPushButton;
 class QSpinBox;
+class FileManagerWindow;
 class Dialog : public QWidget
 {
     Q_OBJECT
@@ -85,6 +87,7 @@ private slots:
     void on_refreshCameraBtn_clicked();
 
     void showIpEditMenu(const QPoint &pos);
+    void on_fileManagerBtn_clicked();
 
 private:
     bool checkAdbRun();
@@ -151,6 +154,9 @@ private:
     quint32 m_prevBitRate = 2000000;
     int m_prevMaxSizeIndex = 0;
     QPointer<PresetConfigDialog> m_presetDialog;
+    QPushButton *m_fileManagerBtn = nullptr;
+    // 每台设备一个独立文件管理窗口
+    QMap<QString, QPointer<FileManagerWindow>> m_fileWindows;
 };
 
 #endif // DIALOG_H

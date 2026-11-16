@@ -200,6 +200,10 @@ int main(int argc, char *argv[])
 // qt_zh_CN.qm 里这些文案在旧上下文 QTextControl 下，永远无法命中，导致
 // 右键菜单始终显示英文。这里用自定义翻译器为该上下文补齐标准文案，
 // 译法与官方简体中文翻译保持一致。
+//
+// 另外官方 5.15 安装包没有 qtbase_zh_CN.qm，QDialogButtonBox/QMessageBox
+// 等标准按钮（保存/取消/确定…）的文案在 QPlatformTheme 上下文下同样
+// 命中不了翻译，这里一并用该翻译器补齐（不新增类，保持单处维护）。
 class TextControlTranslator : public QTranslator
 {
 public:
@@ -231,6 +235,70 @@ public:
             }
             if (src == QLatin1String("Copy & Link Location")) {
                 return QString::fromUtf8("复制链接位置(&L)");
+            }
+        }
+        if (qstrcmp(context, "QPlatformTheme") == 0) {
+            // 译法与 Qt 官方简体中文（qtbase_zh_CN.ts）一致
+            const QLatin1String src(sourceText);
+            if (src == QLatin1String("OK")) {
+                return QString::fromUtf8("确定");
+            }
+            if (src == QLatin1String("Save")) {
+                return QString::fromUtf8("保存");
+            }
+            if (src == QLatin1String("Save All")) {
+                return QString::fromUtf8("全部保存");
+            }
+            if (src == QLatin1String("Open...")) {
+                return QString::fromUtf8("打开...");
+            }
+            if (src == QLatin1String("&Yes")) {
+                return QString::fromUtf8("是(&Y)");
+            }
+            if (src == QLatin1String("Yes to &All")) {
+                return QString::fromUtf8("全部是(&A)");
+            }
+            if (src == QLatin1String("&No")) {
+                return QString::fromUtf8("否(&N)");
+            }
+            if (src == QLatin1String("N&o to All")) {
+                return QString::fromUtf8("全否(&O)");
+            }
+            if (src == QLatin1String("Cancel")) {
+                return QString::fromUtf8("取消");
+            }
+            if (src == QLatin1String("Abort")) {
+                return QString::fromUtf8("中止");
+            }
+            if (src == QLatin1String("Retry")) {
+                return QString::fromUtf8("重试");
+            }
+            if (src == QLatin1String("Ignore")) {
+                return QString::fromUtf8("忽略");
+            }
+            if (src == QLatin1String("Close")) {
+                return QString::fromUtf8("关闭");
+            }
+            if (src == QLatin1String("Help")) {
+                return QString::fromUtf8("帮助");
+            }
+            if (src == QLatin1String("Apply")) {
+                return QString::fromUtf8("应用");
+            }
+            if (src == QLatin1String("Reset")) {
+                return QString::fromUtf8("重置");
+            }
+            if (src == QLatin1String("Discard")) {
+                return QString::fromUtf8("放弃");
+            }
+            if (src == QLatin1String("Don't Save")) {
+                return QString::fromUtf8("不保存");
+            }
+            if (src == QLatin1String("Show Details...")) {
+                return QString::fromUtf8("显示详细信息...");
+            }
+            if (src == QLatin1String("Hide Details...")) {
+                return QString::fromUtf8("隐藏详细信息...");
             }
         }
         return QTranslator::translate(context, sourceText, disambiguation, n);

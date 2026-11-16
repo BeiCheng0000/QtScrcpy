@@ -110,6 +110,8 @@ set(QSC_DEVICE_SOURCES
     src/device/decoder/videobuffer.cpp
     src/device/filehandler/filehandler.h
     src/device/filehandler/filehandler.cpp
+    src/device/filemanager/filemanager.h
+    src/device/filemanager/filemanager.cpp
     src/device/recorder/recorder.h
     src/device/recorder/recorder.cpp
     src/device/server/server.h

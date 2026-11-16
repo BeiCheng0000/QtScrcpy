@@ -188,6 +188,8 @@ set(QC_UI_SOURCES
     ui/presetconfigdialog.cpp
     ui/loadingoverlay.h
     ui/loadingoverlay.cpp
+    ui/filemanagerwindow.h
+    ui/filemanagerwindow.cpp
     render/qyuvopenglwidget.h
     render/qyuvopenglwidget.cpp
 )

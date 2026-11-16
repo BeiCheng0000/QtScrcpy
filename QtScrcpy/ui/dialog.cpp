@@ -34,6 +34,7 @@
 #include "dialog.h"
 #include "ui_dialog.h"
 #include "videoform.h"
+#include "filemanagerwindow.h"
 #include "../groupcontroller/groupcontroller.h"
 
 #ifdef Q_OS_WIN32
@@ -240,6 +241,13 @@ void Dialog::initUI()
     ui->bitRateEdit->setValidator(new QIntValidator(1, 99999, this));
 
     ui->presetConfigBtn->setVisible(false);
+
+    // 设备文件管理入口：与"启动服务/停止服务"同排，随当前选中设备打开独立窗口
+    m_fileManagerBtn = new QPushButton(tr("文件管理"), ui->startServerBtn->parentWidget());
+    m_fileManagerBtn->setMinimumHeight(ui->startServerBtn->minimumHeight());
+    m_fileManagerBtn->setToolTip(tr("浏览设备文件，支持拖拽上传、下载与文本编辑"));
+    ui->horizontalLayout_server->addWidget(m_fileManagerBtn);
+    connect(m_fileManagerBtn, &QPushButton::clicked, this, &Dialog::on_fileManagerBtn_clicked);
 
     // 填充编码模式下拉框。索引 0 是 .ui 中固定的“默认（自动）”项，
     // 其下依次追加所有已注册的编码预设。
@@ -1401,6 +1409,15 @@ void Dialog::onDeviceDisconnected(QString serial)
     // 绝不能让已消失设备的 sndcpy 音频桥接继续播放。
     AudioOutput::instance().stopForDevice(serial);
     GroupController::instance().removeDevice(serial);
+
+    // 文件管理窗口依附于设备会话：设备断开即关闭，避免对失效设备继续操作
+    if (m_fileWindows.contains(serial)) {
+        QPointer<FileManagerWindow> win = m_fileWindows.take(serial);
+        if (win) {
+            win->close();
+        }
+    }
+
     auto device = qsc::IDeviceManage::getInstance().getDevice(serial);
     if (!device) {
         return;
@@ -1412,6 +1429,36 @@ void Dialog::onDeviceDisconnected(QString serial)
         vf->close();
         vf->deleteLater();
     }
+}
+
+void Dialog::on_fileManagerBtn_clicked()
+{
+    const QString serial = ui->serialBox->currentText().trimmed();
+    if (serial.isEmpty()) {
+        QMessageBox::warning(this, tr("文件管理"), tr("请先选择一台已连接的设备"));
+        return;
+    }
+
+    if (m_fileWindows.contains(serial)) {
+        QPointer<FileManagerWindow> existing = m_fileWindows.value(serial);
+        if (existing) {
+            existing->showNormal();
+            existing->raise();
+            existing->activateWindow();
+            return;
+        }
+        m_fileWindows.remove(serial);
+    }
+
+    auto *window = new FileManagerWindow(serial, this);
+    window->setAttribute(Qt::WA_DeleteOnClose);
+    m_fileWindows.insert(serial, window);
+    connect(window, &QObject::destroyed, this, [this, serial]() {
+        m_fileWindows.remove(serial);
+    });
+    window->show();
+    window->raise();
+    window->activateWindow();
 }
 
 void Dialog::on_wirelessDisConnectBtn_clicked()
