@@ -69,6 +69,7 @@ Device::Device(DeviceParams params, QObject *parent) : IDevice(parent), m_params
         if (m_decoder) {
             m_decoder->setRenderExpiredFrames(m_params.renderExpiredFrames);
             m_decoder->setThreads(m_params.decodeThreads);
+            m_decoder->setFpsLogEnabled(m_params.fpsLogEnabled);
         }
 
         m_fileHandler = new FileHandler(this);

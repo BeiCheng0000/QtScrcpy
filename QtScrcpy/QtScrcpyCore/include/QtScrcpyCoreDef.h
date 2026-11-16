@@ -69,6 +69,7 @@ struct DeviceParams {
     QString gameScript = "";          // 游戏映射脚本
     int decodeMode = 0;               // 0=FFmpeg OpenGL (默认), 1=VideoToolbox Metal (Apple Silicon)
     int decodeThreads = 4;            // FFmpeg 解码线程数：0=自动，1=单线程（旧行为），N=指定
+    bool fpsLogEnabled = false;       // 每秒输出 FPS/Discard 诊断日志到控制台（跟随"显示 FPS"开关）
 };
     
 }

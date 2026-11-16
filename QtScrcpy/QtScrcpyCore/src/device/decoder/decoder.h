@@ -26,6 +26,7 @@ public:
     void onVideoSessionChanged(const QSize &size) override;
     void setRenderExpiredFrames(bool enabled) override;
     void setThreads(int threads) override;
+    void setFpsLogEnabled(bool enabled) override;
 
 private slots:
     void onNewFrame();

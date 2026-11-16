@@ -86,6 +86,13 @@ void Decoder::setThreads(int threads)
     m_threads = threads;
 }
 
+void Decoder::setFpsLogEnabled(bool enabled)
+{
+    if (m_vb) {
+        m_vb->setFpsLogEnabled(enabled);
+    }
+}
+
 bool Decoder::push(const AVPacket *packet)
 {
     if (!m_codecCtx || !m_vb) {

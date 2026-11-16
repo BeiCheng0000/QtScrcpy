@@ -23,6 +23,7 @@ public:
     void lock();
     void unLock();
     void setRenderExpiredFrames(bool renderExpiredFrames);
+    void setFpsLogEnabled(bool enabled);
 
     AVFrame *decodingFrame();
     // 将解码帧标记为可渲染

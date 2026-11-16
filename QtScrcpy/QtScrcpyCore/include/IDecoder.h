@@ -34,6 +34,8 @@ public:
     virtual void setRenderExpiredFrames(bool enabled) { Q_UNUSED(enabled); }
     /// 设置解码线程数：0=FFmpeg 自动，1=单线程（旧行为，最低延迟），N=指定
     virtual void setThreads(int threads) { Q_UNUSED(threads); }
+    /// 控制每秒 FPS/Discard 控制台诊断日志（默认关闭）
+    virtual void setFpsLogEnabled(bool enabled) { Q_UNUSED(enabled); }
 
 signals:
     void updateFPS(quint32 fps, quint32 skipped);

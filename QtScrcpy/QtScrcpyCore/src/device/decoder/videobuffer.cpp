@@ -66,6 +66,11 @@ void VideoBuffer::setRenderExpiredFrames(bool renderExpiredFrames)
     m_renderExpiredFrames = renderExpiredFrames;
 }
 
+void VideoBuffer::setFpsLogEnabled(bool enabled)
+{
+    m_fpsCounter.setLogEnabled(enabled);
+}
+
 AVFrame *VideoBuffer::decodingFrame()
 {
     return m_decodingFrame;

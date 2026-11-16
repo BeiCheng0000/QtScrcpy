@@ -41,9 +41,11 @@ void FpsCounter::timerEvent(QTimerEvent *event)
         m_curSkipped = m_skipped;
         resetCounter();
         emit updateFPS(m_curRendered, m_curSkipped);
-        // 每秒一行的帧率诊断日志：FPS=被渲染帧数，Discard=被跳过帧数，
-        // 两者之和近似设备送出的帧率；用于帧率瓶颈定位
-        qInfo("FPS:%d Discard:%d", m_curRendered, m_skipped);
+        // 每秒一行的帧率诊断日志：FPS=被渲染帧数，Discard=被跳过帧数。
+        // 仅在用户开启"显示 FPS"时输出，避免未开显示时控制台被刷屏
+        if (m_logEnabled) {
+            qInfo("FPS:%d Discard:%d", m_curRendered, m_skipped);
+        }
     }
 }
 

@@ -1012,7 +1012,8 @@ bool VideoForm::isHost()
 
 void VideoForm::updateFPS(quint32 fps, quint32 skipped)
 {
-    if (!m_fpsLabel) {
+    if (!m_fpsLabel || !m_fpsLabel->isVisible()) {
+        // 标签隐藏（未开"显示 FPS"）时不做任何更新
         return;
     }
     // skipped = 每秒被新帧覆盖而未渲染的帧数，用于判断瓶颈在解码/渲染侧
