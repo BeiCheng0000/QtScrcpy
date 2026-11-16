@@ -889,6 +889,8 @@ void Dialog::on_startServerBtn_clicked()
     // on devices with Android >= 10, the capture frame rate can be limited
     params.maxFps = static_cast<quint32>(Config::getInstance().getMaxFps());
     params.decodeThreads = Config::getInstance().getDecoderThreads();
+    // 控制台 FPS 诊断日志跟随"显示 FPS"开关
+    params.fpsLogEnabled = ui->fpsCheck->isChecked();
     params.videoSource = static_cast<qsc::VideoSource>(ui->videoSourceBox->currentIndex());
     params.cameraFacing = ui->cameraFacingBox->currentIndex() == 1
             ? qsc::CAMERA_FACING_FRONT
