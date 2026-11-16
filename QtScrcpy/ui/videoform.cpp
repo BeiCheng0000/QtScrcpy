@@ -39,6 +39,7 @@
 #include "recorder/videorecorder.h"
 #include "toolform.h"
 #include "mousetap/mousetap.h"
+#include "adbprocess.h"
 #include "ui_videoform.h"
 #include "videoform.h"
 
@@ -1596,6 +1597,8 @@ void VideoForm::resizeEvent(QResizeEvent *event)
     Q_UNUSED(event)
     // 遮罩跟随窗口大小变化，始终覆盖画面区域
     syncLoadingOverlay();
+    // APK 安装提示浮层保持居中
+    syncInstallTip();
     if (m_toolForm && !isFullScreen()) {
         m_toolForm->resize(m_toolForm->width(), frameGeometry().height());
     }
@@ -1643,6 +1646,75 @@ void VideoForm::closeEvent(QCloseEvent *event)
     device->disconnectDevice();
 }
 
+void VideoForm::installApk(const QString &apkPath)
+{
+    const QFileInfo info(apkPath);
+    if (!info.exists()) {
+        return;
+    }
+    auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
+    if (!device) {
+        return;
+    }
+    showInstallTip(tr("正在安装 %1 …").arg(info.fileName()), 0);
+
+    // 独立 adb 进程 + 超时兜底：安装可能持续数十秒，不占用主界面串行通道；
+    // -r 覆盖安装，保留应用数据
+    auto *adb = new qsc::AdbProcess(this);
+    const QString name = info.fileName();
+    QPointer<VideoForm> guard = this;
+    adb->executeWithTimeout(m_serial, QStringList() << "install" << "-r" << info.absoluteFilePath(),
+                            180000, [guard, adb, name](bool ok, bool timedOut, const QString &out) {
+        if (guard) {
+            const QString trimmed = out.trimmed();
+            if (!ok) {
+                const QString reason = timedOut ? tr("超时（3 分钟），请确认设备连接") : trimmed.section('\n', -1);
+                guard->showInstallTip(tr("安装失败 %1：%2").arg(name, reason), 10000);
+            } else if (!trimmed.contains("Success", Qt::CaseInsensitive)) {
+                // adb install 失败时退出码仍可能为 0，必须以输出为准
+                guard->showInstallTip(tr("安装失败 %1：%2").arg(name, trimmed.section('\n', -1)), 10000);
+            } else {
+                guard->showInstallTip(tr("安装成功 %1").arg(name), 4000);
+            }
+        }
+        adb->deleteLater();
+    });
+}
+
+void VideoForm::showInstallTip(const QString &text, int autoHideMs)
+{
+    if (!m_installTipLabel) {
+        auto *label = new QLabel(this);
+        label->setObjectName("installTipLabel");
+        label->setAlignment(Qt::AlignCenter);
+        label->setStyleSheet(
+            "QLabel#installTipLabel{background:rgba(0,0,0,170);color:#ffffff;padding:10px 16px;"
+            "border-radius:8px;font-size:14px;}");
+        m_installTipLabel = label;
+        m_installTipTimer.setSingleShot(true);
+        connect(&m_installTipTimer, &QTimer::timeout, label, &QLabel::hide);
+    }
+    m_installTipLabel->setText(text);
+    syncInstallTip();
+    m_installTipLabel->show();
+    m_installTipLabel->raise();
+    if (autoHideMs > 0) {
+        m_installTipTimer.start(autoHideMs);
+    } else {
+        m_installTipTimer.stop();
+    }
+}
+
+void VideoForm::syncInstallTip()
+{
+    if (!m_installTipLabel) {
+        return;
+    }
+    const QSize hint = m_installTipLabel->sizeHint();
+    m_installTipLabel->resize(hint);
+    m_installTipLabel->move((width() - hint.width()) / 2, (height() - hint.height()) / 2);
+}
+
 void VideoForm::dragEnterEvent(QDragEnterEvent *event)
 {
     event->acceptProposedAction();
@@ -1676,8 +1748,8 @@ void VideoForm::dropEvent(QDropEvent *event)
             continue;
         }
 
-        if (fileInfo.isFile() && fileInfo.suffix() == "apk") {
-            emit device->installApkRequest(file);
+        if (fileInfo.isFile() && fileInfo.suffix().compare(QLatin1String("apk"), Qt::CaseInsensitive) == 0) {
+            installApk(file);
             continue;
         }
         emit device->pushFileRequest(file, Config::getInstance().getPushFilePath() + fileInfo.fileName());

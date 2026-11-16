@@ -121,6 +121,13 @@ private:
     // 是否使用 Metal 渲染路径
     bool isMetalMode() const;
 
+    // 拖入 APK 安装：窗口内浮层提示「正在安装/安装成功/安装失败」
+    void installApk(const QString &apkPath);
+    void showInstallTip(const QString &text, int autoHideMs);
+    void syncInstallTip();
+    QPointer<QLabel> m_installTipLabel;
+    QTimer m_installTipTimer;
+
     // ui
     Ui::videoForm *ui;
     QPointer<ToolForm> m_toolForm;
