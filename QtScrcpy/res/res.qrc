@@ -30,5 +30,6 @@
         <file>i18n/ko_KR.qm</file>
         <file>i18n/qt_zh_CN.qm</file>
         <file>image/tray/logo.png</file>
+        <file>image/mousetrack/glove.png</file>
     </qresource>
 </RCC>

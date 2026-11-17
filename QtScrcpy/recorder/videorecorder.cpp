@@ -135,6 +135,19 @@ public:
     int swsSrcW = 0;
     int swsSrcH = 0;
 
+    // 画面叠加（鼠标轨迹等）：UI 线程 setOverlayPainter 写入，编码线程取用
+    std::mutex overlayMutex;
+    VideoRecorder::OverlayPainter overlayPainter;
+    SwsContext *overlaySwsToRgb = nullptr; // 源 YUV420P → BGRA 画面矩形
+    SwsContext *overlaySwsToYuv = nullptr; // BGRA 画面矩形 → vFrame 中心 YUV420P
+    int overlaySrcW = 0;
+    int overlaySrcH = 0;
+    int overlayDstW = 0;
+    int overlayDstH = 0;
+    std::vector<uint8_t> overlayRgb; // 前向转换缓冲（仅 worker 线程使用）
+    VideoFrame lastFrame;            // worker 线程私有：画面静止时补帧用
+    bool lastFrameValid = false;
+
     bool open(const QString &path, int width, int height, int videoFps, int videoBitrate, int audioSampleRate,
               int audioChannels, int audioBitrate);
     void closeAll();
@@ -143,6 +156,7 @@ public:
     bool initAudio(int audioBitrate);
     void workerLoop();
     bool encodeVideo(VideoFrame &frame);
+    bool composeOverlay(VideoFrame &frame, const VideoRecorder::OverlayPainter &painter, qint64 pts);
     bool pumpAudio();
     bool encodeAudioFrame(const int16_t *samples, int nbSamples);
     void flushAudioAccumulator();
@@ -424,8 +438,30 @@ void VideoRecorder::Impl::workerLoop()
         }
 
         if (hasV && running.load()) {
+            // 保留最近一帧：画面静止无新帧时按 fps 补帧，使叠加动画（波纹/尾迹）
+            // 随时间演进而不是冻结
+            lastFrame = vf;
+            lastFrameValid = true;
             if (!encodeVideo(vf)) {
                 break;
+            }
+        }
+        if (!hasV && running.load() && lastFrameValid) {
+            bool overlayOn = false;
+            {
+                std::lock_guard<std::mutex> lock(overlayMutex);
+                overlayOn = static_cast<bool>(overlayPainter);
+            }
+            if (overlayOn) {
+                const qint64 now = clock.elapsed();
+                const qint64 interval = 1000 / (fps > 0 ? fps : 30);
+                if (now - lastVPts >= interval) {
+                    VideoFrame dup = lastFrame;
+                    dup.ptsMs = now;
+                    if (!encodeVideo(dup)) {
+                        break;
+                    }
+                }
             }
         }
         if (running.load() && audioEnabled && !pumpAudio()) {
@@ -456,7 +492,25 @@ bool VideoRecorder::Impl::encodeVideo(VideoFrame &frame)
         return false;
     }
 
-    if (frame.width == encW && frame.height == encH) {
+    VideoRecorder::OverlayPainter painter;
+    {
+        std::lock_guard<std::mutex> lock(overlayMutex);
+        painter = overlayPainter;
+    }
+
+    // pts 先单调化：叠加回调需要最终时间戳
+    qint64 pts = frame.ptsMs;
+    if (pts <= lastVPts) {
+        pts = lastVPts + 1;
+    }
+    lastVPts = pts;
+
+    if (painter) {
+        // 叠加路径：YUV→BGRA 画面矩形 → QPainter 绘制 → 回写 YUV（含 letterbox）
+        if (!composeOverlay(frame, painter, pts)) {
+            return false;
+        }
+    } else if (frame.width == encW && frame.height == encH) {
         const int heights[3] = {encH, (encH + 1) / 2, (encH + 1) / 2};
         const int srcStride[3] = {frame.strideY, frame.strideU, frame.strideV};
         const uint8_t *srcData[3] = {frame.y.data(), frame.u.data(), frame.v.data()};
@@ -500,11 +554,6 @@ bool VideoRecorder::Impl::encodeVideo(VideoFrame &frame)
         sws_scale(sws, srcData, srcStride, 0, frame.height, dstData, dstStride);
     }
 
-    qint64 pts = frame.ptsMs;
-    if (pts <= lastVPts) {
-        pts = lastVPts + 1;
-    }
-    lastVPts = pts;
     vFrame->pts = pts;
 
     ret = avcodec_send_frame(vCtx, vFrame);
@@ -514,6 +563,72 @@ bool VideoRecorder::Impl::encodeVideo(VideoFrame &frame)
     }
     ++videoFrameCount;
     return drainEncoder(vCtx, vStream);
+}
+
+// 叠加合成：把原始帧缩放到画面矩形（与常规 letterbox 同规则），
+// 交给回调在 BGRA 图像上绘制（QImage 仅包装缓冲，无拷贝），再转回
+// YUV420P 写入编码帧中心，四周保留黑边。
+bool VideoRecorder::Impl::composeOverlay(VideoFrame &frame, const VideoRecorder::OverlayPainter &painter, qint64 pts)
+{
+    if (frame.width <= 0 || frame.height <= 0) {
+        fail(QStringLiteral("overlay: invalid frame size %1x%2").arg(frame.width).arg(frame.height));
+        return false;
+    }
+    const double scale = std::min(static_cast<double>(encW) / frame.width, static_cast<double>(encH) / frame.height);
+    const int dstW = std::max(2, static_cast<int>(frame.width * scale) & ~1);
+    const int dstH = std::max(2, static_cast<int>(frame.height * scale) & ~1);
+
+    if (!overlaySwsToRgb || overlaySrcW != frame.width || overlaySrcH != frame.height || overlayDstW != dstW
+        || overlayDstH != dstH) {
+        sws_freeContext(overlaySwsToRgb);
+        overlaySwsToRgb = sws_getContext(frame.width, frame.height, AV_PIX_FMT_YUV420P, dstW, dstH, AV_PIX_FMT_BGRA,
+                                         SWS_BILINEAR, nullptr, nullptr, nullptr);
+        overlaySrcW = frame.width;
+        overlaySrcH = frame.height;
+        overlayDstW = dstW;
+        overlayDstH = dstH;
+        if (!overlaySwsToRgb) {
+            fail(QStringLiteral("cannot create overlay scaler (yuv->bgra)"));
+            return false;
+        }
+    }
+
+    const int rgbStride = dstW * 4;
+    overlayRgb.resize(static_cast<size_t>(rgbStride) * dstH);
+    const uint8_t *srcData[4] = {frame.y.data(), frame.u.data(), frame.v.data(), nullptr};
+    int srcStride[4] = {frame.strideY, frame.strideU, frame.strideV, 0};
+    uint8_t *rgbData[4] = {overlayRgb.data(), nullptr, nullptr, nullptr};
+    int rgbStrides[4] = {rgbStride, 0, 0, 0};
+    sws_scale(overlaySwsToRgb, srcData, srcStride, 0, frame.height, rgbData, rgbStrides);
+
+    QImage img(overlayRgb.data(), dstW, dstH, rgbStride, QImage::Format_ARGB32);
+    painter(img, pts, scale);
+
+    if (!overlaySwsToYuv || overlayDstW != dstW || overlayDstH != dstH) {
+        sws_freeContext(overlaySwsToYuv);
+        overlaySwsToYuv =
+            sws_getContext(dstW, dstH, AV_PIX_FMT_BGRA, dstW, dstH, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr,
+                           nullptr);
+        overlayDstW = dstW;
+        overlayDstH = dstH;
+        if (!overlaySwsToYuv) {
+            fail(QStringLiteral("cannot create overlay scaler (bgra->yuv)"));
+            return false;
+        }
+    }
+
+    fillBlack(vFrame, encH);
+    const int x0 = ((encW - dstW) / 2) & ~1;
+    const int y0 = ((encH - dstH) / 2) & ~1;
+    const uint8_t *inPlanes[4] = {img.constBits(), nullptr, nullptr, nullptr};
+    int inStrides[4] = {static_cast<int>(img.bytesPerLine()), 0, 0, 0};
+    uint8_t *outPlanes[4] = {vFrame->data[0] + static_cast<ptrdiff_t>(y0) * vFrame->linesize[0] + x0,
+                             vFrame->data[1] + static_cast<ptrdiff_t>(y0 / 2) * vFrame->linesize[1] + x0 / 2,
+                             vFrame->data[2] + static_cast<ptrdiff_t>(y0 / 2) * vFrame->linesize[2] + x0 / 2,
+                             nullptr};
+    int outStrides[4] = {vFrame->linesize[0], vFrame->linesize[1], vFrame->linesize[2], 0};
+    sws_scale(overlaySwsToYuv, inPlanes, inStrides, 0, dstH, outPlanes, outStrides);
+    return true;
 }
 
 bool VideoRecorder::Impl::encodeAudioFrame(const int16_t *samples, int nbSamples)
@@ -680,6 +795,14 @@ void VideoRecorder::Impl::closeAll()
         sws_freeContext(sws);
         sws = nullptr;
     }
+    if (overlaySwsToRgb) {
+        sws_freeContext(overlaySwsToRgb);
+        overlaySwsToRgb = nullptr;
+    }
+    if (overlaySwsToYuv) {
+        sws_freeContext(overlaySwsToYuv);
+        overlaySwsToYuv = nullptr;
+    }
     if (swr) {
         swr_free(&swr);
     }
@@ -713,6 +836,15 @@ VideoRecorder::VideoRecorder(QObject *parent) : QObject(parent), m_impl(new Impl
 {
 }
 
+void VideoRecorder::setOverlayPainter(OverlayPainter painter)
+{
+    if (!m_impl) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_impl->overlayMutex);
+    m_impl->overlayPainter = std::move(painter);
+}
+
 VideoRecorder::~VideoRecorder()
 {
     stop();
@@ -731,6 +863,8 @@ bool VideoRecorder::start(const QString &filePath, int width, int height, int fp
     m_impl->videoFrameCount = 0;
     m_impl->audioSamples = 0;
     m_impl->lastVPts = -1;
+    // 补帧缓存来自上一轮 worker 线程，必须失效，防止旧帧混入新录像
+    m_impl->lastFrameValid = false;
     m_impl->audioPending.clear();
     m_impl->audioAccum.clear();
     m_impl->audioWrittenSamples = 0;

@@ -27,6 +27,9 @@ struct UserBootConfig
     int lockOrientationIndex = 0;
     bool recordScreen     = false;
     bool recordBackground = false;
+    // 录制时把投屏窗口内的鼠标操作轨迹（光标/波纹/尾迹）叠加进视频，
+    // 并落盘同名 .events.json；无 UI 开关，可在 ini 中改为 false 关闭
+    bool recordMouseTrack = true;
     bool reverseConnect   = true;
     bool showFPS          = false;
     bool windowOnTop      = false;

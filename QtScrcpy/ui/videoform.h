@@ -2,10 +2,12 @@
 #define VIDEOFORM_H
 
 #include <QPointer>
+#include <QSharedPointer>
 #include <QTimer>
 #include <QWidget>
 
 #include "../QtScrcpyCore/include/QtScrcpyCore.h"
+#include "mousetrackrecorder.h"
 
 namespace Ui
 {
@@ -127,6 +129,11 @@ private:
     void syncInstallTip();
     QPointer<QLabel> m_installTipLabel;
     QTimer m_installTipTimer;
+
+    // 录制时把投屏窗口内的鼠标事件交给轨迹记录器（叠加进视频 + events.json）
+    void trackMouse(const QPointF &posInVideo, const QSize &videoSize, QEvent::Type type, Qt::MouseButton button);
+    void trackWheel(const QPointF &posInVideo, const QSize &videoSize, int angleDeltaY);
+    QSharedPointer<MouseTrackRecorder> m_trackRecorder = QSharedPointer<MouseTrackRecorder>::create();
 
     // ui
     Ui::videoForm *ui;

@@ -192,6 +192,8 @@ set(QC_UI_SOURCES
     ui/filemanagerwindow.cpp
     ui/wirelesscontroller.h
     ui/wirelesscontroller.cpp
+    ui/mousetrackrecorder.h
+    ui/mousetrackrecorder.cpp
     render/qyuvopenglwidget.h
     render/qyuvopenglwidget.cpp
 )

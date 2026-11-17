@@ -1129,6 +1129,15 @@ bool VideoForm::startRecord()
         });
     }
 
+    // 鼠标轨迹叠加进视频 + 操作轨迹落盘（events.json 与视频时间轴对齐）
+    if (config.recordMouseTrack) {
+        m_trackRecorder->startSession(filePath + QStringLiteral(".events.json"));
+        QSharedPointer<MouseTrackRecorder> track = m_trackRecorder;
+        recorder->setOverlayPainter([track](QImage &img, qint64 ptsMs, double scale) {
+            track->paintAt(img, ptsMs, scale);
+        });
+    }
+
     qInfo() << "recording started:" << filePath << "with audio:" << withAudio;
     emit recordingStateChanged();
     return true;
@@ -1147,6 +1156,8 @@ void VideoForm::stopRecord()
     }
     // stop() is idempotent and also joins a worker that already exited after
     // an encoding error.
+    m_recorder->setOverlayPainter(nullptr);
+    m_trackRecorder->endSession();
     m_recorder->stop();
     emit recordingStateChanged();
 }
@@ -1155,6 +1166,7 @@ void VideoForm::onRecordingFinished(const QString &filePath, qint64 durationMs, 
 {
     qInfo() << "recording saved:" << filePath << "duration(ms):" << durationMs << "bytes:" << bytes
             << "audio:" << hasAudio;
+    m_trackRecorder->endSession();
 
     if (auto *recorder = qobject_cast<VideoRecorder *>(sender())) {
         recorder->deleteLater();
@@ -1184,6 +1196,7 @@ void VideoForm::onRecordingFinished(const QString &filePath, qint64 durationMs, 
 void VideoForm::onRecordingError(const QString &error)
 {
     qWarning() << "recording failed:" << error;
+    m_trackRecorder->endSession();
 
     if (auto *recorder = qobject_cast<VideoRecorder *>(sender())) {
         recorder->deleteLater();
@@ -1273,7 +1286,12 @@ void VideoForm::staysOnTop(bool top)
 void VideoForm::mousePressEvent(QMouseEvent *event)
 {
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
+    QWidget *pressVw = videoWidget();
     if (event->button() == Qt::MiddleButton) {
+        if (pressVw && pressVw->geometry().contains(event->pos())) {
+            trackMouse(pressVw->mapFrom(this, event->pos()), pressVw->size(), QEvent::MouseButtonPress,
+                       Qt::MiddleButton);
+        }
         if (device && !device->isCurrentCustomKeymap()) {
             device->postGoHome();
             return;
@@ -1281,6 +1299,10 @@ void VideoForm::mousePressEvent(QMouseEvent *event)
     }
 
     if (event->button() == Qt::RightButton) {
+        if (pressVw && pressVw->geometry().contains(event->pos())) {
+            trackMouse(pressVw->mapFrom(this, event->pos()), pressVw->size(), QEvent::MouseButtonPress,
+                       Qt::RightButton);
+        }
         if (device && !device->isCurrentCustomKeymap()) {
             device->postGoBack();
             return;
@@ -1303,6 +1325,7 @@ void VideoForm::mousePressEvent(QMouseEvent *event)
         QPointF mappedPos = vw->mapFrom(this, localPos.toPoint());
         QMouseEvent newEvent(event->type(), mappedPos, globalPos, event->button(), event->buttons(), event->modifiers());
         emit device->mouseEvent(&newEvent, m_frameSize, vw->size());
+        trackMouse(mappedPos, vw->size(), newEvent.type(), newEvent.button());
 
         // 调试按键映射坐标
         if (event->button() == Qt::LeftButton) {
@@ -1354,6 +1377,7 @@ void VideoForm::mouseReleaseEvent(QMouseEvent *event)
         }
         QMouseEvent newEvent(event->type(), local, globalPos, event->button(), event->buttons(), event->modifiers());
         emit device->mouseEvent(&newEvent, m_frameSize, vw->size());
+        trackMouse(local, vw->size(), newEvent.type(), newEvent.button());
     } else {
         m_dragPosition = QPoint(0, 0);
     }
@@ -1377,6 +1401,7 @@ void VideoForm::mouseMoveEvent(QMouseEvent *event)
         QPointF mappedPos = vw->mapFrom(this, localPos.toPoint());
         QMouseEvent newEvent(event->type(), mappedPos, globalPos, event->button(), event->buttons(), event->modifiers());
         emit device->mouseEvent(&newEvent, m_frameSize, vw->size());
+        trackMouse(mappedPos, vw->size(), newEvent.type(), newEvent.button());
     } else if (!m_dragPosition.isNull()) {
         if (event->buttons() & Qt::LeftButton) {
             move(globalPos.toPoint() - m_dragPosition);
@@ -1413,6 +1438,7 @@ void VideoForm::mouseDoubleClickEvent(QMouseEvent *event)
         QPointF mappedPos = vw->mapFrom(this, localPos.toPoint());
         QMouseEvent newEvent(event->type(), mappedPos, globalPos, event->button(), event->buttons(), event->modifiers());
         emit device->mouseEvent(&newEvent, m_frameSize, vw->size());
+        trackMouse(mappedPos, vw->size(), newEvent.type(), newEvent.button());
     }
 }
 
@@ -1443,6 +1469,7 @@ void VideoForm::wheelEvent(QWheelEvent *event)
             event->buttons(), event->modifiers(), event->phase(), event->source(), event->inverted());
 #endif
         emit device->wheelEvent(&wheelEvent, m_frameSize, vw->size());
+        trackWheel(pos, vw->size(), event->angleDelta().y());
     }
 }
 
@@ -1713,6 +1740,22 @@ void VideoForm::syncInstallTip()
     const QSize hint = m_installTipLabel->sizeHint();
     m_installTipLabel->resize(hint);
     m_installTipLabel->move((width() - hint.width()) / 2, (height() - hint.height()) / 2);
+}
+
+// 录制时的鼠标轨迹记录：事件坐标已 mapFrom 到视频控件，
+// MouseTrackRecorder 内部再换算到设备画面坐标（与触控转发同一公式）
+void VideoForm::trackMouse(const QPointF &posInVideo, const QSize &videoSize, QEvent::Type type, Qt::MouseButton button)
+{
+    if (m_trackRecorder && m_trackRecorder->isActive() && !videoSize.isEmpty()) {
+        m_trackRecorder->onMouseEvent(posInVideo, videoSize, m_frameSize, type, button);
+    }
+}
+
+void VideoForm::trackWheel(const QPointF &posInVideo, const QSize &videoSize, int angleDeltaY)
+{
+    if (m_trackRecorder && m_trackRecorder->isActive() && !videoSize.isEmpty()) {
+        m_trackRecorder->onWheelEvent(posInVideo, videoSize, m_frameSize, angleDeltaY);
+    }
 }
 
 void VideoForm::dragEnterEvent(QDragEnterEvent *event)
