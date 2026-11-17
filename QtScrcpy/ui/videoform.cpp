@@ -31,6 +31,7 @@
 #include <Windows.h>
 #endif
 
+#include "apkpathutils.h"
 #include "audio/audiooutput.h"
 #include "config.h"
 #include "iconhelper.h"
@@ -1679,33 +1680,90 @@ void VideoForm::installApk(const QString &apkPath)
     if (!info.exists()) {
         return;
     }
+    showInstallTip(tr("正在安装 %1 …").arg(info.fileName()), 0);
+    const QString name = info.fileName();
+    installOne(apkPath, [this, name](bool ok, const QString &reason) {
+        if (ok) {
+            showInstallTip(tr("安装成功 %1").arg(name), 4000);
+        } else {
+            showInstallTip(tr("安装失败 %1：%2").arg(name, reason), 10000);
+        }
+    });
+}
+
+// 单个 apk 安装：独立 adb 进程 + 超时兜底，-r 覆盖安装保留数据。
+// done 回调返回 (是否成功, 失败原因)；调用方负责提示与队列推进。
+void VideoForm::installOne(const QString &apkPath, const std::function<void(bool, const QString &)> &done)
+{
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
     if (!device) {
+        done(false, tr("设备未连接"));
         return;
     }
-    showInstallTip(tr("正在安装 %1 …").arg(info.fileName()), 0);
-
-    // 独立 adb 进程 + 超时兜底：安装可能持续数十秒，不占用主界面串行通道；
-    // -r 覆盖安装，保留应用数据
+    const QString path = ApkPathUtils::toAdbPath(QFileInfo(apkPath).absoluteFilePath());
     auto *adb = new qsc::AdbProcess(this);
-    const QString name = info.fileName();
     QPointer<VideoForm> guard = this;
-    adb->executeWithTimeout(m_serial, QStringList() << "install" << "-r" << info.absoluteFilePath(),
-                            180000, [guard, adb, name](bool ok, bool timedOut, const QString &out) {
+    adb->executeWithTimeout(m_serial, QStringList() << "install" << "-r" << path, 180000,
+                            [guard, adb, done](bool ok, bool timedOut, const QString &out) {
+        QString reason;
+        bool success = false;
+        const QString trimmed = out.trimmed();
+        if (!ok) {
+            reason = timedOut ? tr("超时（3 分钟），请确认设备连接") : trimmed.section('\n', -1);
+        } else if (!trimmed.contains("Success", Qt::CaseInsensitive)) {
+            // adb install 失败时退出码仍可能为 0，必须以输出为准
+            reason = trimmed.section('\n', -1);
+        } else {
+            success = true;
+        }
         if (guard) {
-            const QString trimmed = out.trimmed();
-            if (!ok) {
-                const QString reason = timedOut ? tr("超时（3 分钟），请确认设备连接") : trimmed.section('\n', -1);
-                guard->showInstallTip(tr("安装失败 %1：%2").arg(name, reason), 10000);
-            } else if (!trimmed.contains("Success", Qt::CaseInsensitive)) {
-                // adb install 失败时退出码仍可能为 0，必须以输出为准
-                guard->showInstallTip(tr("安装失败 %1：%2").arg(name, trimmed.section('\n', -1)), 10000);
-            } else {
-                guard->showInstallTip(tr("安装成功 %1").arg(name), 4000);
-            }
+            done(success, reason);
         }
         adb->deleteLater();
     });
+}
+
+void VideoForm::installApkBatch(const QStringList &paths)
+{
+    if (m_installBusy || paths.isEmpty()) {
+        return;
+    }
+    m_installQueue = paths;
+    m_installOk = 0;
+    m_installFail = 0;
+    m_installCancelled = false;
+    m_installBusy = true;
+    installNextApk();
+}
+
+void VideoForm::installNextApk()
+{
+    if (m_installCancelled || m_installQueue.isEmpty()) {
+        m_installBusy = false;
+        if (!m_installCancelled) {
+            showInstallTip(tr("批量安装完成：成功 %1，失败 %2").arg(m_installOk).arg(m_installFail), 6000);
+        }
+        emit apkInstallFinished(m_installOk, m_installFail);
+        return;
+    }
+    const QString path = m_installQueue.takeFirst();
+    emit apkInstallProgress(path, tr("安装中"));
+    installOne(path, [this, path](bool ok, const QString &reason) {
+        if (ok) {
+            ++m_installOk;
+            emit apkInstallProgress(path, tr("成功"));
+        } else {
+            ++m_installFail;
+            emit apkInstallProgress(path, tr("失败：") + reason);
+        }
+        installNextApk();
+    });
+}
+
+void VideoForm::cancelInstallBatch()
+{
+    m_installCancelled = true;
+    m_installQueue.clear();
 }
 
 void VideoForm::showInstallTip(const QString &text, int autoHideMs)

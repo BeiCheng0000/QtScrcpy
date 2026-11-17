@@ -3,8 +3,11 @@
 
 #include <QPointer>
 #include <QSharedPointer>
+#include <QStringList>
 #include <QTimer>
 #include <QWidget>
+
+#include <functional>
 
 #include "../QtScrcpyCore/include/QtScrcpyCore.h"
 #include "mousetrackrecorder.h"
@@ -46,8 +49,15 @@ public:
     bool startRecord();
     void stopRecord();
 
+    // 批量安装（悬停菜单「安装 apk」）：串行执行，逐项发 apkInstallProgress/Finished
+    void installApkBatch(const QStringList &paths);
+    void cancelInstallBatch();
+
 signals:
     void recordingStateChanged();
+    // 批量 apk 安装：每个 apk 完成一项状态，队列结束后汇总
+    void apkInstallProgress(const QString &path, const QString &status);
+    void apkInstallFinished(int successCount, int failCount);
 
 private slots:
     void onRecordingFinished(const QString &filePath, qint64 durationMs, qint64 bytes, bool hasAudio);
@@ -125,10 +135,17 @@ private:
 
     // 拖入 APK 安装：窗口内浮层提示「正在安装/安装成功/安装失败」
     void installApk(const QString &apkPath);
+    void installOne(const QString &apkPath, const std::function<void(bool, const QString &)> &done);
+    void installNextApk();
     void showInstallTip(const QString &text, int autoHideMs);
     void syncInstallTip();
     QPointer<QLabel> m_installTipLabel;
     QTimer m_installTipTimer;
+    QStringList m_installQueue;
+    bool m_installBusy = false;
+    bool m_installCancelled = false;
+    int m_installOk = 0;
+    int m_installFail = 0;
 
     // 录制时把投屏窗口内的鼠标事件交给轨迹记录器（叠加进视频 + events.json）
     void trackMouse(const QPointF &posInVideo, const QSize &videoSize, QEvent::Type type, Qt::MouseButton button);

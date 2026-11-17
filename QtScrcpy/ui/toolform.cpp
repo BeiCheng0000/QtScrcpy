@@ -13,6 +13,7 @@
 #include <QVBoxLayout>
 
 #include "iconhelper.h"
+#include "apkinstalldialog.h"
 #include "toolform.h"
 #include "ui_toolform.h"
 #include "videoform.h"
@@ -241,15 +242,31 @@ void ToolForm::createSettingsMenu()
         { "打开所有应用", "android.settings.APPLICATION_SETTINGS" },
         { "打开关于本机", "android.settings.DEVICE_INFO_SETTINGS" },
         { "打开网络面板", "android.settings.WIRELESS_SETTINGS" },
+        { "安装 apk", nullptr }, // action 为空 -> 打开批量安装对话框
     };
     for (const Entry &entry : entries) {
         QPushButton *button = new QPushButton(QString::fromUtf8(entry.text), m_settingsMenu);
         button->setCursor(Qt::PointingHandCursor);
-        const QString action = QString::fromUtf8(entry.action);
-        connect(button, &QPushButton::clicked, this, [this, action]() {
-            hideSettingsMenu();
-            startActivity(action);
-        });
+        if (entry.action) {
+            const QString action = QString::fromUtf8(entry.action);
+            connect(button, &QPushButton::clicked, this, [this, action]() {
+                hideSettingsMenu();
+                startActivity(action);
+            });
+        } else {
+            connect(button, &QPushButton::clicked, this, [this]() {
+                hideSettingsMenu();
+                auto *dlg = new ApkInstallDialog(this);
+                dlg->setAttribute(Qt::WA_DeleteOnClose, true);
+                if (VideoForm *form = qobject_cast<VideoForm *>(parent())) {
+                    connect(dlg, &ApkInstallDialog::installRequested, form, &VideoForm::installApkBatch);
+                    connect(form, &VideoForm::apkInstallProgress, dlg, &ApkInstallDialog::setItemStatus);
+                    connect(form, &VideoForm::apkInstallFinished, dlg, &ApkInstallDialog::finish);
+                    connect(dlg, &ApkInstallDialog::cancelled, form, &VideoForm::cancelInstallBatch);
+                }
+                dlg->show();
+            });
+        }
         layout->addWidget(button);
     }
     m_settingsMenu->adjustSize();

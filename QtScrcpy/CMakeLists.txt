@@ -194,6 +194,10 @@ set(QC_UI_SOURCES
     ui/wirelesscontroller.cpp
     ui/mousetrackrecorder.h
     ui/mousetrackrecorder.cpp
+    ui/apkpathutils.h
+    ui/apkpathutils.cpp
+    ui/apkinstalldialog.h
+    ui/apkinstalldialog.cpp
     render/qyuvopenglwidget.h
     render/qyuvopenglwidget.cpp
 )
