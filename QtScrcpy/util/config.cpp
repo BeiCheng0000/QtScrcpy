@@ -448,13 +448,8 @@ int Config::getDesktopOpenGL()
 
 int Config::getSkin()
 {
-    // 强制禁用手机边框（皮肤）
+    // 皮肤（手机边框）已废弃，恒为禁用
     return 0;
-    int skin = 1;
-    m_settings->beginGroup(GROUP_COMMON);
-    skin = m_settings->value(COMMON_SKIN_KEY, COMMON_SKIN_DEF).toInt();
-    m_settings->endGroup();
-    return skin;
 }
 
 int Config::getRenderExpiredFrames()

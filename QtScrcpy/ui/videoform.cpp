@@ -48,7 +48,7 @@
 #include "metalvideowindow.h"
 #endif
 
-VideoForm::VideoForm(bool framelessWindow, bool skin, bool showToolbar, int decodeMode, QWidget *parent) : QWidget(parent), ui(new Ui::videoForm), m_skin(skin), m_decodeMode(decodeMode)
+VideoForm::VideoForm(bool framelessWindow, bool showToolbar, int decodeMode, QWidget *parent) : QWidget(parent), ui(new Ui::videoForm), m_decodeMode(decodeMode)
 {
     ui->setupUi(this);
     m_flexResizeTimer.setSingleShot(true);
@@ -67,9 +67,7 @@ VideoForm::VideoForm(bool framelessWindow, bool skin, bool showToolbar, int deco
     updateShowSize(size());
     bool vertical = size().height() > size().width();
     this->show_toolbar = showToolbar;
-    if (m_skin) {
-        updateStyleSheet(vertical);
-    }
+    Q_UNUSED(vertical);
     if (framelessWindow) {
         setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
     }
@@ -95,7 +93,7 @@ VideoForm::~VideoForm()
 {
     m_closing = true;
     if (!m_recordAudioKey.isEmpty()) {
-        AudioOutput::instance().removePcmListener(m_recordAudioKey);
+        AudioOutput::instance().removePcmListener(m_serial, m_recordAudioKey);
         m_recordAudioKey.clear();
     }
     if (m_recorder) {
@@ -127,21 +125,6 @@ QWidget* VideoForm::videoWidget() const
 
 void VideoForm::initUI()
 {
-    if (m_skin) {
-        QPixmap phone;
-        if (phone.load(":/res/phone.png")) {
-            m_widthHeightRatio = 1.0f * phone.width() / phone.height();
-        }
-
-#ifndef Q_OS_MACOS
-        // mac下去掉标题栏影响showfullscreen
-        // 去掉标题栏
-        setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
-        // 根据图片构造异形窗口
-        setAttribute(Qt::WA_TranslucentBackground);
-#endif
-    }
-
 #ifdef Q_OS_MACOS
     // Apple Silicon: 使用 VideoToolbox + Metal 渲染
     if (m_decodeMode == 1) {
@@ -783,36 +766,7 @@ QRect VideoForm::getScreenRect()
     return screenRect;
 }
 
-void VideoForm::updateStyleSheet(bool vertical)
-{
-    if (vertical) {
-        setStyleSheet(R"(
-                 #videoForm {
-                     border-image: url(:/image/videoform/phone-v.png) 150px 65px 85px 65px;
-                     border-width: 150px 65px 85px 65px;
-                 }
-                 )");
-    } else {
-        setStyleSheet(R"(
-                 #videoForm {
-                     border-image: url(:/image/videoform/phone-h.png) 65px 85px 65px 150px;
-                     border-width: 65px 85px 65px 150px;
-                 }
-                 )");
-    }
-    layout()->setContentsMargins(getMargins(vertical));
-}
-
-QMargins VideoForm::getMargins(bool vertical)
-{
-    QMargins margins;
-    if (vertical) {
-        margins = QMargins(10, 68, 12, 62);
-    } else {
-        margins = QMargins(68, 12, 62, 10);
-    }
-    return margins;
-}
+// 皮肤（手机边框）功能已废弃：原 updateStyleSheet/getMargins 已删除
 
 QSize VideoForm::fittedWindowSize(bool fillScreen)
 {
@@ -824,12 +778,9 @@ QSize VideoForm::fittedWindowSize(bool fillScreen)
         return QSize();
     }
 
-    const bool vertical = m_widthHeightRatio < 1.0f;
-    // 皮肤边距被绘制为手机外框；它们属于窗口的一部分，
-    // 但不属于画面，因此要从可用区域中排除。
-    const QMargins skin = m_skin ? getMargins(vertical) : QMargins();
-    const int availW = screenRect.width() - skin.left() - skin.right();
-    const int availH = screenRect.height() - skin.top() - skin.bottom();
+    // 无皮肤边框：可用区域即整个窗口
+    const int availW = screenRect.width();
+    const int availH = screenRect.height();
     if (availW <= 0 || availH <= 0) {
         return QSize();
     }
@@ -848,16 +799,19 @@ QSize VideoForm::fittedWindowSize(bool fillScreen)
             w = static_cast<int>(h * m_widthHeightRatio + 0.5);
         }
         videoSize = QSize(w, h);
-    } else if (vertical) {
-        const int h = qMin(m_frameSize.height(), screenRect.height() - 200);
-        videoSize = QSize(static_cast<int>(h * m_widthHeightRatio + 0.5), h);
     } else {
-        const int w = qMin(m_frameSize.width(), screenRect.width() / 2);
-        videoSize = QSize(w, static_cast<int>(w / m_widthHeightRatio + 0.5));
+        const bool vertical = m_widthHeightRatio < 1.0f;
+        if (vertical) {
+            const int h = qMin(m_frameSize.height(), screenRect.height() - 200);
+            videoSize = QSize(static_cast<int>(h * m_widthHeightRatio + 0.5), h);
+        } else {
+            const int w = qMin(m_frameSize.width(), screenRect.width() / 2);
+            videoSize = QSize(w, static_cast<int>(w / m_widthHeightRatio + 0.5));
+        }
     }
 
-    QSize windowSize(videoSize.width() + skin.left() + skin.right(),
-                     videoSize.height() + skin.top() + skin.bottom());
+    // 无皮肤边框：窗口尺寸即画面尺寸
+    QSize windowSize(videoSize.width(), videoSize.height());
     windowSize.setWidth(qMin(windowSize.width(), screenRect.width()));
     windowSize.setHeight(qMin(windowSize.height(), screenRect.height()));
     return windowSize;
@@ -898,9 +852,6 @@ void VideoForm::fitWindowToFrame(bool fillScreen)
         return;
     }
     resize(fitted);
-    if (m_skin) {
-        updateStyleSheet(m_widthHeightRatio < 1.0f);
-    }
     moveCenter();
 }
 
@@ -962,9 +913,6 @@ void VideoForm::switchFullScreen()
         //setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
         //show();
 #endif
-        if (m_skin) {
-            updateStyleSheet(m_frameSize.height() > m_frameSize.width());
-        }
         // 退出全屏：停止边缘唤出轮询，恢复普通模式的工具栏行为
         m_fullscreenToolbarTimer.stop();
         exitFullscreenToolbar();
@@ -988,9 +936,6 @@ void VideoForm::switchFullScreen()
         //setWindowFlags(windowFlags() & ~Qt::FramelessWindowHint);
 #endif
         showToolForm(false);
-        if (m_skin) {
-            layout()->setContentsMargins(0, 0, 0, 0);
-        }
         showFullScreen();
 
         // 预驻留工具栏窗口（全透明），并启用边缘唤出轮询
@@ -1094,14 +1039,14 @@ bool VideoForm::startRecord()
 
     UserBootConfig config = Config::getInstance().getUserBootConfig();
     bool withAudio = config.recordAudio;
-    if (withAudio && !AudioOutput::instance().isRunning()) {
+    if (withAudio && !AudioOutput::instance().isRunning(m_serial)) {
         const QMessageBox::StandardButton answer = QMessageBox::question(
             this, tr("record screen"),
             tr("Recording sound starts the sndcpy audio bridge, the device screen may switch to sndcpy for a moment.\n"
                "Record with sound?\n\nChoose No to record video only."),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
         if (answer == QMessageBox::Yes) {
-            withAudio = AudioOutput::instance().start(m_serial, 28200);
+            withAudio = AudioOutput::instance().start(m_serial);
             if (!withAudio) {
                 QMessageBox::warning(this, tr("record screen"),
                                      tr("Cannot start the audio bridge, recording video only."));
@@ -1125,7 +1070,7 @@ bool VideoForm::startRecord()
     m_recorder = recorder;
     if (withAudio) {
         m_recordAudioKey = QStringLiteral("record:") + m_serial;
-        AudioOutput::instance().addPcmListener(m_recordAudioKey, [recorder](const char *data, int size) {
+        AudioOutput::instance().addPcmListener(m_serial, m_recordAudioKey, [recorder](const char *data, int size) {
             recorder->pushAudioData(data, size);
         });
     }
@@ -1153,7 +1098,7 @@ void VideoForm::stopRecord()
     if (!m_recordAudioKey.isEmpty()) {
         // 在停止前先移除接收端，避免套接字线程向
         // 正在拆除的录制器推送数据。
-        AudioOutput::instance().removePcmListener(m_recordAudioKey);
+        AudioOutput::instance().removePcmListener(m_serial, m_recordAudioKey);
         m_recordAudioKey.clear();
     }
     // stop() is idempotent and also joins a worker that already exited after
@@ -1204,7 +1149,7 @@ void VideoForm::onRecordingError(const QString &error)
         recorder->deleteLater();
     }
     if (!m_recordAudioKey.isEmpty()) {
-        AudioOutput::instance().removePcmListener(m_recordAudioKey);
+        AudioOutput::instance().removePcmListener(m_serial, m_recordAudioKey);
         m_recordAudioKey.clear();
     }
     emit recordingStateChanged();
@@ -1336,14 +1281,6 @@ void VideoForm::mousePressEvent(QMouseEvent *event)
         QMouseEvent newEvent(event->type(), mappedPos, globalPos, event->button(), event->buttons(), event->modifiers());
         emit device->mouseEvent(&newEvent, m_frameSize, vw->size());
         trackMouse(mappedPos, vw->size(), newEvent.type(), newEvent.button());
-
-        // 调试按键映射坐标
-        if (event->button() == Qt::LeftButton) {
-            qreal x = localPos.x() / vw->size().width();
-            qreal y = localPos.y() / vw->size().height();
-            QString posTip = QString(R"("pos": {"x": %1, "y": %2})").arg(x).arg(y);
-            qInfo() << posTip.toStdString().c_str();
-        }
     } else {
         if (event->button() == Qt::LeftButton) {
             m_dragPosition = globalPos.toPoint() - frameGeometry().topLeft();
@@ -1557,9 +1494,6 @@ void VideoForm::changeEvent(QEvent *event)
         } else {
             fitWindowToFrame(false);
         }
-        if (m_skin) {
-            updateStyleSheet(m_widthHeightRatio < 1.0f);
-        }
         m_stateAdjusting = false;
     } else if (wasMax) {
         // 通过“还原”按钮离开真正的“最大化”状态。
@@ -1567,9 +1501,6 @@ void VideoForm::changeEvent(QEvent *event)
         m_stateAdjusting = true;
         if (m_restoredGeometry.isValid()) {
             setGeometry(m_restoredGeometry);
-        }
-        if (m_skin) {
-            updateStyleSheet(m_widthHeightRatio < 1.0f);
         }
         m_stateAdjusting = false;
     } else if (hasExcessiveLetterbox()) {
@@ -1662,6 +1593,9 @@ void VideoForm::closeEvent(QCloseEvent *event)
         stopRecord();
     }
     m_closing = true;
+    // 用户主动关窗口：在断开链路（→ deviceDisconnected）发出前先标记，
+    // 主窗口据此跳过自动重连
+    emit windowClosedByUser(m_serial);
 
     // sndcpy 桥接与本设备绑定：关闭其窗口也必须
     // 停止音频播放（并拆除 forward/捕获活动）。

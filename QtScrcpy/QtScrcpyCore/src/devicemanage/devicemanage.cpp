@@ -44,20 +44,19 @@ bool DeviceManage::connectDevice(qsc::DeviceParams params)
         qInfo("over the maximum number of connections");
         return false;
     }
-    /*
-    // 没有必要分配端口，都用27183即可，连接建立以后server会释放监听的
-    quint16 port = 0;
-    if (params.useReverse) {
-         port = getFreePort();
+    // 为每台设备分配独立的本地端口：reverse 模式下 serverSocket 会持续
+    // listen 该端口（不是“连接建立后释放”），多台设备都用默认 27183 时
+    // 第二台 listen 必失败；forward 模式的 adb forward 也是全局端口注册，
+    // 同端口多设备同样不可区分。因此统一从 27183 起分配空闲端口。
+    {
+        const quint16 port = getFreePort();
         if (0 == port) {
-            qInfo("no port available, automatically switch to forward");
-            params.useReverse = false;
+            qInfo("no free local port, fall back to default %d", params.localPort);
         } else {
             params.localPort = port;
-            qInfo("free port %d", port);
+            qInfo("assign local port %d to %s", port, params.serial.toUtf8().constData());
         }
     }
-    */
     IDevice *device = new Device(params);
     connect(device, &Device::deviceConnected, this, &DeviceManage::onDeviceConnected);
     connect(device, &Device::deviceDisconnected, this, &DeviceManage::onDeviceDisconnected);

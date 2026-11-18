@@ -9,6 +9,7 @@
 #include <QListWidget>
 #include <QTimer>
 #include <QMap>
+#include <QSet>
 
 
 #include "adbprocess.h"
@@ -131,6 +132,11 @@ private:
     void showPortEditMenu(const QPoint &pos);
     void syncPresetLevelToUi();
 
+    // ---- 自动重连（意外掉线后有限次重试）----
+    void startServerFor(const QString &serial); // on_startServerBtn_clicked 的参数化版本
+    void tryReconnect();
+    void stopAutoReconnect();
+
 protected:
     void closeEvent(QCloseEvent *event);
 
@@ -138,6 +144,12 @@ private:
     Ui::Widget *ui;
     qsc::AdbProcess m_adb;
     WirelessController *m_wireless = nullptr;
+    QTimer m_reconnectTimer;          // 单发定时：意外掉线后逐次重试
+    QString m_reconnectSerial;        // 正在自动重连的设备
+    int m_reconnectTries = 0;         // 剩余重试次数
+    QSet<QString> m_manualDisconnects; // 用户主动断开的设备：不自动重连
+    QSet<QString> m_internalClosing;   // 程序清理中正在 close 的窗口：其 windowClosedByUser 信号不算用户操作
+    QSet<QString> m_connectedSerials;  // 当前已连接设备（用于“停止全部”标记手动断开）
     QSystemTrayIcon *m_hideIcon;
     QGroupBox *m_advancedDisplayGroup = nullptr;
     QComboBox *m_configLanguageBox = nullptr;

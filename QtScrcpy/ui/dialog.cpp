@@ -129,6 +129,12 @@ Dialog::Dialog(QWidget *parent) : QWidget(parent), ui(new Ui::Widget)
     if (ui->autoUpdatecheckBox->isChecked()) {
         m_autoUpdatetimer.start(5000);
     }
+    // 意外掉线自动重连：4 秒一轮，共 5 轮（约 20 秒窗口，覆盖 USB
+    // 重新枚举/无线波动恢复所需时间）。每一轮末尾都会重启定时器，
+    // 由下一轮开头的 getDevice 检查判定本轮是否已成功。
+    m_reconnectTimer.setSingleShot(true);
+    m_reconnectTimer.setInterval(4000);
+    connect(&m_reconnectTimer, &QTimer::timeout, this, &Dialog::tryReconnect);
 
     connect(&m_adb, &qsc::AdbProcess::adbProcessResult, this, [this](qsc::AdbProcess::ADB_EXEC_RESULT processResult) {
         QString log = "";
@@ -906,12 +912,19 @@ void Dialog::on_videoSourceBox_currentIndexChanged(int)
 
 void Dialog::on_startServerBtn_clicked()
 {
+    startServerFor(ui->serialBox->currentText().trimmed());
+}
+
+// 启动一台设备的投屏会话。serial 由调用方给出（按钮 = 当前下拉框选中项；
+// 自动重连 = 掉线设备）。其余参数沿用当前界面配置。
+void Dialog::startServerFor(const QString &serial)
+{
     outLog("start server...", false);
 
     // 这里“original”的 toUShort 结果为 0 也是可接受的情况
     quint16 videoSize = ui->maxSizeBox->currentText().trimmed().toUShort();
     qsc::DeviceParams params;
-    params.serial = ui->serialBox->currentText().trimmed();
+    params.serial = serial;
     params.maxSize = videoSize;
     // 比特率按连接方式区分：无线设备 serial 形如 ip:port，用无线专用档位；
     // USB 设备用主档位。（编码预设若自带码率，下面会覆盖该值）
@@ -1217,7 +1230,9 @@ void Dialog::refreshApps()
 
 void Dialog::on_stopServerBtn_clicked()
 {
-    if (qsc::IDeviceManage::getInstance().disconnectDevice(ui->serialBox->currentText().trimmed())) {
+    const QString serial = ui->serialBox->currentText().trimmed();
+    m_manualDisconnects.insert(serial); // 主动断开：不做自动重连
+    if (qsc::IDeviceManage::getInstance().disconnectDevice(serial)) {
         outLog("stop server");
     }
 }
@@ -1362,15 +1377,41 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
     if (!success) {
         // 服务端启动失败（内部已自动重试若干次）：原来静默返回，用户只能看到
         // 镜像窗口始终打不开，被感知为"启动不成功且没有原因"。这里给出明确反馈。
-        const QString message = tr("设备 %1 启动投屏服务失败，请检查 USB 连接后重试").arg(serial);
-        outLog(QString("[错误] %1").arg(message), true);
-        if (m_hideIcon) {
-            m_hideIcon->showMessage(tr("投屏服务启动失败"), message, QSystemTrayIcon::Warning, 6000);
+        const bool autoRetry = (serial == m_reconnectSerial);
+        if (autoRetry) {
+            // 自动重连中的失败只记日志，下一轮定时器会继续尝试；
+            // 不弹托盘，避免重试期间连发多条“启动失败”通知
+            outLog(tr("auto reconnect attempt failed for %1, will retry").arg(serial), false);
+        } else {
+            const QString message = tr("设备 %1 启动投屏服务失败，请检查 USB 连接后重试").arg(serial);
+            outLog(QString("[错误] %1").arg(message), true);
+            if (m_hideIcon) {
+                m_hideIcon->showMessage(tr("投屏服务启动失败"), message, QSystemTrayIcon::Warning, 6000);
+            }
         }
+        // 启动失败不视为“意外掉线”，避免自动重连逻辑对从未连接过的设备反复重试
+        m_connectedSerials.remove(serial);
         return;
     }
-    auto videoForm = new VideoForm(ui->framelessCheck->isChecked(), Config::getInstance().getSkin(), ui->showToolbar->isChecked(), ui->decodeModeBox->currentIndex());
+    m_connectedSerials.insert(serial);
+    if (serial == m_reconnectSerial) {
+        stopAutoReconnect(); // 掉线设备已自动恢复
+    }
+    auto videoForm = new VideoForm(ui->framelessCheck->isChecked(), ui->showToolbar->isChecked(), ui->decodeModeBox->currentIndex());
     videoForm->setSerial(serial);
+    // 用户点 X 关闭投屏窗口 = 主动断开：标记豁免，防止自动重连把窗口复活。
+    // 掉线清理路径（onDeviceDisconnected）也会 close 窗口，但会先把自己登记到
+    // m_internalClosing：那种 close 不代表用户操作，不得触发豁免
+    connect(videoForm, &VideoForm::windowClosedByUser, this, [this](const QString &closedSerial) {
+        if (m_internalClosing.contains(closedSerial)) {
+            m_internalClosing.remove(closedSerial); // 程序清理引发的 close，忽略
+            return;
+        }
+        m_manualDisconnects.insert(closedSerial);
+        if (closedSerial == m_reconnectSerial) {
+            stopAutoReconnect();
+        }
+    });
 
     qsc::IDeviceManage::getInstance().getDevice(serial)->setUserData(static_cast<void*>(videoForm));
     qsc::IDeviceManage::getInstance().getDevice(serial)->registerDeviceObserver(videoForm);
@@ -1421,21 +1462,19 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
             return;
         }
         auto &audio = AudioOutput::instance();
-        if (audio.isRunning()) {
-            // 桥接是进程级的：绝不能从其他设备“抢走”声音
-            // is already playing (another device may still be connected).
-            qInfo() << "audio bridge already active for" << audio.serial()
-                    << ", skip auto start for" << serial;
+        if (audio.isRunning(serial)) {
+            qInfo() << "audio bridge already active for" << serial << ", skip auto start";
             return;
         }
         if (!qsc::IDeviceManage::getInstance().getDevice(serial)) {
             return; // 延迟期间设备已消失
         }
-        if (!audio.start(serial, 28200)) {
+        // 每台设备独立会话/端口：第二台不再因第一台占用单桥而静音
+        if (!audio.start(serial)) {
             qWarning() << "auto start audio failed for" << serial;
             return;
         }
-        qInfo() << "auto start audio success for" << serial;
+        qInfo() << "auto start audio success for" << serial << "on port" << audio.portOf(serial);
     });
 }
 
@@ -1462,9 +1501,84 @@ void Dialog::onDeviceDisconnected(QString serial)
     if (data) {
         VideoForm* vf = static_cast<VideoForm*>(data);
         qsc::IDeviceManage::getInstance().getDevice(serial)->deRegisterDeviceObserver(vf);
+        // close 会触发 VideoForm::closeEvent → windowClosedByUser；
+        // 这是掉线清理而非用户操作，先登记避免被误标记为手动断开
+        m_internalClosing.insert(serial);
         vf->close();
+        m_internalClosing.remove(serial); // close 同步触发 closeEvent 并被 lambda 消费；若窗口已在关闭流程则清除残留
         vf->deleteLater();
     }
+
+    // ---- 自动重连（仅意外掉线）----
+    m_connectedSerials.remove(serial);
+    if (m_manualDisconnects.contains(serial)) {
+        m_manualDisconnects.remove(serial); // 手动断开：一次标记只豁免一次
+        return;
+    }
+    // 教学投屏常见痛点：USB 抖动/无线波动导致会话被销毁，必须从主窗口
+    // 手动重连。这里保留窗口生命周期外的自动恢复：3s × 3 次重试。
+    m_reconnectSerial = serial;
+    m_reconnectTries = 5;
+    m_reconnectTimer.start();
+    outLog(tr("device %1 disconnected, auto reconnecting...").arg(serial), false);
+}
+
+void Dialog::tryReconnect()
+{
+    if (m_reconnectSerial.isEmpty()) {
+        return;
+    }
+    const QString serial = m_reconnectSerial;
+    // 判定用 m_connectedSerials 而非 getDevice：上一轮 startServerFor 若
+    // 还在异步失败中，其 Device 仍留在设备表里，getDevice 非空但会话
+    // 并未建立；只有 deviceConnected(true) 才会置位该集合。
+    if (m_connectedSerials.contains(serial)) {
+        stopAutoReconnect(); // 已被用户手动重连/本轮重连成功
+        return;
+    }
+    if (m_reconnectTries <= 0) {
+        outLog(tr("auto reconnect failed for %1, please reconnect manually").arg(serial), false);
+        stopAutoReconnect();
+        return;
+    }
+    --m_reconnectTries;
+
+    // USB 设备直接重建会话；无线设备（serial = ip:port）先恢复 adb 连接。
+    // 本轮无论成功与否，末尾都重启定时器：成功与否由下一轮开头的
+    // getDevice 检查判定（startServerFor 的结果是异步的，无法就地判断）。
+    const bool wifi = serial.contains(QLatin1Char(':'));
+    if (!wifi) {
+        startServerFor(serial);
+        if (!m_reconnectSerial.isEmpty()) {
+            m_reconnectTimer.start(); // 下一轮检查/重试
+        }
+        return;
+    }
+    auto *adb = new qsc::AdbProcess(this);
+    adb->executeWithTimeout(serial, QStringList() << "connect" << serial, 8000,
+                            [this, adb, serial](bool ok, bool timedOut, const QString &out) {
+        adb->deleteLater();
+        if (m_reconnectSerial.isEmpty()) {
+            return; // 重连已被用户操作取代（手动连接/手动停止）
+        }
+        if (ok && !timedOut && out.contains(QLatin1String("connected to"), Qt::CaseInsensitive)) {
+            outLog(tr("adb connect to %1 success, restarting session").arg(serial), false);
+            startServerFor(serial);
+        } else {
+            outLog(tr("adb connect to %1 failed (%2), retrying...")
+                       .arg(serial, out.trimmed().section(QLatin1Char('\n'), -1)), false);
+        }
+        if (!m_reconnectSerial.isEmpty()) {
+            m_reconnectTimer.start(); // 下一轮检查/重试
+        }
+    });
+}
+
+void Dialog::stopAutoReconnect()
+{
+    m_reconnectSerial.clear();
+    m_reconnectTries = 0;
+    m_reconnectTimer.stop();
 }
 
 void Dialog::on_fileManagerBtn_clicked()
@@ -1509,6 +1623,8 @@ void Dialog::on_wirelessDisConnectBtn_clicked()
         return;
     }
     // 带上端口断开：只传 IP 会把同一 IP 的其它端口一起断掉（旧实现的问题）
+    const QString addr = ip + QLatin1Char(':') + QString::number(wirelessConnectPort());
+    m_manualDisconnects.insert(addr); // 用户主动断开无线：掉线回调不做自动重连
     WirelessController::Target target;
     target.ip = ip;
     target.connectPort = wirelessConnectPort();
@@ -1675,6 +1791,12 @@ void Dialog::on_clearOut_clicked()
 
 void Dialog::on_stopAllServerBtn_clicked()
 {
+    // 先标记全部为手动断开，防止掉线回调触发自动重连
+    for (const QString &serial : m_connectedSerials) {
+        m_manualDisconnects.insert(serial);
+    }
+    m_reconnectSerial.clear();
+    m_reconnectTimer.stop();
     qsc::IDeviceManage::getInstance().disconnectAllDevice();
 }
 
@@ -1880,15 +2002,22 @@ void Dialog::on_startAudioBtn_clicked()
         return;
     }
 
-    AudioOutput::instance().start(ui->serialBox->currentText(), 28200);
+    const QString serial = ui->serialBox->currentText().trimmed();
+    auto &audio = AudioOutput::instance();
+    if (audio.isRunning(serial)) {
+        outLog(tr("audio already running for %1").arg(serial), false);
+        return;
+    }
+    if (!audio.start(serial)) {
+        outLog(tr("start audio failed for %1").arg(serial), false);
+    }
 }
 
 void Dialog::on_stopAudioBtn_clicked()
 {
-    // 拆除整个桥接（socket、播放、adb 转发以及设备端采集），
-    // 而不只是本地播放。否则下次连接会发现 tcp:28200 上残留的过期 sndcpy 会话。
-    auto &audio = AudioOutput::instance();
-    audio.stopForDevice(audio.serial());
+    // 只拆除当前选中设备的桥接，不影响其他设备正在播放的音频
+    const QString serial = ui->serialBox->currentText().trimmed();
+    AudioOutput::instance().stopForDevice(serial);
 }
 
 void Dialog::on_installSndcpyBtn_clicked()

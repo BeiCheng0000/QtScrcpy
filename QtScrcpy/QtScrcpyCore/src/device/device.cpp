@@ -244,7 +244,9 @@ void Device::cameraZoomOut()
 
 bool Device::isReversePort(quint16 port)
 {
-    if (m_server && m_server->isReverse() && port == m_server->getParams().localPort) {
+    // 端口占用检查不分 reverse/forward：两种模式的本地端口都必须唯一，
+    // 否则 getFreePort() 会给两台 forward 设备分配同一端口
+    if (m_server && port == m_server->getParams().localPort) {
         return true;
     }
 

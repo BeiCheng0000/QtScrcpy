@@ -22,7 +22,6 @@ public:
     void postControlMsg(ControlMsg *controlMsg);
     void setCameraMode(bool cameraMode);
     void recvDeviceMsg(DeviceMsg *deviceMsg);
-    void test(QRect rc);
 
     void updateScript(QString gameScript = "");
     bool isCurrentCustomKeymap();

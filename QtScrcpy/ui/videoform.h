@@ -28,7 +28,7 @@ class VideoForm : public QWidget, public qsc::DeviceObserver
 {
     Q_OBJECT
 public:
-    explicit VideoForm(bool framelessWindow = false, bool skin = true, bool showToolBar = true, int decodeMode = 0, QWidget *parent = 0);
+    explicit VideoForm(bool framelessWindow = false, bool showToolBar = true, int decodeMode = 0, QWidget *parent = 0);
     ~VideoForm();
 
     void staysOnTop(bool top = true);
@@ -58,6 +58,9 @@ signals:
     // 首个视频帧写入录制器（视频 pts 0 点）：工具栏录制计时以此为起点，
     // 与视频文件的实际内容时长保持一致
     void recordingClockStarted();
+    // 用户主动关闭投屏窗口：主窗口据此豁免该设备的自动重连
+    //（否则关窗口会被当成意外掉线，窗口被自动重连“复活”）
+    void windowClosedByUser(const QString &serial);
     // 批量 apk 安装：每个 apk 完成一项状态，队列结束后汇总
     void apkInstallProgress(const QString &path, const QString &status);
     void apkInstallFinished(int successCount, int failCount);
@@ -84,8 +87,7 @@ private:
     void onVideoSessionChanged(const QSize &size, bool clientResized) override;
     void grabCursor(bool grab) override;
 
-    void updateStyleSheet(bool vertical);
-    QMargins getMargins(bool vertical);
+    // 皮肤（手机边框）已废弃：原 updateStyleSheet/getMargins 随之删除
     void initUI();
     // 连接加载遮罩：让遮罩始终覆盖画面区域并保持顶层
     void syncLoadingOverlay();
@@ -184,7 +186,6 @@ private:
     QSize m_normalSize;
     QPoint m_dragPosition;
     float m_widthHeightRatio = 0.5f;
-    bool m_skin = true;
     QPoint m_fullScreenBeforePos;
     QString m_serial;
     int m_decodeMode = 0;

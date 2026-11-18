@@ -5,6 +5,7 @@
 #include <QHostAddress>
 #include <QTcpSocket>
 #include <QTime>
+#include <QTimer>
 
 #include <utility>
 
@@ -16,123 +17,72 @@
 
 #include "audiooutput.h"
 
-AudioOutput::AudioOutput(QObject *parent)
-    : QObject(parent)
-{
-    m_running = false;
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    m_audioOutput = nullptr;
-#else
-    m_audioSink = nullptr;
-#endif
-    connect(&m_sndcpy, &QProcess::readyReadStandardOutput, this, [this]() {
-        qInfo() << QString("AudioOutput::") << QString(m_sndcpy.readAllStandardOutput());
-    });
-    connect(&m_sndcpy, &QProcess::readyReadStandardError, this, [this]() {
-        qInfo() << QString("AudioOutput::") << QString(m_sndcpy.readAllStandardError());
-    });
+namespace {
+constexpr int kBaseAudioPort = 28200;
 }
 
-AudioOutput::~AudioOutput()
+AudioSession::AudioSession(const QString &serial, int port, QObject *parent)
+    : QObject(parent), serial(serial), port(port)
 {
+}
+
+AudioSession::~AudioSession()
+{
+    stop();
     if (QProcess::NotRunning != m_sndcpy.state()) {
         m_sndcpy.kill();
+        m_sndcpy.waitForFinished(500);
     }
-    stop();
 }
 
-AudioOutput &AudioOutput::instance()
-{
-    // 故意泄漏：音频桥接必须比各控件存活更久，随进程退出而释放，
-    // 而不是在静态析构阶段被销毁。
-    static AudioOutput *s_instance = new AudioOutput();
-    return *s_instance;
-}
-
-bool AudioOutput::isRunning() const
-{
-    return m_running;
-}
-
-QString AudioOutput::serial() const
-{
-    return m_serial;
-}
-
-void AudioOutput::addPcmListener(const QString &key, std::function<void(const char *, int)> listener)
+void AudioSession::addListener(const QString &key, std::function<void(const char *, int)> listener)
 {
     QMutexLocker locker(&m_listenerMutex);
-    m_pcmListeners.insert(key, std::move(listener));
+    m_listeners.insert(key, std::move(listener));
 }
 
-void AudioOutput::removePcmListener(const QString &key)
+void AudioSession::removeListener(const QString &key)
 {
     QMutexLocker locker(&m_listenerMutex);
-    m_pcmListeners.remove(key);
+    m_listeners.remove(key);
 }
 
-bool AudioOutput::start(const QString& serial, int port)
+void AudioSession::clearListeners()
 {
-    if (m_running) {
-        stop();
-    }
-    m_serial.clear();
-    m_port = port;
+    QMutexLocker locker(&m_listenerMutex);
+    m_listeners.clear();
+}
 
+bool AudioSession::start()
+{
     QElapsedTimer timeConsumeCount;
     timeConsumeCount.start();
-    bool ret = runSndcpyProcess(serial, port);
-    qInfo() << "AudioOutput::run sndcpy cost:" << timeConsumeCount.elapsed() << "milliseconds";
-    if (!ret) {
-        return ret;
+    if (!runSndcpyProcess(true)) {
+        qWarning() << "AudioOutput::" << serial << "start sndcpy failed";
+        return false;
     }
+    qInfo() << "AudioOutput::" << serial << "run sndcpy cost:" << timeConsumeCount.elapsed() << "ms on port" << port;
 
     startAudioOutput();
-    startRecvData(port);
-
-    m_running = true;
-    m_serial = serial;
+    startRecvData();
+    running = true;
     return true;
 }
 
-void AudioOutput::stop()
+void AudioSession::stop()
 {
-    if (!m_running) {
-        return;
-    }
-    m_running = false;
-
+    running = false;
     stopRecvData();
     stopAudioOutput();
-
-    // 任何监听器都不应比音频会话存活更久（例如设备窗口已关闭
-    // 时仍附属着的录制器）。
-    {
-        QMutexLocker locker(&m_listenerMutex);
-        m_pcmListeners.clear();
-    }
-    m_serial.clear();
+    clearListeners();
 }
 
-void AudioOutput::stopForDevice(const QString& serial)
+void AudioSession::stopBridge()
 {
-    if (!m_running) {
-        return; // 已停止，保持调用幂等
-    }
-    if (!m_serial.isEmpty() && m_serial != serial) {
-        return; // 音频属于另一台已连接设备
-    }
-
-    stop();
-
     if (QProcess::NotRunning != m_sndcpy.state()) {
         m_sndcpy.kill();
+        m_sndcpy.waitForFinished(500);
     }
-    teardownDeviceBridge(serial);
-}
-
-void AudioOutput::teardownDeviceBridge(const QString& serial)
-{
     QString adb = QCoreApplication::applicationDirPath();
 #ifdef Q_OS_WIN32
     adb += QStringLiteral("/adb.exe");
@@ -144,14 +94,10 @@ void AudioOutput::teardownDeviceBridge(const QString& serial)
         return;
     }
 
-    QStringList baseArgs;
-    if (!serial.isEmpty()) {
-        baseArgs << QStringLiteral("-s") << serial;
-    }
-
+    const QStringList baseArgs{QStringLiteral("-s"), serial};
     const QStringList commands[] = {
         QStringList{QStringLiteral("forward"), QStringLiteral("--remove"),
-                    QStringLiteral("tcp:%1").arg(m_port)},
+                    QStringLiteral("tcp:%1").arg(port)},
         QStringList{QStringLiteral("shell"), QStringLiteral("am"), QStringLiteral("force-stop"),
                     QStringLiteral("com.rom1v.sndcpy")},
     };
@@ -170,52 +116,51 @@ void AudioOutput::teardownDeviceBridge(const QString& serial)
     }
 }
 
-void AudioOutput::installonly(const QString &serial, int port)
-{
-    runSndcpyProcess(serial, port, false);
-}
-
-bool AudioOutput::runSndcpyProcess(const QString &serial, int port, bool wait)
+bool AudioSession::runSndcpyProcess(bool wait)
 {
     if (QProcess::NotRunning != m_sndcpy.state()) {
         m_sndcpy.kill();
+        m_sndcpy.waitForFinished(500);
     }
+    connect(&m_sndcpy, &QProcess::readyReadStandardOutput, this, [this]() {
+        qInfo() << "AudioOutput::" << serial << QString(m_sndcpy.readAllStandardOutput());
+    });
+    connect(&m_sndcpy, &QProcess::readyReadStandardError, this, [this]() {
+        qInfo() << "AudioOutput::" << serial << QString(m_sndcpy.readAllStandardError());
+    });
 
 #ifdef Q_OS_WIN32
-    QStringList params{serial, QString::number(port)};
-    // sndcpy.bat 会在其工作目录中查找 adb.exe 与 sndcpy.apk。
-    // 始终在可执行文件旁边运行它，这样即使程序从其他目录启动，录制音频也能正常工作。
+    const QStringList params{serial, QString::number(port)};
+    // sndcpy.bat 在其工作目录中查找 adb.exe 与 sndcpy.apk
     m_sndcpy.setWorkingDirectory(QCoreApplication::applicationDirPath());
-    m_sndcpy.start("sndcpy.bat", params);
+    m_sndcpy.start(QStringLiteral("sndcpy.bat"), params);
 #else
-    QStringList params{"sndcpy.sh", serial, QString::number(port)};
+    const QStringList params{QStringLiteral("sndcpy.sh"), serial, QString::number(port)};
     m_sndcpy.setWorkingDirectory(QCoreApplication::applicationDirPath());
-    m_sndcpy.start("bash", params);
+    m_sndcpy.start(QStringLiteral("bash"), params);
 #endif
 
     if (!wait) {
         return true;
     }
-
-    if (!m_sndcpy.waitForStarted()) {
-        qWarning() << "AudioOutput::start sndcpy process failed";
+    if (!m_sndcpy.waitForStarted(5000)) {
+        qWarning() << "AudioOutput::" << serial << "start sndcpy process failed";
         return false;
     }
-    if (!m_sndcpy.waitForFinished()) {
-        qWarning() << "AudioOutput::sndcpy process crashed";
+    // 绝不无限阻塞 UI 线程：脚本的等待循环若卡住（如设备端 grep 无匹配），
+    // 20 秒后强杀进程并放弃该设备的音频，绝不能拖垮投屏连接本身。
+    if (!m_sndcpy.waitForFinished(20000)) {
+        qWarning() << "AudioOutput::" << serial << "sndcpy process timed out, killing";
+        m_sndcpy.kill();
+        m_sndcpy.waitForFinished(1000);
         return false;
     }
-
     return true;
 }
 
-void AudioOutput::startAudioOutput()
+void AudioSession::startAudioOutput()
 {
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    if (m_audioOutput) {
-        return;
-    }
-
     QAudioFormat format;
     format.setSampleRate(48000);
     format.setChannelCount(2);
@@ -224,26 +169,21 @@ void AudioOutput::startAudioOutput()
     format.setByteOrder(QAudioFormat::LittleEndian);
     format.setSampleType(QAudioFormat::SignedInt);
     QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
-
     if (!info.isFormatSupported(format)) {
         qWarning() << "AudioOutput::audio format not supported, cannot play audio.";
         return;
     }
-
     m_audioOutput = new QAudioOutput(format, this);
-    connect(m_audioOutput, &QAudioOutput::stateChanged, this, [](QAudio::State state) {
-        qInfo() << "AudioOutput::audio state changed:" << state;
+    connect(m_audioOutput, &QAudioOutput::stateChanged, this, [this](QAudio::State state) {
+        qInfo() << "AudioOutput::" << serial << "audio state changed:" << state;
     });
-    m_audioOutput->setBufferSize(48000*2*15/1000 * 20);
+    m_audioOutput->setBufferSize(48000 * 2 * 15 / 1000 * 20);
     m_outputDevice = m_audioOutput->start();
 #else
-    if (m_audioSink) {
-        return;
-    }
-
     QAudioFormat format;
     format.setSampleRate(48000);
     format.setChannelCount(2);
+    format.setSampleSize(16);
     format.setSampleFormat(QAudioFormat::Int16);
     QAudioDevice defaultDevice = QMediaDevices::defaultAudioOutput();
     if (!defaultDevice.isFormatSupported(format)) {
@@ -261,7 +201,7 @@ void AudioOutput::startAudioOutput()
 #endif
 }
 
-void AudioOutput::stopAudioOutput()
+void AudioSession::stopAudioOutput()
 {
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     if (m_audioOutput) {
@@ -279,7 +219,7 @@ void AudioOutput::stopAudioOutput()
     m_outputDevice = nullptr;
 }
 
-void AudioOutput::startRecvData(int port)
+void AudioSession::startRecvData()
 {
     if (m_workerThread.isRunning()) {
         stopRecvData();
@@ -289,54 +229,67 @@ void AudioOutput::startRecvData(int port)
     audioSocket->moveToThread(&m_workerThread);
     connect(&m_workerThread, &QThread::finished, audioSocket, &QObject::deleteLater);
 
-    connect(this, &AudioOutput::connectTo, audioSocket, [audioSocket](int port) {
-        audioSocket->connectToHost(QHostAddress::LocalHost, port);
-        if (!audioSocket->waitForConnected(500)) {
-            qWarning("AudioOutput::audio socket connect failed");
-            return;
-        }
-        qInfo("AudioOutput::audio socket connect success");
+    // sndcpy 脚本的设备端 Activity 就绪可能远晚于脚本退出（就绪检查恒真），
+    // 一次性 500ms 连接会永久失败。改为在 worker 线程定时重试，直至连上。
+    connect(this, &AudioSession::connectTo, audioSocket, [this, audioSocket](int p) {
+        auto tryConnect = [this, audioSocket, p]() {
+            if (!running.load()) {
+                return; // 会话已停止，不再重连
+            }
+            if (audioSocket->state() != QAbstractSocket::UnconnectedState) {
+                return; // 正在连接或已连接
+            }
+            audioSocket->connectToHost(QHostAddress::LocalHost, p);
+        };
+        tryConnect();
+        // 失败/断开后每 1 秒重试（Qt 事件循环在 worker 线程中运行）
+        QTimer *retry = new QTimer(audioSocket);
+        retry->setInterval(1000);
+        connect(retry, &QTimer::timeout, audioSocket, tryConnect);
+        connect(audioSocket, &QAbstractSocket::stateChanged, audioSocket,
+                [retry](QAbstractSocket::SocketState state) {
+            if (state == QAbstractSocket::ConnectedState) {
+                retry->stop();
+            } else if (state == QAbstractSocket::UnconnectedState) {
+                retry->start();
+            }
+        });
+        retry->start();
     });
     connect(audioSocket, &QIODevice::readyRead, audioSocket, [this, audioSocket]() {
-        qint64 recv = audioSocket->bytesAvailable();
-        //qDebug() << "AudioOutput::recv data:" << recv;
+        const qint64 recv = audioSocket->bytesAvailable();
         if (recv <= 0) {
             return;
         }
-
         if (m_buffer.size() < recv) {
             m_buffer.resize(static_cast<int>(recv));
         }
-
-        qint64 count = audioSocket->read(m_buffer.data(), recv);
+        const qint64 count = audioSocket->read(m_buffer.data(), recv);
         if (count <= 0) {
             return;
         }
 
-        // 录制时播放可能不可用，因此直接转发原始 PCM
-        // to the listeners first.
+        // 仅分发给本设备会话的监听器（每台设备的录制器只收到自己的声音）
         {
             QMutexLocker locker(&m_listenerMutex);
-            for (auto it = m_pcmListeners.constBegin(); it != m_pcmListeners.constEnd(); ++it) {
+            for (auto it = m_listeners.constBegin(); it != m_listeners.constEnd(); ++it) {
                 it.value()(m_buffer.data(), static_cast<int>(count));
             }
         }
-
         if (m_outputDevice) {
             m_outputDevice->write(m_buffer.data(), count);
         }
     });
-    connect(audioSocket, &QTcpSocket::stateChanged, audioSocket, [](QAbstractSocket::SocketState state) {
-        qInfo() << "AudioOutput::audio socket state changed:" << state;
-
+    connect(audioSocket, &QTcpSocket::stateChanged, audioSocket, [this](QAbstractSocket::SocketState state) {
+        qInfo() << "AudioOutput::" << serial << "audio socket state changed:" << state;
     });
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    connect(audioSocket, &QTcpSocket::errorOccurred, audioSocket, [](QAbstractSocket::SocketError error) {
-        qInfo() << "AudioOutput::audio socket error occurred:" << error;
+    connect(audioSocket, &QTcpSocket::errorOccurred, audioSocket, [this](QAbstractSocket::SocketError error) {
+        qInfo() << "AudioOutput::" << serial << "audio socket error occurred:" << error;
     });
 #else
-    connect(audioSocket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), audioSocket, [](QAbstractSocket::SocketError error) {
-        qInfo() << "AudioOutput::audio socket error occurred:" << error;
+    connect(audioSocket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), audioSocket, [this](QAbstractSocket::SocketError error) {
+        qInfo() << "AudioOutput::" << serial << "audio socket error occurred:" << error;
     });
 #endif
 
@@ -344,12 +297,158 @@ void AudioOutput::startRecvData(int port)
     emit connectTo(port);
 }
 
-void AudioOutput::stopRecvData()
+void AudioSession::stopRecvData()
 {
     if (!m_workerThread.isRunning()) {
         return;
     }
-
     m_workerThread.quit();
     m_workerThread.wait();
+}
+
+// ---------------------------------------------------------------- AudioOutput
+
+AudioOutput::AudioOutput(QObject *parent) : QObject(parent)
+{
+}
+
+AudioOutput::~AudioOutput()
+{
+    const QStringList serials = m_sessions.keys();
+    for (const QString &s : serials) {
+        stopForDevice(s);
+    }
+}
+
+AudioOutput &AudioOutput::instance()
+{
+    // 故意泄漏：音频桥接必须比各控件存活更久，随进程退出而释放
+    static AudioOutput *s_instance = new AudioOutput();
+    return *s_instance;
+}
+
+int AudioOutput::availablePort(int preferred) const
+{
+    QHash<int, bool> used;
+    for (auto it = m_sessions.constBegin(); it != m_sessions.constEnd(); ++it) {
+        if (it.value() && it.value()->running) {
+            used.insert(it.value()->port, true);
+        }
+    }
+    if (preferred > 0 && !used.contains(preferred)) {
+        return preferred;
+    }
+    int port = kBaseAudioPort;
+    while (used.contains(port)) {
+        ++port;
+    }
+    return port;
+}
+
+bool AudioOutput::start(const QString &serial, int port)
+{
+    if (serial.trimmed().isEmpty()) {
+        return false;
+    }
+    // 同一设备重复启动：先彻底拆掉旧桥，避免进程/forward 残留
+    if (m_sessions.contains(serial)) {
+        stopForDevice(serial);
+    }
+    const int actualPort = availablePort(port);
+    auto *session = new AudioSession(serial, actualPort, this);
+    if (!session->start()) {
+        session->deleteLater();
+        return false;
+    }
+    m_sessions.insert(serial, session);
+    m_lastSerial = serial;
+    qInfo() << "AudioOutput::audio bridge started for" << serial << "on port" << actualPort;
+    return true;
+}
+
+void AudioOutput::stop()
+{
+    const QStringList serials = m_sessions.keys();
+    for (const QString &s : serials) {
+        stopForDevice(s);
+    }
+}
+
+void AudioOutput::stopForDevice(const QString &serial)
+{
+    auto it = m_sessions.find(serial);
+    if (it == m_sessions.end() || !it.value()) {
+        return; // 幂等：该设备无音频会话
+    }
+    AudioSession *session = it.value();
+    m_sessions.erase(it);
+    session->stop();
+    session->stopBridge();
+    session->deleteLater();
+    if (m_lastSerial == serial) {
+        m_lastSerial.clear();
+    }
+    qInfo() << "AudioOutput::audio bridge stopped for" << serial;
+}
+
+void AudioOutput::installonly(const QString &serial, int port)
+{
+    // 仅安装/唤醒 sndcpy，不持有会话：使用独立的一次性进程
+#ifdef Q_OS_WIN32
+    const QString program = QStringLiteral("sndcpy.bat");
+    const QStringList params{serial, QString::number(port > 0 ? port : kBaseAudioPort)};
+#else
+    const QString program = QStringLiteral("bash");
+    const QStringList params{QStringLiteral("sndcpy.sh"), serial,
+                             QString::number(port > 0 ? port : kBaseAudioPort)};
+#endif
+    auto *process = new QProcess(this);
+    process->setWorkingDirectory(QCoreApplication::applicationDirPath());
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), process,
+            [process](int, QProcess::ExitStatus) { process->deleteLater(); });
+    process->start(program, params);
+}
+
+bool AudioOutput::isRunning() const
+{
+    for (auto it = m_sessions.constBegin(); it != m_sessions.constEnd(); ++it) {
+        if (it.value() && it.value()->running) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool AudioOutput::isRunning(const QString &serial) const
+{
+    auto it = m_sessions.constFind(serial);
+    return it != m_sessions.constEnd() && it.value() && it.value()->running;
+}
+
+QString AudioOutput::serial() const
+{
+    return m_lastSerial;
+}
+
+int AudioOutput::portOf(const QString &serial) const
+{
+    auto it = m_sessions.constFind(serial);
+    return (it != m_sessions.constEnd() && it.value()) ? it.value()->port : 0;
+}
+
+void AudioOutput::addPcmListener(const QString &serial, const QString &key,
+                                 std::function<void(const char *, int)> listener)
+{
+    auto it = m_sessions.find(serial);
+    if (it != m_sessions.end() && it.value()) {
+        it.value()->addListener(key, std::move(listener));
+    }
+}
+
+void AudioOutput::removePcmListener(const QString &serial, const QString &key)
+{
+    auto it = m_sessions.find(serial);
+    if (it != m_sessions.end() && it.value()) {
+        it.value()->removeListener(key);
+    }
 }
