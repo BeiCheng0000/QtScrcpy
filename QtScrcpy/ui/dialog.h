@@ -31,6 +31,7 @@ class QGroupBox;
 class QPushButton;
 class QSpinBox;
 class FileManagerWindow;
+class GroupControlWidget;
 class Dialog : public QWidget
 {
     Q_OBJECT
@@ -139,6 +140,7 @@ private:
 
 protected:
     void closeEvent(QCloseEvent *event);
+    void changeEvent(QEvent *event) override; // 运行时语言切换刷新文案
 
 private:
     Ui::Widget *ui;
@@ -151,6 +153,9 @@ private:
     QSet<QString> m_internalClosing;   // 程序清理中正在 close 的窗口：其 windowClosedByUser 信号不算用户操作
     QSet<QString> m_connectedSerials;  // 当前已连接设备（用于“停止全部”标记手动断开）
     QSystemTrayIcon *m_hideIcon;
+    GroupControlWidget *m_groupWidget = nullptr; // 群控页签（运行期创建）
+    class QTabWidget *m_groupTabWidget = nullptr;
+    int m_groupTabIndex = -1;
     QGroupBox *m_advancedDisplayGroup = nullptr;
     QComboBox *m_configLanguageBox = nullptr;
     QLineEdit *m_configTitleEdit = nullptr;
@@ -164,6 +169,17 @@ private:
     QLineEdit *m_configCodecOptionsEdit = nullptr;
     QLineEdit *m_configCodecNameEdit = nullptr;
     QComboBox *m_configLogLevelBox = nullptr;
+    QGroupBox *m_appConfigGroup = nullptr;       // 应用配置组（运行期创建，语言切换刷新标题）
+    QPushButton *m_openConfigButton = nullptr;
+    QPushButton *m_openKeymapButton = nullptr;
+    QPushButton *m_saveButton = nullptr;
+    QGroupBox *m_recordGroupTitle = nullptr; // 录制设置组（语言切换时刷新标题）
+    // 录制设置（userdata.ini）
+    QCheckBox *m_recordAudioCheck = nullptr;
+    QCheckBox *m_recordMouseTrackCheck = nullptr;
+    QSpinBox *m_recordFpsSpin = nullptr;
+    QSpinBox *m_recordVideoBitrateSpin = nullptr;
+    QSpinBox *m_recordAudioBitrateSpin = nullptr;
     QComboBox *m_displayModeBox = nullptr;
     QLineEdit *m_displayIdEdit = nullptr;
     QLineEdit *m_newDisplayEdit = nullptr;

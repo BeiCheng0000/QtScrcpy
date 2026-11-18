@@ -35,6 +35,8 @@
 #include "ui_dialog.h"
 #include "videoform.h"
 #include "filemanagerwindow.h"
+#include "groupcontrolwidget.h"
+#include "nowheelcontrols.h"
 #include "../groupcontroller/groupcontroller.h"
 
 #ifdef Q_OS_WIN32
@@ -370,9 +372,13 @@ void Dialog::initUI()
     advancedDisplayLayout->addWidget(m_advancedDisplayGroup);
     advancedDisplayLayout->addStretch();
     initAdvancedConfigUi(advancedConfigPage);
+    // 群控页签：集中管理多设备批量操作与批量安装
+    m_groupWidget = new GroupControlWidget(configTabs);
     configTabs->addTab(startConfigPage, tr("Start Config"));
     configTabs->addTab(advancedDisplayPage, tr("Advanced Display"));
     configTabs->addTab(advancedConfigPage, tr("Advanced Config"));
+    m_groupTabWidget = configTabs;
+    m_groupTabIndex = configTabs->addTab(m_groupWidget, tr("Group Control"));
     configTabs->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     ui->verticalLayout_6->addWidget(configTabs);
 
@@ -411,7 +417,7 @@ void Dialog::initAdvancedDisplayUi()
     auto *layout = new QFormLayout(m_advancedDisplayGroup);
     layout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
-    m_displayModeBox = new QComboBox(m_advancedDisplayGroup);
+    m_displayModeBox = new FocusWheelComboBox(m_advancedDisplayGroup);
     m_displayModeBox->addItem(tr("Primary display"));
     m_displayModeBox->addItem(tr("Existing display ID"));
     m_displayModeBox->addItem(tr("New virtual display"));
@@ -431,7 +437,7 @@ void Dialog::initAdvancedDisplayUi()
 
     m_flexDisplayCheck = new QCheckBox(tr("Resize virtual display with window"), m_advancedDisplayGroup);
     layout->addRow(m_flexDisplayCheck);
-    m_displayImePolicyBox = new QComboBox(m_advancedDisplayGroup);
+    m_displayImePolicyBox = new FocusWheelComboBox(m_advancedDisplayGroup);
     m_displayImePolicyBox->addItem(tr("Server default"), "");
     m_displayImePolicyBox->addItem("local", "local");
     m_displayImePolicyBox->addItem("fallback", "fallback");
@@ -448,7 +454,7 @@ void Dialog::initAdvancedDisplayUi()
     auto *startAppWidget = new QWidget(m_advancedDisplayGroup);
     auto *startAppLayout = new QHBoxLayout(startAppWidget);
     startAppLayout->setContentsMargins(0, 0, 0, 0);
-    m_startAppBox = new QComboBox(startAppWidget);
+    m_startAppBox = new FocusWheelComboBox(startAppWidget);
     m_startAppBox->setEditable(true);
     m_startAppBox->setInsertPolicy(QComboBox::NoInsert);
     m_startAppBox->setPlaceholderText("com.android.settings");
@@ -478,10 +484,11 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     contentLayout->setContentsMargins(0, 0, 0, 0);
 
     auto *group = new QGroupBox(tr("Application configuration"), content);
+    m_appConfigGroup = group;
     auto *layout = new QFormLayout(group);
     layout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
-    m_configLanguageBox = new QComboBox(group);
+    m_configLanguageBox = new FocusWheelComboBox(group);
     m_configLanguageBox->addItem(tr("Automatic"), "Auto");
     m_configLanguageBox->addItem("简体中文", "zh_CN");
     m_configLanguageBox->addItem("English", "en_US");
@@ -496,7 +503,7 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     m_configPushPathEdit->setPlaceholderText("/sdcard/");
     layout->addRow(tr("Push file path"), m_configPushPathEdit);
 
-    m_configMaxFpsSpin = new QSpinBox(group);
+    m_configMaxFpsSpin = new FocusWheelSpinBox(group);
     m_configMaxFpsSpin->setRange(0, 1000);
     m_configMaxFpsSpin->setSpecialValueText(tr("Unlimited"));
     layout->addRow(tr("Maximum FPS"), m_configMaxFpsSpin);
@@ -504,7 +511,7 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     m_configRenderExpiredCheck = new QCheckBox(tr("Render expired video frames"), group);
     layout->addRow(m_configRenderExpiredCheck);
 
-    m_configDecoderThreadsSpin = new QSpinBox(group);
+    m_configDecoderThreadsSpin = new FocusWheelSpinBox(group);
     m_configDecoderThreadsSpin->setRange(0, 16);
     m_configDecoderThreadsSpin->setSpecialValueText(tr("Auto"));
     m_configDecoderThreadsSpin->setToolTip(
@@ -512,7 +519,7 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
            "frame threading adds about 1-2 frames of pipeline latency. Takes effect on next connection."));
     layout->addRow(tr("Decoder threads"), m_configDecoderThreadsSpin);
 
-    m_configOpenGlBox = new QComboBox(group);
+    m_configOpenGlBox = new FocusWheelComboBox(group);
     m_configOpenGlBox->addItem(tr("Automatic"), -1);
     m_configOpenGlBox->addItem(tr("Software OpenGL"), 0);
     m_configOpenGlBox->addItem(tr("OpenGL ES"), 1);
@@ -536,7 +543,7 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     m_configCodecNameEdit->setPlaceholderText("OMX.qcom.video.encoder.avc");
     layout->addRow(tr("Codec name"), m_configCodecNameEdit);
 
-    m_configLogLevelBox = new QComboBox(group);
+    m_configLogLevelBox = new FocusWheelComboBox(group);
     m_configLogLevelBox->addItem("verbose", "verbose");
     m_configLogLevelBox->addItem("debug", "debug");
     m_configLogLevelBox->addItem("info", "info");
@@ -544,14 +551,42 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     m_configLogLevelBox->addItem("error", "error");
     layout->addRow(tr("Log level"), m_configLogLevelBox);
 
+    // 录制设置（此前只能手改 userdata.ini，无 UI 开关）
+    auto *recordGroup = new QGroupBox(tr("Recording"), content);
+    m_recordGroupTitle = recordGroup;
+    auto *recordLayout = new QFormLayout(recordGroup);
+    recordLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+
+    m_recordAudioCheck = new QCheckBox(tr("Record audio"), recordGroup);
+    recordLayout->addRow(m_recordAudioCheck);
+
+    m_recordMouseTrackCheck = new QCheckBox(tr("Overlay mouse track"), recordGroup);
+    recordLayout->addRow(m_recordMouseTrackCheck);
+
+    m_recordFpsSpin = new FocusWheelSpinBox(recordGroup);
+    m_recordFpsSpin->setRange(1, 120);
+    recordLayout->addRow(tr("Record FPS"), m_recordFpsSpin);
+
+    m_recordVideoBitrateSpin = new FocusWheelSpinBox(recordGroup);
+    m_recordVideoBitrateSpin->setRange(200000, 100000000);
+    m_recordVideoBitrateSpin->setSingleStep(500000);
+    recordLayout->addRow(tr("Video bitrate (bps)"), m_recordVideoBitrateSpin);
+
+    m_recordAudioBitrateSpin = new FocusWheelSpinBox(recordGroup);
+    m_recordAudioBitrateSpin->setRange(32000, 320000);
+    m_recordAudioBitrateSpin->setSingleStep(16000);
+    recordLayout->addRow(tr("Audio bitrate (bps)"), m_recordAudioBitrateSpin);
+
+    contentLayout->addWidget(recordGroup);
+
     auto *buttons = new QHBoxLayout();
-    auto *openConfigButton = new QPushButton(tr("Open Config Directory"), group);
-    auto *openKeymapButton = new QPushButton(tr("Open Keymap Directory"), group);
-    auto *saveButton = new QPushButton(tr("Save"), group);
-    buttons->addWidget(openConfigButton);
-    buttons->addWidget(openKeymapButton);
+    m_openConfigButton = new QPushButton(tr("Open Config Directory"), group);
+    m_openKeymapButton = new QPushButton(tr("Open Keymap Directory"), group);
+    m_saveButton = new QPushButton(tr("Save"), group);
+    buttons->addWidget(m_openConfigButton);
+    buttons->addWidget(m_openKeymapButton);
     buttons->addStretch();
-    buttons->addWidget(saveButton);
+    buttons->addWidget(m_saveButton);
     layout->addRow(buttons);
 
     contentLayout->addWidget(group);
@@ -559,13 +594,13 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     scrollArea->setWidget(content);
     pageLayout->addWidget(scrollArea);
 
-    connect(openConfigButton, &QPushButton::clicked, this, [this] {
+    connect(m_openConfigButton, &QPushButton::clicked, this, [this] {
         openUserDirectory(Config::getInstance().getConfigDirectory());
     });
-    connect(openKeymapButton, &QPushButton::clicked, this, [this] {
+    connect(m_openKeymapButton, &QPushButton::clicked, this, [this] {
         openUserDirectory(getKeyMapPath());
     });
-    connect(saveButton, &QPushButton::clicked, this, &Dialog::saveAdvancedConfig);
+    connect(m_saveButton, &QPushButton::clicked, this, &Dialog::saveAdvancedConfig);
     loadAdvancedConfig();
 }
 
@@ -584,6 +619,14 @@ void Dialog::loadAdvancedConfig()
     m_configCodecOptionsEdit->setText(config.getCodecOptions());
     m_configCodecNameEdit->setText(config.getCodecName());
     m_configLogLevelBox->setCurrentIndex(qMax(0, m_configLogLevelBox->findData(config.getLogLevel())));
+
+    // 录制设置（userdata.ini）
+    const UserBootConfig boot = config.getUserBootConfig();
+    m_recordAudioCheck->setChecked(boot.recordAudio);
+    m_recordMouseTrackCheck->setChecked(boot.recordMouseTrack);
+    m_recordFpsSpin->setValue(qBound(m_recordFpsSpin->minimum(), boot.recordFps, m_recordFpsSpin->maximum()));
+    m_recordVideoBitrateSpin->setValue(qBound(m_recordVideoBitrateSpin->minimum(), boot.recordVideoBitrate, m_recordVideoBitrateSpin->maximum()));
+    m_recordAudioBitrateSpin->setValue(qBound(m_recordAudioBitrateSpin->minimum(), boot.recordAudioBitrate, m_recordAudioBitrateSpin->maximum()));
 }
 
 void Dialog::saveAdvancedConfig()
@@ -614,8 +657,11 @@ void Dialog::saveAdvancedConfig()
         m_configAdbPathEdit->setText(adbPath);
     }
 
+    const QString newLanguage = m_configLanguageBox->currentData().toString();
+    const bool languageChanged = (newLanguage != Config::getInstance().getLanguage());
+
     QMap<QString, QVariant> values;
-    values.insert("Language", m_configLanguageBox->currentData());
+    values.insert("Language", newLanguage);
     values.insert("WindowTitle", m_configTitleEdit->text().trimmed());
     values.insert("PushFilePath", pushPath);
     values.insert("MaxFps", m_configMaxFpsSpin->value());
@@ -628,16 +674,33 @@ void Dialog::saveAdvancedConfig()
     values.insert("CodecName", m_configCodecNameEdit->text().trimmed());
     values.insert("LogLevel", m_configLogLevelBox->currentData());
 
+    // 录制设置保存到 userdata.ini（与投屏启动配置同文件）
+    UserBootConfig boot = Config::getInstance().getUserBootConfig();
+    boot.recordAudio = m_recordAudioCheck->isChecked();
+    boot.recordMouseTrack = m_recordMouseTrackCheck->isChecked();
+    boot.recordFps = m_recordFpsSpin->value();
+    boot.recordVideoBitrate = m_recordVideoBitrateSpin->value();
+    boot.recordAudioBitrate = m_recordAudioBitrateSpin->value();
+    Config::getInstance().setUserBootConfig(boot);
+
     if (!Config::getInstance().updateCommonConfig(values)) {
         QMessageBox::warning(this, tr("Save failed"), tr("Unable to save config.ini."));
         return;
     }
     // 立即应用新的 ADB 路径，无需重启；路径为空表示回退到内置 adb
     qsc::AdbProcess::setAdbPath(adbPath);
-    outLog(adbPath.isEmpty() ? tr("ADB path: bundled adb") : tr("ADB path: %1").arg(adbPath));
     m_configPushPathEdit->setText(pushPath);
+
+    if (languageChanged) {
+        // 语言立即生效：重载翻译器 + 广播 LanguageChange，不必重启程序
+        retranslateApplication();
+        outLog(tr("Language changed, interface updated"));
+    }
+    outLog(adbPath.isEmpty() ? tr("ADB path: bundled adb") : tr("ADB path: %1").arg(adbPath));
     QMessageBox::information(this, tr("Configuration saved"),
-                             tr("The settings were saved to config.ini. Restart QtScrcpy for all changes to take effect."));
+                             languageChanged
+                                 ? tr("Settings saved. Language changed immediately; restart for other changes to take effect.")
+                                 : tr("The settings were saved to config.ini. Restart QtScrcpy for all changes to take effect."));
 }
 
 void Dialog::openUserDirectory(const QString &path)
@@ -854,6 +917,148 @@ void Dialog::bringToFront()
     setWindowState((windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     raise();
     activateWindow();
+}
+
+// 刷新 QFormLayout 中由 addRow(label, widget) 自动生成的 QLabel。
+// Designer 的 retranslateUi() 不覆盖这些运行期创建的标签，需手动逐行回填。
+static void retranslateFormLabels(QLayout *layout, const QStringList &labels)
+{
+    auto *form = qobject_cast<QFormLayout *>(layout);
+    if (!form) {
+        return;
+    }
+    for (int i = 0; i < form->rowCount() && i < labels.size(); ++i) {
+        if (labels.at(i).isEmpty()) {
+            continue;
+        }
+        auto *item = form->itemAt(i, QFormLayout::LabelRole);
+        if (item && item->widget()) {
+            if (auto *label = qobject_cast<QLabel *>(item->widget())) {
+                label->setText(labels.at(i));
+            }
+        }
+    }
+}
+
+static void setComboItemText(QComboBox *box, int index, const QString &text)
+{
+    if (box && index >= 0 && index < box->count()) {
+        box->setItemText(index, text);
+    }
+}
+
+void Dialog::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange) {
+        return;
+    }
+    ui->retranslateUi(this);
+
+    // 文件管理入口
+    if (m_fileManagerBtn) {
+        m_fileManagerBtn->setText(tr("File manager"));
+        m_fileManagerBtn->setToolTip(tr("Browse device files, supports drag-and-drop upload, download and text editing"));
+    }
+
+    // 编码模式下拉：预设名称随语言变化
+    if (ui->codecModeBox->count() > 0) {
+        const int current = ui->codecModeBox->currentIndex();
+        ui->codecModeBox->blockSignals(true);
+        // 索引 0 是 .ui 固定项，由 retranslateUi() 已刷新；仅重建预设项
+        for (int i = 1; i < ui->codecModeBox->count(); ++i) {
+            const QVector<EncoderPreset> &presets = EncoderPresetRegistry::all();
+            const int presetIndex = i - 1;
+            if (presetIndex < presets.size()) {
+                ui->codecModeBox->setItemText(i, presets.at(presetIndex).displayName);
+            }
+        }
+        ui->codecModeBox->setCurrentIndex(current);
+        ui->codecModeBox->blockSignals(false);
+    }
+
+    // 主界面动态下拉项
+    setComboItemText(ui->maxSizeBox, ui->maxSizeBox->count() - 1, tr("original"));
+    ui->bitRateEdit->setToolTip(tr("For USB; 12 Mbps or higher recommended; below 8 Mbps is visibly blurry at original resolution"));
+    ui->wirelessBitRateEdit->setToolTip(
+        tr("For wireless (IP:port); Wi-Fi bandwidth and stability are limited, 2~8 Mbps recommended"));
+    ui->wirelessBitRateLabel->setToolTip(ui->wirelessBitRateEdit->toolTip());
+    setComboItemText(ui->videoSourceBox, 0, tr("display"));
+    setComboItemText(ui->videoSourceBox, 1, tr("camera"));
+    setComboItemText(ui->cameraFacingBox, 0, tr("back"));
+    setComboItemText(ui->cameraFacingBox, 1, tr("front"));
+    setComboItemText(ui->lockOrientationBox, 0, tr("no lock"));
+    setComboItemText(ui->decodeModeBox, 0, tr("FFmpeg + OpenGL (Universal Default)"));
+    setComboItemText(ui->decodeModeBox, 1, tr("VideoToolbox + Metal (Apple Silicon Only)"));
+
+    // 高级显示组
+    if (m_advancedDisplayGroup) {
+        m_advancedDisplayGroup->setTitle(tr("Advanced display"));
+        setComboItemText(m_displayModeBox, 0, tr("Primary display"));
+        setComboItemText(m_displayModeBox, 1, tr("Existing display ID"));
+        setComboItemText(m_displayModeBox, 2, tr("New virtual display"));
+        setComboItemText(m_displayImePolicyBox, 0, tr("Server default"));
+        m_flexDisplayCheck->setText(tr("Resize virtual display with window"));
+        m_vdSystemDecorationsCheck->setText(tr("Show system decorations"));
+        m_vdDestroyContentCheck->setText(tr("Destroy content on close"));
+        m_keepActiveCheck->setText(tr("Keep device active"));
+        m_refreshAppsBtn->setText(tr("refresh"));
+        retranslateFormLabels(m_advancedDisplayGroup->layout(),
+                              { tr("Display mode"), tr("Display ID"), tr("Virtual size / DPI"),
+                                tr("Crop"), QString(), tr("IME policy"), QString(), QString(),
+                                QString(), tr("Start app") });
+    }
+
+    // 应用配置组
+    if (m_appConfigGroup) {
+        m_appConfigGroup->setTitle(tr("Application configuration"));
+        setComboItemText(m_configLanguageBox, 0, tr("Automatic"));
+        m_configMaxFpsSpin->setSpecialValueText(tr("Unlimited"));
+        m_configDecoderThreadsSpin->setSpecialValueText(tr("Auto"));
+        m_configDecoderThreadsSpin->setToolTip(
+            tr("FFmpeg decoder threads. 1 = single thread (old behavior, lowest latency); "
+               "frame threading adds about 1-2 frames of pipeline latency. Takes effect on next connection."));
+        setComboItemText(m_configOpenGlBox, 0, tr("Automatic"));
+        setComboItemText(m_configOpenGlBox, 1, tr("Software OpenGL"));
+        setComboItemText(m_configOpenGlBox, 2, tr("OpenGL ES"));
+        setComboItemText(m_configOpenGlBox, 3, tr("Desktop OpenGL"));
+        m_configOpenGlBox->setToolTip(tr("Takes effect after restarting QtScrcpy."));
+        m_configAdbPathEdit->setPlaceholderText(tr("Use bundled ADB"));
+        m_configRenderExpiredCheck->setText(tr("Render expired video frames"));
+        m_openConfigButton->setText(tr("Open Config Directory"));
+        m_openKeymapButton->setText(tr("Open Keymap Directory"));
+        m_saveButton->setText(tr("Save"));
+        retranslateFormLabels(m_appConfigGroup->layout(),
+                              { tr("Language"), tr("Window title"), tr("Push file path"), tr("Maximum FPS"),
+                                QString(), tr("Decoder threads"), tr("OpenGL backend"),
+                                tr("Device server path"), tr("ADB executable"), tr("Codec options"),
+                                tr("Codec name"), tr("Log level") });
+    }
+
+    // 无线调试运行期设置的 tooltip / placeholder
+    if (ui->devicePortEdt->lineEdit()) {
+        ui->devicePortEdt->lineEdit()->setToolTip(
+            tr("Wireless debugging: the port after the IP on the device's main screen; leave empty on Android 10 or below to use 5555"));
+    }
+    ui->pairPortEdt->setToolTip(tr("Optional: port in the device's 'Pair using PIN' dialog, must be filled together with the PIN"));
+    ui->pairCodeEdt->setPlaceholderText(tr("6-digit PIN"));
+    ui->pairCodeEdt->setToolTip(tr("Optional: 6-digit PIN shown in the device's 'Pair using PIN' dialog, must be filled together with the pair port; used for this pairing only and not saved"));
+
+    // 群控页签
+    if (m_groupTabWidget && m_groupTabIndex >= 0) {
+        m_groupTabWidget->setTabText(m_groupTabIndex, tr("Group Control"));
+    }
+    if (m_groupWidget) {
+        m_groupWidget->retranslateUi();
+    }
+
+    // 录制设置
+    m_recordGroupTitle->setTitle(tr("Recording"));
+    m_recordAudioCheck->setText(tr("Record audio"));
+    m_recordMouseTrackCheck->setText(tr("Overlay mouse track"));
+    retranslateFormLabels(m_recordGroupTitle->layout(),
+                          { QString(), QString(), tr("Record FPS"), tr("Video bitrate (bps)"),
+                            tr("Audio bitrate (bps)") });
 }
 
 void Dialog::closeEvent(QCloseEvent *event)
@@ -1394,6 +1599,9 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
         return;
     }
     m_connectedSerials.insert(serial);
+    if (m_groupWidget) {
+        m_groupWidget->syncDevices(m_connectedSerials.values());
+    }
     if (serial == m_reconnectSerial) {
         stopAutoReconnect(); // 掉线设备已自动恢复
     }
@@ -1511,6 +1719,9 @@ void Dialog::onDeviceDisconnected(QString serial)
 
     // ---- 自动重连（仅意外掉线）----
     m_connectedSerials.remove(serial);
+    if (m_groupWidget) {
+        m_groupWidget->deviceDisconnected(serial);
+    }
     if (m_manualDisconnects.contains(serial)) {
         m_manualDisconnects.remove(serial); // 手动断开：一次标记只豁免一次
         return;

@@ -65,7 +65,7 @@
    <item>
     <widget class="QPushButton" name="expandSettingsBtn">
      <property name="toolTip">
-      <string>系统设置（Ctrl+Alt+N，悬停展开更多）</string>
+      <string>Device settings (Ctrl+Alt+N, hover to expand)</string>
      </property>
      <property name="text">
       <string/>
@@ -185,7 +185,7 @@
    <item>
     <widget class="QPushButton" name="screenShotBtn">
      <property name="toolTip">
-      <string>截图（复制到剪贴板）</string>
+      <string>Screenshot (copy to clipboard)</string>
      </property>
      <property name="text">
       <string/>

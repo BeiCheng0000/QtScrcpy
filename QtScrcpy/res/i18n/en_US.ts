@@ -2,6 +2,109 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>ApkInstallDialog</name>
+    <message>
+        <source>Batch install APK</source>
+        <translation>Batch install APK</translation>
+    </message>
+    <message>
+        <source>Drop apk files or folders here, or enter a path (UNC network paths supported):</source>
+        <translation>Drop apk files or folders here, or enter a path (UNC network paths supported):</translation>
+    </message>
+    <message>
+        <source>e.g. C:\apks\app.apk  or  \\host\share\app.apk  or a folder</source>
+        <translation>e.g. C:\apks\app.apk  or  \\host\share\app.apk  or a folder</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Add</translation>
+    </message>
+    <message>
+        <source>Choose files</source>
+        <translation>Choose files</translation>
+    </message>
+    <message>
+        <source>Choose folder</source>
+        <translation>Choose folder</translation>
+    </message>
+    <message>
+        <source>You can drag files or folders directly onto this list</source>
+        <translation>You can drag files or folders directly onto this list</translation>
+    </message>
+    <message>
+        <source>Include apk files in subfolders</source>
+        <translation>Include apk files in subfolders</translation>
+    </message>
+    <message>
+        <source>Remove selected</source>
+        <translation>Remove selected</translation>
+    </message>
+    <message>
+        <source>Start install</source>
+        <translation>Start install</translation>
+    </message>
+    <message>
+        <source>Cancel install</source>
+        <translation>Cancel install</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Close</translation>
+    </message>
+    <message>
+        <source>%1 APK file(s)</source>
+        <translation>%1 APK file(s)</translation>
+    </message>
+    <message>
+        <source>Installing 0/%1</source>
+        <translation>Installing 0/%1</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded / %2 failed</source>
+        <translation>Done: %1 succeeded / %2 failed</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelled</translation>
+    </message>
+    <message>
+        <source>Pending</source>
+        <translation>Pending</translation>
+    </message>
+    <message>
+        <source>Skipped invalid paths</source>
+        <translation>Skipped invalid paths</translation>
+    </message>
+    <message>
+        <source>Choose APK files to install</source>
+        <translation>Choose APK files to install</translation>
+    </message>
+    <message>
+        <source>APK files (*.apk);;All files (*.*)</source>
+        <translation>APK files (*.apk);;All files (*.*)</translation>
+    </message>
+    <message>
+        <source>Choose folder containing APK files</source>
+        <translation>Choose folder containing APK files</translation>
+    </message>
+    <message>
+        <source>Please add APK files or folders first</source>
+        <translation>Please add APK files or folders first</translation>
+    </message>
+    <message>
+        <source>%1: path does not exist or network share is unreachable</source>
+        <translation>%1: path does not exist or network share is unreachable</translation>
+    </message>
+    <message>
+        <source>%1: not an apk file</source>
+        <translation>%1: not an apk file</translation>
+    </message>
+    <message>
+        <source>%1: not a file or directory</source>
+        <translation>%1: not a file or directory</translation>
+    </message>
+</context>
+<context>
     <name>Dialog</name>
     <message>
         <source>show</source>
@@ -299,6 +402,689 @@
         <source>Open directory failed</source>
         <translation>Open directory failed</translation>
     </message>
+    <message>
+        <source>文件管理</source>
+        <translation>File manager</translation>
+    </message>
+    <message>
+        <source>浏览设备文件，支持拖拽上传、下载与文本编辑</source>
+        <translation>Browse device files, supports drag-and-drop upload, download and text editing</translation>
+    </message>
+    <message>
+        <source>USB 连接使用；建议 12 Mbps 或更高，原画分辨率下低于 8 Mbps 会明显模糊</source>
+        <translation>For USB; 12 Mbps or higher recommended, below 8 Mbps is visibly blurry at original resolution</translation>
+    </message>
+    <message>
+        <source>无线（IP:端口）连接使用；Wi-Fi 带宽与稳定性受限，建议 2~8 Mbps，过高会卡顿或花屏</source>
+        <translation>For wireless (IP:port); Wi-Fi bandwidth and stability are limited, 2~8 Mbps recommended, higher may stutter or artifact</translation>
+    </message>
+    <message>
+        <source>已为高分辨率自动提升码率至 12 Mbps（可在设置中调整）</source>
+        <translation>Bitrate automatically raised to 12 Mbps for high resolution (can be adjusted in settings)</translation>
+    </message>
+    <message>
+        <source>Group Control</source>
+        <translation>Group Control</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Auto</translation>
+    </message>
+    <message>
+        <source>FFmpeg decoder threads. 1 = single thread (old behavior, lowest latency); frame threading adds about 1-2 frames of pipeline latency. Takes effect on next connection.</source>
+        <translation>FFmpeg decoder threads. 1 = single thread (old behavior, lowest latency); frame threading adds about 1-2 frames of pipeline latency. Takes effect on next connection.</translation>
+    </message>
+    <message>
+        <source>Decoder threads</source>
+        <translation>Decoder threads</translation>
+    </message>
+    <message>
+        <source>Recording</source>
+        <translation>Recording</translation>
+    </message>
+    <message>
+        <source>Record audio</source>
+        <translation>Record audio</translation>
+    </message>
+    <message>
+        <source>Overlay mouse track</source>
+        <translation>Overlay mouse track</translation>
+    </message>
+    <message>
+        <source>Record FPS</source>
+        <translation>Record FPS</translation>
+    </message>
+    <message>
+        <source>Video bitrate (bps)</source>
+        <translation>Video bitrate (bps)</translation>
+    </message>
+    <message>
+        <source>Audio bitrate (bps)</source>
+        <translation>Audio bitrate (bps)</translation>
+    </message>
+    <message>
+        <source>Invalid ADB path</source>
+        <translation>Invalid ADB path</translation>
+    </message>
+    <message>
+        <source>ADB executable not found:
+%1</source>
+        <translation>ADB executable not found:
+%1</translation>
+    </message>
+    <message>
+        <source>Language changed, interface updated</source>
+        <translation>Language changed, interface updated</translation>
+    </message>
+    <message>
+        <source>ADB path: bundled adb</source>
+        <translation>ADB path: bundled adb</translation>
+    </message>
+    <message>
+        <source>ADB path: %1</source>
+        <translation>ADB path: %1</translation>
+    </message>
+    <message>
+        <source>Settings saved. Language changed immediately; restart for other changes to take effect.</source>
+        <translation>Settings saved. Language changed immediately; restart for other changes to take effect.</translation>
+    </message>
+    <message>
+        <source>bitrate: %1 Mbps (%2)</source>
+        <translation>bitrate: %1 Mbps (%2)</translation>
+    </message>
+    <message>
+        <source>wireless</source>
+        <translation>wireless</translation>
+    </message>
+    <message>
+        <source>usb</source>
+        <translation>usb</translation>
+    </message>
+    <message>
+        <source>无线操作进行中，请稍候…</source>
+        <translation>Wireless operation in progress, please wait…</translation>
+    </message>
+    <message>
+        <source>error: 设备 IP 不合法</source>
+        <translation>error: invalid device IP</translation>
+    </message>
+    <message>
+        <source>error: 配对端口与配对码需同时填写（或都留空仅做直连）</source>
+        <translation>error: pair port and PIN must be filled together (or both empty for direct connection)</translation>
+    </message>
+    <message>
+        <source>信息不完整</source>
+        <translation>Incomplete information</translation>
+    </message>
+    <message>
+        <source>配对端口与配对码是一组配对信息，需要同时填写；若设备已配对过，请将两项都清空后直接连接。</source>
+        <translation>The pair port and PIN are a pair and must be filled together; if the device is already paired, clear both and connect directly.</translation>
+    </message>
+    <message>
+        <source>error: 配对端口不合法，请填写手机「使用配对码配对设备」弹窗中的端口</source>
+        <translation>error: invalid pair port, enter the port from the phone&apos;s &apos;Pair using PIN&apos; dialog</translation>
+    </message>
+    <message>
+        <source>auto reconnect attempt failed for %1, will retry</source>
+        <translation>auto reconnect attempt failed for %1, will retry</translation>
+    </message>
+    <message>
+        <source>设备 %1 启动投屏服务失败，请检查 USB 连接后重试</source>
+        <translation>Failed to start mirroring service for device %1, check USB connection and retry</translation>
+    </message>
+    <message>
+        <source>投屏服务启动失败</source>
+        <translation>Failed to start mirroring service</translation>
+    </message>
+    <message>
+        <source>device %1 disconnected, auto reconnecting...</source>
+        <translation>device %1 disconnected, auto reconnecting...</translation>
+    </message>
+    <message>
+        <source>auto reconnect failed for %1, please reconnect manually</source>
+        <translation>auto reconnect failed for %1, please reconnect manually</translation>
+    </message>
+    <message>
+        <source>adb connect to %1 success, restarting session</source>
+        <translation>adb connect to %1 success, restarting session</translation>
+    </message>
+    <message>
+        <source>adb connect to %1 failed (%2), retrying...</source>
+        <translation>adb connect to %1 failed (%2), retrying...</translation>
+    </message>
+    <message>
+        <source>请先选择一台已连接的设备</source>
+        <translation>Please select a connected device first</translation>
+    </message>
+    <message>
+        <source>无线调试：「无线调试」主界面 IP 地址后的端口；Android 10 及以下留空按 5555</source>
+        <translation>Wireless debugging: port after the IP on the main screen; leave empty on Android 10 or below to use 5555</translation>
+    </message>
+    <message>
+        <source>选填：手机「无线调试 → 使用配对码配对设备」弹窗中的端口，需与配对码同时填写</source>
+        <translation>Optional: port in the phone&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the PIN</translation>
+    </message>
+    <message>
+        <source>6 位数字</source>
+        <translation>6-digit PIN</translation>
+    </message>
+    <message>
+        <source>选填：手机「无线调试 → 使用配对码配对设备」中显示的 6 位配对码，需与配对端口同时填写；仅用于本次配对，不会被保存</source>
+        <translation>Optional: 6-digit PIN shown on the phone, must be filled together with the pair port; used for this pairing only and not saved</translation>
+    </message>
+    <message>
+        <source>配对成功：%1</source>
+        <translation>Paired successfully: %1</translation>
+    </message>
+    <message>
+        <source>无线调试失败：%1</source>
+        <translation>Wireless debugging failed: %1</translation>
+    </message>
+    <message>
+        <source>无线调试失败</source>
+        <translation>Wireless debugging failed</translation>
+    </message>
+    <message>
+        <source>audio already running for %1</source>
+        <translation>audio already running for %1</translation>
+    </message>
+    <message>
+        <source>start audio failed for %1</source>
+        <translation>start audio failed for %1</translation>
+    </message>
+    <message>
+        <source>File manager</source>
+        <translation>File manager</translation>
+    </message>
+    <message>
+        <source>Browse device files, supports drag-and-drop upload, download and text editing</source>
+        <translation>Browse device files, supports drag-and-drop upload, download and text editing</translation>
+    </message>
+    <message>
+        <source>For USB; 12 Mbps or higher recommended; below 8 Mbps is visibly blurry at original resolution</source>
+        <translation>For USB; 12 Mbps or higher recommended; below 8 Mbps is visibly blurry at original resolution</translation>
+    </message>
+    <message>
+        <source>For wireless (IP:port); Wi-Fi bandwidth and stability are limited, 2~8 Mbps recommended</source>
+        <translation>For wireless (IP:port); Wi-Fi bandwidth and stability are limited, 2~8 Mbps recommended</translation>
+    </message>
+    <message>
+        <source>Wireless debugging: the port after the IP on the device&apos;s main screen; leave empty on Android 10 or below to use 5555</source>
+        <translation>Wireless debugging: the port after the IP on the device&apos;s main screen; leave empty on Android 10 or below to use 5555</translation>
+    </message>
+    <message>
+        <source>Optional: port in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the PIN</source>
+        <translation>Optional: port in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the PIN</translation>
+    </message>
+    <message>
+        <source>6-digit PIN</source>
+        <translation>6-digit PIN</translation>
+    </message>
+    <message>
+        <source>Optional: 6-digit PIN shown in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the pair port; used for this pairing only and not saved</source>
+        <translation>Optional: 6-digit PIN shown in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the pair port; used for this pairing only and not saved</translation>
+    </message>
+</context>
+<context>
+    <name>FileManagerWindow</name>
+    <message>
+        <source>上传</source>
+        <translation>Upload</translation>
+    </message>
+    <message>
+        <source>%1 不是可编辑的文本文件，可右键下载</source>
+        <translation>%1 is not an editable text file, you can right-click to download</translation>
+    </message>
+    <message>
+        <source>正在加载 %1 …</source>
+        <translation>Loading %1 …</translation>
+    </message>
+    <message>
+        <source>正在刷新 …</source>
+        <translation>Refreshing …</translation>
+    </message>
+    <message>
+        <source>%1 项（%2 个文件夹，%3 个文件）</source>
+        <translation>%1 items (%2 folders, %3 files)</translation>
+    </message>
+    <message>
+        <source>加载失败：%1</source>
+        <translation>Load failed: %1</translation>
+    </message>
+    <message>
+        <source>无法打开目录</source>
+        <translation>Cannot open folder</translation>
+    </message>
+    <message>
+        <source>无法打开 %1
+%2</source>
+        <translation>Cannot open %1
+%2</translation>
+    </message>
+    <message>
+        <source>文件夹</source>
+        <translation>Folder</translation>
+    </message>
+    <message>
+        <source>链接</source>
+        <translation>Link</translation>
+    </message>
+    <message>
+        <source>文件</source>
+        <translation>File</translation>
+    </message>
+    <message>
+        <source>图片</source>
+        <translation>Image</translation>
+    </message>
+    <message>
+        <source>视频</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>音频</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>文本</source>
+        <translation>Text</translation>
+    </message>
+    <message>
+        <source>压缩包</source>
+        <translation>Archive</translation>
+    </message>
+    <message>
+        <source>安装包</source>
+        <translation>Package</translation>
+    </message>
+    <message>
+        <source> 文件</source>
+        <translation> file</translation>
+    </message>
+    <message>
+        <source>刚刚</source>
+        <translation>Just now</translation>
+    </message>
+    <message>
+        <source>%1 分钟前</source>
+        <translation>%1 min ago</translation>
+    </message>
+    <message>
+        <source>%1 小时前</source>
+        <translation>%1 h ago</translation>
+    </message>
+    <message>
+        <source>%1 天前</source>
+        <translation>%1 d ago</translation>
+    </message>
+    <message>
+        <source>打开</source>
+        <translation>Open</translation>
+    </message>
+    <message>
+        <source>编辑</source>
+        <translation>Edit</translation>
+    </message>
+    <message>
+        <source>下载到…</source>
+        <translation>Download to…</translation>
+    </message>
+    <message>
+        <source>复制路径</source>
+        <translation>Copy path</translation>
+    </message>
+    <message>
+        <source>删除</source>
+        <translation>Delete</translation>
+    </message>
+    <message>
+        <source>删除选中的文件/目录（目录将连同内容一起删除，不可恢复）</source>
+        <translation>Delete selected files/folders (folders are deleted with all contents, cannot be undone)</translation>
+    </message>
+    <message>
+        <source>刷新</source>
+        <translation>Refresh</translation>
+    </message>
+    <message>
+        <source>确定要删除“%1”吗？
+
+目录将被连同其全部内容一起删除，此操作无法撤销。</source>
+        <translation>Delete &quot;%1&quot;?
+
+The folder and all its contents will be deleted; this cannot be undone.</translation>
+    </message>
+    <message>
+        <source>确定要删除所选的 %1 个条目吗？
+
+目录将被连同其全部内容一起删除，此操作无法撤销。</source>
+        <translation>Delete the selected %1 items?
+
+Folders and all their contents will be deleted; this cannot be undone.</translation>
+    </message>
+    <message>
+        <source>确认删除</source>
+        <translation>Confirm delete</translation>
+    </message>
+    <message>
+        <source>取消</source>
+        <translation>Cancel</translation>
+    </message>
+    <message>
+        <source>正在删除 %1 个条目…</source>
+        <translation>Deleting %1 items…</translation>
+    </message>
+    <message>
+        <source>删除完成（%1 个条目）</source>
+        <translation>Deleted (%1 items)</translation>
+    </message>
+    <message>
+        <source>删除失败：%1</source>
+        <translation>Delete failed: %1</translation>
+    </message>
+    <message>
+        <source>删除失败</source>
+        <translation>Delete failed</translation>
+    </message>
+    <message>
+        <source>设备返回了未知错误</source>
+        <translation>The device returned an unknown error</translation>
+    </message>
+    <message>
+        <source>选择要上传的文件</source>
+        <translation>Choose files to upload</translation>
+    </message>
+    <message>
+        <source>请先选择要下载的文件或文件夹</source>
+        <translation>Please select files or folders to download first</translation>
+    </message>
+    <message>
+        <source>选择保存位置</source>
+        <translation>Choose save location</translation>
+    </message>
+    <message>
+        <source>没有可上传的文件</source>
+        <translation>No files to upload</translation>
+    </message>
+    <message>
+        <source>
+… 共 %1 项</source>
+        <translation>
+… %1 items total</translation>
+    </message>
+    <message>
+        <source>目标已存在</source>
+        <translation>Target already exists</translation>
+    </message>
+    <message>
+        <source>以下项目在设备上已存在，是否覆盖？
+
+%1</source>
+        <translation>The following already exist on the device, overwrite?
+
+%1</translation>
+    </message>
+    <message>
+        <source>已取消上传</source>
+        <translation>Upload cancelled</translation>
+    </message>
+    <message>
+        <source>开始传输，共 %1 个文件…</source>
+        <translation>Transfer started, %1 files…</translation>
+    </message>
+    <message>
+        <source>第 %1/%2 个：%3</source>
+        <translation>%1/%2: %3</translation>
+    </message>
+    <message>
+        <source>传输已取消（成功 %1，失败 %2）</source>
+        <translation>Transfer cancelled (%1 succeeded, %2 failed)</translation>
+    </message>
+    <message>
+        <source>传输完成：成功 %1，失败 %2</source>
+        <translation>Transfer complete: %1 succeeded, %2 failed</translation>
+    </message>
+    <message>
+        <source>传输失败</source>
+        <translation>Transfer failed</translation>
+    </message>
+    <message>
+        <source>正在读取 %1 …</source>
+        <translation>Reading %1 …</translation>
+    </message>
+    <message>
+        <source>编辑 - %1</source>
+        <translation>Edit - %1</translation>
+    </message>
+    <message>
+        <source>编码：%1    换行：%2    保存时回写到设备原路径</source>
+        <translation>Encoding: %1    Line ending: %2    Saved back to the original device path</translation>
+    </message>
+    <message>
+        <source>正在保存 %1 …</source>
+        <translation>Saving %1 …</translation>
+    </message>
+    <message>
+        <source>已打开 %1</source>
+        <translation>Opened %1</translation>
+    </message>
+    <message>
+        <source>读取失败：%1</source>
+        <translation>Read failed: %1</translation>
+    </message>
+    <message>
+        <source>无法打开文件</source>
+        <translation>Cannot open file</translation>
+    </message>
+    <message>
+        <source>%1
+%2</source>
+        <translation>%1
+%2</translation>
+    </message>
+    <message>
+        <source>已保存 %1</source>
+        <translation>Saved %1</translation>
+    </message>
+    <message>
+        <source>文件已被修改</source>
+        <translation>File has been modified</translation>
+    </message>
+    <message>
+        <source>设备上的文件在编辑期间已被其他程序修改。
+仍要覆盖保存吗？</source>
+        <translation>The file on the device was modified by another program while editing.
+Still overwrite and save?</translation>
+    </message>
+    <message>
+        <source>已取消保存</source>
+        <translation>Save cancelled</translation>
+    </message>
+    <message>
+        <source>保存失败：%1</source>
+        <translation>Save failed: %1</translation>
+    </message>
+    <message>
+        <source>保存失败</source>
+        <translation>Save failed</translation>
+    </message>
+    <message>
+        <source>File manager - %1</source>
+        <translation>File manager - %1</translation>
+    </message>
+    <message>
+        <source>Back (Alt+Left)</source>
+        <translation>Back (Alt+Left)</translation>
+    </message>
+    <message>
+        <source>Forward (Alt+Right)</source>
+        <translation>Forward (Alt+Right)</translation>
+    </message>
+    <message>
+        <source>Parent folder (Backspace)</source>
+        <translation>Parent folder (Backspace)</translation>
+    </message>
+    <message>
+        <source>Refresh (F5)</source>
+        <translation>Refresh (F5)</translation>
+    </message>
+    <message>
+        <source>Upload</source>
+        <translation>Upload</translation>
+    </message>
+    <message>
+        <source>Upload files to current folder (you can also drag files/folders onto the window)</source>
+        <translation>Upload files to current folder (you can also drag files/folders onto the window)</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Download</translation>
+    </message>
+    <message>
+        <source>Download selected files/folders to computer</source>
+        <translation>Download selected files/folders to computer</translation>
+    </message>
+    <message>
+        <source>Enter device path and press Enter to jump</source>
+        <translation>Enter device path and press Enter to jump</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>Modified</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Type</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Size</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>Ready</translation>
+    </message>
+</context>
+<context>
+    <name>GroupControlWidget</name>
+    <message>
+        <source>Select target devices (checked = included in batch operations)</source>
+        <translation>Select target devices (checked = included in batch operations)</translation>
+    </message>
+    <message>
+        <source>Select all</source>
+        <translation>Select all</translation>
+    </message>
+    <message>
+        <source>Select none</source>
+        <translation>Select none</translation>
+    </message>
+    <message>
+        <source>Invert</source>
+        <translation>Invert</translation>
+    </message>
+    <message>
+        <source>Set checked device as control host</source>
+        <translation>Set checked device as control host</translation>
+    </message>
+    <message>
+        <source>Batch device actions</source>
+        <translation>Batch device actions</translation>
+    </message>
+    <message>
+        <source>Install APK on checked devices</source>
+        <translation>Install APK on checked devices</translation>
+    </message>
+    <message>
+        <source>No connected devices</source>
+        <translation>No connected devices</translation>
+    </message>
+    <message>
+        <source>Batch operation log</source>
+        <translation>Batch operation log</translation>
+    </message>
+    <message>
+        <source>%1 connected device(s), %2 checked</source>
+        <translation>%1 connected device(s), %2 checked</translation>
+    </message>
+    <message>
+        <source>Group control</source>
+        <translation>Group control</translation>
+    </message>
+    <message>
+        <source>No device checked</source>
+        <translation>No device checked</translation>
+    </message>
+    <message>
+        <source>Set host: %1</source>
+        <translation>Set host: %1</translation>
+    </message>
+    <message>
+        <source>%1 sent to %2 device(s)</source>
+        <translation>%1 sent to %2 device(s)</translation>
+    </message>
+    <message>
+        <source>Install APK</source>
+        <translation>Install APK</translation>
+    </message>
+    <message>
+        <source>[%1] device disconnected, skipped</source>
+        <translation>[%1] device disconnected, skipped</translation>
+    </message>
+    <message>
+        <source>[%1] queued %2 apk(s)</source>
+        <translation>[%1] queued %2 apk(s)</translation>
+    </message>
+    <message>
+        <source>Install cancelled</source>
+        <translation>Install cancelled</translation>
+    </message>
+    <message>
+        <source>[%1] %2: %3</source>
+        <translation>[%1] %2: %3</translation>
+    </message>
+    <message>
+        <source>[%1] finished: %2 success, %3 failed</source>
+        <translation>[%1] finished: %2 success, %3 failed</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation>Back</translation>
+    </message>
+    <message>
+        <source>Home</source>
+        <translation>Home</translation>
+    </message>
+    <message>
+        <source>Menu</source>
+        <translation>Menu</translation>
+    </message>
+    <message>
+        <source>Power</source>
+        <translation>Power</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>Rotate</translation>
+    </message>
+    <message>
+        <source>Screenshot</source>
+        <translation>Screenshot</translation>
+    </message>
+</context>
+<context>
+    <name>LoadingOverlay</name>
+    <message>
+        <source>Connecting to device…</source>
+        <translation>Connecting to device…</translation>
+    </message>
+    <message>
+        <source>Still no frame: make sure the device screen is on and USB debugging is authorized</source>
+        <translation>Still no frame: make sure the device screen is on and USB debugging is authorized</translation>
+    </message>
 </context>
 <context>
     <name>PresetConfigDialog</name>
@@ -316,48 +1102,49 @@
     </message>
     <message>
         <source>MTK Encoder</source>
-        <translation type="unfinished"></translation>
+        <translation>MTK Encoder</translation>
     </message>
     <message>
         <source>This feature is for MediaTek (MTK) devices only.
 Using on non-MTK devices may cause encoding failure or visual artifacts.</source>
-        <translation type="unfinished"></translation>
+        <translation>This feature is for MediaTek (MTK) devices only.
+Using on non-MTK devices may cause encoding failure or visual artifacts.</translation>
     </message>
     <message>
         <source>Game Mode (20Mbps, QP≤28)</source>
-        <translation type="unfinished"></translation>
+        <translation>Game Mode (20Mbps, QP≤28)</translation>
     </message>
     <message>
         <source>VBR + hard QP cap at 28 + short GOP. The strongest anti-blur shield for real-time gaming.</source>
-        <translation type="unfinished"></translation>
+        <translation>VBR + hard QP cap at 28 + short GOP. The strongest anti-blur shield for real-time gaming.</translation>
     </message>
     <message>
         <source>VBR + QP cap at 28 + short GOP (5 frames). Hard ceiling blocks Sticky QP completely — best for real-time gaming.</source>
-        <translation type="unfinished"></translation>
+        <translation>VBR + QP cap at 28 + short GOP (5 frames). Hard ceiling blocks Sticky QP completely — best for real-time gaming.</translation>
     </message>
     <message>
         <source>Balanced (8Mbps, QP≤35)</source>
-        <translation type="unfinished"></translation>
+        <translation>Balanced (8Mbps, QP≤35)</translation>
     </message>
     <message>
         <source>Standard anti-blur protection with optimal visual quality. Recommended for daily use.</source>
-        <translation type="unfinished"></translation>
+        <translation>Standard anti-blur protection with optimal visual quality. Recommended for daily use.</translation>
     </message>
     <message>
         <source>VBR + QP cap at 35 + standard GOP. Matches default visual quality while preventing QP runaway. Ideal for daily use.</source>
-        <translation type="unfinished"></translation>
+        <translation>VBR + QP cap at 35 + standard GOP. Matches default visual quality while preventing QP runaway. Ideal for daily use.</translation>
     </message>
     <message>
         <source>Power Saver (4Mbps, QP≤35)</source>
-        <translation type="unfinished"></translation>
+        <translation>Power Saver (4Mbps, QP≤35)</translation>
     </message>
     <message>
         <source>Maximum power saving: low-power ME + single ref frame. Saves most encoder power for non-gaming scenarios.</source>
-        <translation type="unfinished"></translation>
+        <translation>Maximum power saving: low-power ME + single ref frame. Saves most encoder power for non-gaming scenarios.</translation>
     </message>
     <message>
         <source>VBR + QP cap at 35 + disabled visual optimizations + low-power ME + single ref frame. Maximum power saving for non-intensive scenarios.</source>
-        <translation type="unfinished"></translation>
+        <translation>VBR + QP cap at 35 + disabled visual optimizations + low-power ME + single ref frame. Maximum power saving for non-intensive scenarios.</translation>
     </message>
 </context>
 <context>
@@ -436,19 +1223,39 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</source
     </message>
     <message>
         <source>record screen (Ctrl+Alt+R)</source>
-        <translation type="unfinished"></translation>
+        <translation>record screen (Ctrl+Alt+R)</translation>
     </message>
     <message>
         <source>stop record %1:%2</source>
-        <translation type="unfinished"></translation>
+        <translation>stop record %1:%2</translation>
     </message>
     <message>
-        <source>系统设置（Ctrl+Alt+N，悬停展开更多）</source>
-        <translation type="unfinished"></translation>
+        <source>Device settings (Ctrl+Alt+N, hover to expand)</source>
+        <translation>Device settings (Ctrl+Alt+N, hover to expand)</translation>
     </message>
     <message>
-        <source>截图（复制到剪贴板）</source>
-        <translation type="unfinished"></translation>
+        <source>Screenshot (copy to clipboard)</source>
+        <translation>Screenshot (copy to clipboard)</translation>
+    </message>
+    <message>
+        <source>Open all apps</source>
+        <translation>Open all apps</translation>
+    </message>
+    <message>
+        <source>About this device</source>
+        <translation>About this device</translation>
+    </message>
+    <message>
+        <source>Open network panel</source>
+        <translation>Open network panel</translation>
+    </message>
+    <message>
+        <source>Install apk</source>
+        <translation>Install apk</translation>
+    </message>
+    <message>
+        <source>Screenshot copied, ready to paste</source>
+        <translation>Screenshot copied, ready to paste</translation>
     </message>
 </context>
 <context>
@@ -459,69 +1266,103 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</source
     </message>
     <message>
         <source>record screen</source>
-        <translation type="unfinished">record screen</translation>
+        <translation>record screen</translation>
     </message>
     <message>
         <source>Recording is not supported with the Metal decoder, please switch the decode mode.</source>
-        <translation type="unfinished"></translation>
+        <translation>Recording is not supported with the Metal decoder, please switch the decode mode.</translation>
     </message>
     <message>
         <source>No video frame is available yet.</source>
-        <translation type="unfinished"></translation>
+        <translation>No video frame is available yet.</translation>
     </message>
     <message>
         <source>Cannot create the recording directory.</source>
-        <translation type="unfinished"></translation>
+        <translation>Cannot create the recording directory.</translation>
     </message>
     <message>
         <source>Recording sound starts the sndcpy audio bridge, the device screen may switch to sndcpy for a moment.
 Record with sound?
 
 Choose No to record video only.</source>
-        <translation type="unfinished"></translation>
+        <translation>Recording sound starts the sndcpy audio bridge, the device screen may switch to sndcpy for a moment.
+Record with sound?
+
+Choose No to record video only.</translation>
     </message>
     <message>
         <source>Cannot start the audio bridge, recording video only.</source>
-        <translation type="unfinished"></translation>
+        <translation>Cannot start the audio bridge, recording video only.</translation>
     </message>
     <message>
         <source>recording finished</source>
-        <translation type="unfinished"></translation>
+        <translation>recording finished</translation>
     </message>
     <message>
         <source>Saved to:
 %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Saved to:
+%1</translation>
     </message>
     <message>
         <source>Duration: %1 s
 Size: %2 MB
 Audio: %3</source>
-        <translation type="unfinished"></translation>
+        <translation>Duration: %1 s
+Size: %2 MB
+Audio: %3</translation>
     </message>
     <message>
         <source>yes</source>
-        <translation type="unfinished"></translation>
+        <translation>yes</translation>
     </message>
     <message>
         <source>no</source>
-        <translation type="unfinished"></translation>
+        <translation>no</translation>
     </message>
     <message>
         <source>open folder</source>
-        <translation type="unfinished"></translation>
+        <translation>open folder</translation>
     </message>
     <message>
         <source>Recording failed: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Recording failed: %1</translation>
     </message>
     <message>
-        <source>正在连接设备…</source>
-        <translation type="unfinished"></translation>
+        <source>正在安装 %1 …</source>
+        <translation>Installing %1 …</translation>
     </message>
     <message>
-        <source>仍在连接，请检查设备与 USB 调试授权…</source>
-        <translation type="unfinished"></translation>
+        <source>安装成功 %1</source>
+        <translation>Installed %1</translation>
+    </message>
+    <message>
+        <source>安装失败 %1：%2</source>
+        <translation>Install failed %1: %2</translation>
+    </message>
+    <message>
+        <source>设备未连接</source>
+        <translation>Device not connected</translation>
+    </message>
+    <message>
+        <source>超时（3 分钟），请确认设备连接</source>
+        <translation>Timeout (3 min), please check the device connection</translation>
+    </message>
+    <message>
+        <source>批量安装完成：成功 %1，失败 %2</source>
+        <translation>Batch install complete: %1 succeeded, %2 failed</translation>
+    </message>
+    <message>
+        <source>安装中</source>
+        <translation>Installing</translation>
+    </message>
+    <message>
+        <source>成功</source>
+        <translation>Success</translation>
+    </message>
+    <message>
+        <source>失败：</source>
+        <translation>Failed: </translation>
     </message>
 </context>
 <context>
@@ -529,10 +1370,6 @@ Audio: %3</source>
     <message>
         <source>Wireless</source>
         <translation>Wireless</translation>
-    </message>
-    <message>
-        <source>wireless connect</source>
-        <translation>wireless connect</translation>
     </message>
     <message>
         <source>wireless disconnect</source>
@@ -783,6 +1620,196 @@ Audio: %3</source>
     <message>
         <source>Open encoder advanced settings: optimization levels for visual quality and performance.</source>
         <translation>Open encoder advanced settings: optimization levels for visual quality and performance.</translation>
+    </message>
+</context>
+<context>
+    <name>WirelessController</name>
+    <message>
+        <source>配对超时（30 秒无响应）：请确认手机与电脑在同一局域网、防火墙/VPN 未拦截，且配对端口填写正确</source>
+        <translation>Pairing timeout (no response in 30 s): make sure phone and PC are on the same LAN, firewall/VPN is not blocking, and the pair port is correct</translation>
+    </message>
+    <message>
+        <source>配对码错误：请核对手机「无线调试」界面显示的 6 位配对码；多次错误后请重新打开无线调试界面</source>
+        <translation>Wrong PIN: check the 6-digit PIN shown on the phone&apos;s wireless debugging screen; after repeated errors reopen wireless debugging</translation>
+    </message>
+    <message>
+        <source>配对端口已失效：请在手机上重新打开「无线调试」，复制新的配对端口与配对码</source>
+        <translation>Pair port expired: reopen wireless debugging on the phone and copy the new pair port and PIN</translation>
+    </message>
+    <message>
+        <source>无法连接配对端口：请确认端口填写正确（不是连接端口），且手机与电脑在同一局域网</source>
+        <translation>Cannot connect to pair port: make sure the port is correct (not the connection port) and phone and PC are on the same LAN</translation>
+    </message>
+    <message>
+        <source>内置 adb 不支持配对：请升级 platform-tools 至 30.0.0 以上</source>
+        <translation>Bundled adb does not support pairing: upgrade platform-tools to 30.0.0 or newer</translation>
+    </message>
+    <message>
+        <source>配对失败，adb 未返回原因</source>
+        <translation>Pairing failed, adb returned no reason</translation>
+    </message>
+    <message>
+        <source>连接超时（40 秒无响应）：请检查网段是否一致、是否开启 VPN、防火墙是否放行</source>
+        <translation>Connection timeout (no response in 40 s): check the network segment, VPN, and firewall settings</translation>
+    </message>
+    <message>
+        <source>无法连接连接端口：请确认「无线调试」仍处于开启状态，且填写的是主界面显示的连接端口（不是配对端口）</source>
+        <translation>Cannot connect to the connection port: make sure wireless debugging is still on and you entered the connection port shown on the main screen (not the pair port)</translation>
+    </message>
+    <message>
+        <source>网络不可达：请确认手机与电脑在同一网段、设备未锁屏休眠</source>
+        <translation>Network unreachable: make sure phone and PC are on the same subnet and the device is not locked/asleep</translation>
+    </message>
+    <message>
+        <source>adb 命令异常：请检查内置 adb 是否可用</source>
+        <translation>adb command error: check whether the bundled adb is usable</translation>
+    </message>
+    <message>
+        <source>连接失败，adb 未返回原因</source>
+        <translation>Connection failed, adb returned no reason</translation>
+    </message>
+    <message>
+        <source>设备 IP 不合法</source>
+        <translation>Invalid device IP</translation>
+    </message>
+    <message>
+        <source>请填写配对端口（手机「无线调试 → 使用配对码配对设备」弹窗中的端口）</source>
+        <translation>Please enter the pair port (from the phone&apos;s &apos;Pair using PIN&apos; dialog)</translation>
+    </message>
+    <message>
+        <source>请填写连接端口（手机「无线调试」主界面 IP 后显示的端口）</source>
+        <translation>Please enter the connection port (shown after the IP on the phone&apos;s wireless debugging screen)</translation>
+    </message>
+    <message>
+        <source>请填写手机显示的配对码</source>
+        <translation>Please enter the PIN shown on the phone</translation>
+    </message>
+    <message>
+        <source>正在配对 %1 …</source>
+        <translation>Pairing %1 …</translation>
+    </message>
+    <message>
+        <source>adb pair %1 ******</source>
+        <translation>adb pair %1 ******</translation>
+    </message>
+    <message>
+        <source>配对响应：%1</source>
+        <translation>Pair response: %1</translation>
+    </message>
+    <message>
+        <source>请填写连接端口</source>
+        <translation>Please enter the connection port</translation>
+    </message>
+    <message>
+        <source>正在连接 %1 …</source>
+        <translation>Connecting to %1 …</translation>
+    </message>
+    <message>
+        <source>adb connect %1</source>
+        <translation>adb connect %1</translation>
+    </message>
+    <message>
+        <source>连接响应：%1</source>
+        <translation>Connect response: %1</translation>
+    </message>
+    <message>
+        <source>已连接但设备尚未就绪：请稍后在设备列表刷新重试</source>
+        <translation>Connected but device not ready: refresh the device list and retry later</translation>
+    </message>
+    <message>
+        <source>已连接 %1</source>
+        <translation>Connected %1</translation>
+    </message>
+    <message>
+        <source>adb disconnect %1</source>
+        <translation>adb disconnect %1</translation>
+    </message>
+    <message>
+        <source>断开超时：请确认设备是否已离线</source>
+        <translation>Disconnect timeout: check whether the device is offline</translation>
+    </message>
+    <message>
+        <source>已断开 %1</source>
+        <translation>Disconnected %1</translation>
+    </message>
+    <message>
+        <source>正在搜索局域网内的无线调试设备…</source>
+        <translation>Searching for wireless debugging devices on the LAN…</translation>
+    </message>
+    <message>
+        <source>adb mdns services</source>
+        <translation>adb mdns services</translation>
+    </message>
+    <message>
+        <source>搜索超时：请确认手机与电脑在同一局域网</source>
+        <translation>Search timeout: make sure phone and PC are on the same LAN</translation>
+    </message>
+    <message>
+        <source>未发现设备：请确认手机与电脑同一局域网，且「无线调试」界面已打开</source>
+        <translation>No device found: make sure phone and PC are on the same LAN and wireless debugging is open</translation>
+    </message>
+    <message>
+        <source>发现 %1 台设备</source>
+        <translation>Found %1 device(s)</translation>
+    </message>
+</context>
+<context>
+    <name>qsc::FileManager</name>
+    <message>
+        <source>该路径不是文件夹</source>
+        <translation>This path is not a folder</translation>
+    </message>
+    <message>
+        <source>无法访问该文件夹：权限不足或路径已不存在</source>
+        <translation>Cannot access this folder: insufficient permission or path no longer exists</translation>
+    </message>
+    <message>
+        <source>读取临时文件失败</source>
+        <translation>Failed to read temporary file</translation>
+    </message>
+    <message>
+        <source>该文件是二进制文件，不支持编辑</source>
+        <translation>This is a binary file and cannot be edited</translation>
+    </message>
+    <message>
+        <source>无法写入本地临时文件</source>
+        <translation>Failed to write local temporary file</translation>
+    </message>
+    <message>
+        <source>权限不足：条目所在目录为只读，无法删除</source>
+        <translation>Insufficient permission: the containing folder is read-only, cannot delete</translation>
+    </message>
+    <message>
+        <source>删除失败，设备返回未知错误</source>
+        <translation>Delete failed, device returned an unknown error</translation>
+    </message>
+    <message>
+        <source>文件或目录不存在</source>
+        <translation>File or directory does not exist</translation>
+    </message>
+    <message>
+        <source>权限不足，无法访问</source>
+        <translation>Insufficient permission to access</translation>
+    </message>
+    <message>
+        <source>设备未连接</source>
+        <translation>Device not connected</translation>
+    </message>
+    <message>
+        <source>设备存储空间不足</source>
+        <translation>Insufficient storage on device</translation>
+    </message>
+    <message>
+        <source>目标位置只读</source>
+        <translation>Target location is read-only</translation>
+    </message>
+    <message>
+        <source>操作超时，请重试</source>
+        <translation>Operation timed out, please retry</translation>
+    </message>
+    <message>
+        <source>操作失败</source>
+        <translation>Operation failed</translation>
     </message>
 </context>
 </TS>

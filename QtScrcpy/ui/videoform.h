@@ -42,6 +42,7 @@ public:
     void showFPS(bool show);
     void switchFullScreen();
     bool isHost();
+    void setHost(bool host);
 
     // 屏幕录制：由工具栏的录制按钮触发。
     bool isRecording() const;

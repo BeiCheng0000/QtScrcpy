@@ -1,5 +1,6 @@
 #include "apkpathutils.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
@@ -35,7 +36,7 @@ QStringList ApkPathUtils::expand(const QStringList &rawPaths, bool recursive, QS
         const QFileInfo info(path);
         if (!info.exists()) {
             if (skipped) {
-                skipped->append(QStringLiteral("%1: 路径不存在或网络共享不可访问").arg(raw.trimmed()));
+                skipped->append(QCoreApplication::translate("ApkInstallDialog", "%1: path does not exist or network share is unreachable").arg(raw.trimmed()));
             }
             continue;
         }
@@ -54,7 +55,7 @@ QStringList ApkPathUtils::expand(const QStringList &rawPaths, bool recursive, QS
             if (info.suffix().compare(QLatin1String("apk"), Qt::CaseInsensitive) == 0) {
                 addFile(path);
             } else if (skipped) {
-                skipped->append(QStringLiteral("%1: 不是 apk 文件").arg(raw.trimmed()));
+                skipped->append(QCoreApplication::translate("ApkInstallDialog", "%1: not an apk file").arg(raw.trimmed()));
             }
         } else if (info.isDir()) {
             QDirIterator it(path, QStringList() << QStringLiteral("*.apk") << QStringLiteral("*.APK"), QDir::Files,
@@ -63,7 +64,7 @@ QStringList ApkPathUtils::expand(const QStringList &rawPaths, bool recursive, QS
                 addFile(it.next());
             }
         } else if (skipped) {
-            skipped->append(QStringLiteral("%1: 不是文件或目录").arg(raw.trimmed()));
+            skipped->append(QCoreApplication::translate("ApkInstallDialog", "%1: not a file or directory").arg(raw.trimmed()));
         }
     }
     return result;

@@ -957,6 +957,13 @@ bool VideoForm::isHost()
     return m_toolForm->isHost();
 }
 
+void VideoForm::setHost(bool host)
+{
+    if (m_toolForm) {
+        m_toolForm->setHost(host);
+    }
+}
+
 void VideoForm::updateFPS(quint32 fps, quint32 skipped)
 {
     if (!m_fpsLabel || !m_fpsLabel->isVisible()) {
@@ -1462,6 +1469,10 @@ void VideoForm::paintEvent(QPaintEvent *paint)
 void VideoForm::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
+    if (event->type() == QEvent::LanguageChange) {
+        ui->retranslateUi(this); // 运行时切换语言
+        return;
+    }
     if (m_stateAdjusting || event->type() != QEvent::WindowStateChange) {
         return;
     }
@@ -1525,7 +1536,7 @@ void VideoForm::showEvent(QShowEvent *event)
         QTimer::singleShot(15000, m_loadingWidget, [this]() {
             if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
                 if (overlay->isVisible()) {
-                    overlay->setText(tr("仍未收到画面：请确认设备屏幕已点亮、USB 调试已授权"));
+                    overlay->setNoFrameText();
                 }
             }
         });

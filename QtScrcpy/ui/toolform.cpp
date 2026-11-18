@@ -89,6 +89,15 @@ bool ToolForm::isHost()
     return m_isHost;
 }
 
+void ToolForm::setHost(bool host)
+{
+    if (m_isHost == host) {
+        return;
+    }
+    m_isHost = host;
+    updateGroupControl(); // 同步按钮颜色与 GroupController 的 observer 注册
+}
+
 void ToolForm::updateCameraMode()
 {
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
@@ -182,6 +191,30 @@ void ToolForm::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
+void ToolForm::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::LanguageChange) {
+        ui->retranslateUi(this); // 运行时切换语言
+        retranslateDynamicUi();
+    }
+}
+
+void ToolForm::retranslateDynamicUi()
+{
+    // 设置菜单按钮由代码创建，Designer 无法自动刷新
+    const QString texts[] = { tr("Open all apps"), tr("About this device"), tr("Open network panel"),
+                              tr("Install apk") };
+    for (int i = 0; i < m_settingsMenuButtons.size() && i < 4; ++i) {
+        m_settingsMenuButtons.at(i)->setText(texts[i]);
+    }
+    // 截图提示是临时 label，若当前正显示则同步更新
+    if (m_toast && m_toast->isVisible()) {
+        m_toast->setText(tr("Screenshot copied, ready to paste"));
+        m_toast->adjustSize();
+    }
+}
+
 void ToolForm::showEvent(QShowEvent *event)
 {
     Q_UNUSED(event)
@@ -238,17 +271,21 @@ void ToolForm::createSettingsMenu()
 
     struct Entry
     {
-        const char *text;
         const char *action;
     };
     const Entry entries[] = {
-        { "打开所有应用", "android.settings.APPLICATION_SETTINGS" },
-        { "打开关于本机", "android.settings.DEVICE_INFO_SETTINGS" },
-        { "打开网络面板", "android.settings.WIRELESS_SETTINGS" },
-        { "安装 apk", nullptr }, // action 为空 -> 打开批量安装对话框
+        { "android.settings.APPLICATION_SETTINGS" },
+        { "android.settings.DEVICE_INFO_SETTINGS" },
+        { "android.settings.WIRELESS_SETTINGS" },
+        { nullptr }, // action 为空 -> 打开批量安装对话框
     };
-    for (const Entry &entry : entries) {
-        QPushButton *button = new QPushButton(QString::fromUtf8(entry.text), m_settingsMenu);
+    const QString texts[] = { tr("Open all apps"), tr("About this device"), tr("Open network panel"),
+                              tr("Install apk") };
+    m_settingsMenuButtons.clear();
+    for (int i = 0; i < 4; ++i) {
+        const Entry &entry = entries[i];
+        QPushButton *button = new QPushButton(texts[i], m_settingsMenu);
+        m_settingsMenuButtons.append(button);
         button->setCursor(Qt::PointingHandCursor);
         if (entry.action) {
             const QString action = QString::fromUtf8(entry.action);
@@ -340,7 +377,7 @@ void ToolForm::showScreenshotHint()
         })");
     }
 
-    m_toast->setText(QStringLiteral("已截图，可以进行粘贴"));
+    m_toast->setText(tr("Screenshot copied, ready to paste"));
     m_toast->adjustSize();
 
     const QPoint anchor = ui->screenShotBtn->mapToGlobal(QPoint(0, 0));

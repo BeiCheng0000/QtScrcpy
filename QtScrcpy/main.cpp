@@ -1,4 +1,5 @@
-﻿#include <QApplication>
+﻿#include <QAbstractScrollArea>
+#include <QApplication>
 #include <QColor>
 #include <QDebug>
 #include <QDir>
@@ -14,16 +15,79 @@
 #include <QTranslator>
 #include <QLibraryInfo>
 #include <QDateTime>
+#include <QWidget>
+
+#include <QAbstractSpinBox>
+#include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QLineEdit>
+#include <QSpinBox>
 
 #include "config.h"
 #include "dialog.h"
 #include "mousetap/mousetap.h"
 #include "singleinstance.h"
 
+// 滚轮彻底禁用于 Spin 类控件：QComboBox/QSpinBox/QDoubleSpinBox 的滚轮
+// 一律不得改变值/切换选项（无论是否拥有焦点——需求明确"不希望滑轮控制
+// 输入参数"）。注意这些控件的滚轮事件可能先投递给内部 QLineEdit 子控件
+// （可编辑 QComboBox、QAbstractSpinBox 内部全覆盖 QLineEdit），须沿父链
+// 识别归属后一并拦截。拦截后把滚轮交给最近的 QAbstractScrollArea 祖先，
+// 使所在页面可以继续滚动；无滚动祖先时就地消费（页面不滚，但值不变）。
+class WheelFocusGuard : public QObject
+{
+public:
+    using QObject::QObject;
+
+    // 返回滚轮事件真正"归属"的 Spin 类控件；不属于则返回 nullptr
+    static QWidget *spinWidgetFor(QObject *watched)
+    {
+        auto *w = qobject_cast<QWidget *>(watched);
+        if (!w) {
+            return nullptr;
+        }
+        if (qobject_cast<QComboBox *>(w) || qobject_cast<QAbstractSpinBox *>(w)) {
+            return w;
+        }
+        if (qobject_cast<QLineEdit *>(w)) {
+            for (QWidget *p = w->parentWidget(); p; p = p->parentWidget()) {
+                if (qobject_cast<QComboBox *>(p) || qobject_cast<QAbstractSpinBox *>(p)) {
+                    return p;
+                }
+                if (!qobject_cast<QWidget *>(p->parentWidget())) {
+                    break;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (event->type() == QEvent::Wheel) {
+            if (QWidget *target = spinWidgetFor(watched)) {
+                QWidget *scroll = target->parentWidget();
+                while (scroll && !qobject_cast<QAbstractScrollArea *>(scroll)) {
+                    scroll = scroll->parentWidget();
+                }
+                if (scroll) {
+                    if (auto *area = qobject_cast<QAbstractScrollArea *>(scroll)) {
+                        QCoreApplication::sendEvent(area->viewport(), event);
+                    }
+                }
+                return true; // 已消费：值不变
+            }
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
 static Dialog *g_mainDlg = Q_NULLPTR;
 static QtMessageHandler g_oldMessageHandler = Q_NULLPTR;
 void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 void installTranslator();
+// 运行时切换语言：重新加载翻译器并向所有窗口投递 LanguageChange 事件
+void retranslateApplication();
 
 static QtMsgType g_msgType = QtInfoMsg;
 QtMsgType covertLogLevel(const QString &logLevel);
@@ -123,6 +187,10 @@ int main(int argc, char *argv[])
 
     g_oldMessageHandler = qInstallMessageHandler(myMessageOutput);
     QApplication a(argc, argv);
+
+    // 应用级滚轮防误触（覆盖 .ui 静态控件与后续所有新增控件）
+    static WheelFocusGuard wheelFocusGuard;
+    a.installEventFilter(&wheelFocusGuard);
 
     // Only one QtScrcpy per user. If one is already running (possibly hidden in
     // the system tray), ask it to show its window and exit.
@@ -310,6 +378,12 @@ void installTranslator()
     static QTranslator translator;
     static QTranslator qtTranslator;
     static TextControlTranslator textControlTranslator;
+
+    // 支持运行时切换：先卸载旧翻译器（即使资源未变，重复 load/install 也安全）
+    qApp->removeTranslator(&translator);
+    qApp->removeTranslator(&qtTranslator);
+    qApp->removeTranslator(&textControlTranslator);
+
     // 默认简体中文：旧配置中可能保存了 "Auto"（跟随系统区域），系统为英文时
     // 界面会显示英文。这里把默认语言固定为中文，仅当用户在设置里显式选择
     // 其他语言时才切换。
@@ -370,6 +444,17 @@ void installTranslator()
     // 中文界面下补齐 Qt 缺失的标准文本控件右键菜单文案
     if (language == QLocale::Chinese) {
         qApp->installTranslator(&textControlTranslator);
+    }
+}
+
+void retranslateApplication()
+{
+    installTranslator();
+    // Qt 在 installTranslator 后不会自动刷新已创建的窗口，需广播 LanguageChange
+    QEvent event(QEvent::LanguageChange);
+    qApp->sendEvent(qApp, &event);
+    for (QWidget *w : QApplication::topLevelWidgets()) {
+        qApp->sendEvent(w, &event);
     }
 }
 

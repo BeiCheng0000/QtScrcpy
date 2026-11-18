@@ -28,7 +28,7 @@ struct UserBootConfig
     bool recordScreen     = false;
     bool recordBackground = false;
     // 录制时把投屏窗口内的鼠标操作轨迹（光标/波纹/尾迹）叠加进视频，
-    // 并落盘同名 .events.json；无 UI 开关，可在 ini 中改为 false 关闭
+    // 并落盘同名 .events.json；Advanced Config「Recording」页可开关
     bool recordMouseTrack = true;
     bool reverseConnect   = true;
     bool showFPS          = false;
@@ -57,6 +57,9 @@ struct UserBootConfig
     bool keepActive = false;
     QString startApp;
 };
+
+// 定义在 main.cpp：运行时切换语言后重载翻译器并广播 LanguageChange
+void retranslateApplication();
 
 class QSettings;
 class Config : public QObject

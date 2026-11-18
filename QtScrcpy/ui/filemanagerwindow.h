@@ -32,9 +32,11 @@ protected:
     void dropEvent(QDropEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 private:
     void buildUi();
+    void retranslateUi();
     void navigateTo(const QString &path, bool recordHistory = true);
     void refresh();
     void goBack();

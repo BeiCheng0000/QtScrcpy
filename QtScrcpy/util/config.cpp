@@ -37,8 +37,10 @@
 #define COMMON_RENDER_EXPIRED_FRAMES_DEF 0
 
 // FFmpeg 解码线程数：0=自动按核数，1=单线程（旧行为，最低延迟），N=指定
+// 默认 1：frame threading 会引入 1~2 帧管线延迟，损害投屏操作的跟手性；
+// 仅在解码确实是瓶颈时由用户手动调高。
 #define COMMON_DECODER_THREADS_KEY "DecoderThreads"
-#define COMMON_DECODER_THREADS_DEF 4
+#define COMMON_DECODER_THREADS_DEF 1
 
 #define COMMON_ADB_PATH_KEY "AdbPath"
 #define COMMON_ADB_PATH_DEF ""
@@ -267,6 +269,17 @@ void Config::initializeConfig()
             }
         }
     }
+
+    // 用户数据（主界面参数等）同样支持模板初始化：新环境/重置后首次运行时，
+    // 从安装包携带的 userdata.ini 恢复出厂默认的开箱配置（码率、录制参数等）。
+    // 模板由部署包 config/userdata.ini 提供（对应"保存的配置固化为默认"）。
+    const QString userDataFile = configPath + "/userdata.ini";
+    const QString defaultUserDataFile = getDefaultConfigPath() + "/userdata.ini";
+    if (!QFileInfo::exists(userDataFile) && QFileInfo(defaultUserDataFile).isFile()) {
+        if (!QFile::copy(defaultUserDataFile, userDataFile)) {
+            qWarning() << "Failed to copy default user data to:" << userDataFile;
+        }
+    }
 }
 
 void Config::setUserBootConfig(const UserBootConfig &config)
@@ -463,7 +476,7 @@ int Config::getRenderExpiredFrames()
 
 int Config::getDecoderThreads()
 {
-    int threads = 4;
+    int threads = COMMON_DECODER_THREADS_DEF;
     m_settings->beginGroup(GROUP_COMMON);
     threads = m_settings->value(COMMON_DECODER_THREADS_KEY, COMMON_DECODER_THREADS_DEF).toInt();
     m_settings->endGroup();

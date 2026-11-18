@@ -75,7 +75,11 @@ EncoderPreset makeMtkPreset()
 
 const QVector<EncoderPreset> &EncoderPresetRegistry::all()
 {
-    static const QVector<EncoderPreset> presets = { makeMtkPreset() };
+    // 不使用 static 缓存：预设文案由 QCoreApplication::translate 生成，
+    // 运行时切换语言后必须重新构造，否则下拉框仍显示旧语言。
+    // 预设数量极少（当前仅 1 个），每次构造的开销可忽略。
+    static QVector<EncoderPreset> presets;
+    presets = { makeMtkPreset() };
     return presets;
 }
 

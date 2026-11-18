@@ -3,6 +3,7 @@
 
 #include <QElapsedTimer>
 #include <QEvent>
+#include <QList>
 #include <QPointer>
 #include <QTimer>
 #include <QWidget>
@@ -15,8 +16,9 @@ namespace Ui
     class ToolForm;
 }
 
-class Device;   // 前向声明，避免引入完整头文件
-class QLabel;   // 前向声明，提示标签使用
+class Device;       // 前向声明，避免引入完整头文件
+class QLabel;       // 前向声明，提示标签使用
+class QPushButton;  // 前向声明，设置菜单按钮使用
 // 右侧吸附式工具栏：随视频窗口显示，提供截屏、录制、按键、设置等快捷控制
 class ToolForm : public MagneticWidget
 {
@@ -28,6 +30,7 @@ public:
 
     void setSerial(const QString& serial); // 绑定当前操作的设备序列号
     bool isHost();                         // 是否为群控主机（影响部分按钮可用性）
+    void setHost(bool host);               // 群控面板统一设置主控身份
 
 protected:
     // 鼠标按下/释放/移动：实现工具栏拖拽与吸附到视频窗口右侧
@@ -40,6 +43,7 @@ protected:
 
     void showEvent(QShowEvent *event);
     void hideEvent(QHideEvent *event);
+    void changeEvent(QEvent *event) override; // 运行时语言切换
 
 private slots:
     // 各按钮点击槽：向当前绑定设备发送对应的控制指令
@@ -75,6 +79,7 @@ private:
     void hideSettingsMenu();                // 隐藏扩展菜单并停止隐藏检测定时器
     void startActivity(const QString &action); // 通过 adb 打开指定 Android 设置页
     void showScreenshotHint();              // 显示“已截图，可以粘贴”轻量提示
+    void retranslateDynamicUi();            // 刷新代码动态创建、Designer 无法自动 retrans 的文案
 
 private:
     Ui::ToolForm *ui;
@@ -89,6 +94,7 @@ private:
     QTimer m_toastTimer;            // 截图提示自动隐藏定时
     QElapsedTimer m_recordElapsed;  // 录制已持续时长
     QWidget *m_settingsMenu = nullptr; // 悬停弹出的设置子菜单（无边框工具窗口）
+    QList<QPushButton *> m_settingsMenuButtons; // 设置菜单按钮（语言切换时刷新文本）
     QLabel *m_toast = nullptr;          // 截图成功后的轻量提示标签
 };
 

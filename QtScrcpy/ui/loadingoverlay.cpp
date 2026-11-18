@@ -1,5 +1,6 @@
 #include "loadingoverlay.h"
 
+#include <QEvent>
 #include <QPainter>
 #include <QRandomGenerator>
 #include <QTimer>
@@ -66,7 +67,7 @@ LoadingOverlay::LoadingOverlay(QWidget *parent)
     // 遮罩背景由 paintEvent 自绘（近实色深色圆角），不用样式表，
     // 保证淡出动画能连同背景一起整体渐隐
     setAttribute(Qt::WA_OpaquePaintEvent, false);
-    m_text = tr("正在连接设备…");
+    m_text = tr("Connecting to device…");
     m_clock.start();
     m_timer = new QTimer(this);
     m_timer->setInterval(16); // ≈60fps
@@ -96,7 +97,28 @@ void LoadingOverlay::setText(const QString &text)
         return;
     }
     m_text = text;
+    m_textIsNoFrame = false;
     update();
+}
+
+void LoadingOverlay::setNoFrameText()
+{
+    m_text = tr("Still no frame: make sure the device screen is on and USB debugging is authorized");
+    m_textIsNoFrame = true;
+    update();
+}
+
+void LoadingOverlay::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::LanguageChange) {
+        if (m_textIsNoFrame) {
+            m_text = tr("Still no frame: make sure the device screen is on and USB debugging is authorized");
+        } else {
+            m_text = tr("Connecting to device…");
+        }
+        update();
+    }
 }
 
 void LoadingOverlay::fadeOutAndDelete()

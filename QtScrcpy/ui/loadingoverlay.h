@@ -29,6 +29,8 @@ public:
     void advancePhase(int phase);
     // 更新主文案（例如 15 秒无画面时的安抚文案）
     void setText(const QString &text);
+    // 15 秒无画面安抚文案：以可翻译 key 设置，语言切换时自动重翻译
+    void setNoFrameText();
     // 首帧纹理就绪：整体淡出后 emit fadedOut() 并 deleteLater()
     void fadeOutAndDelete();
 
@@ -37,6 +39,7 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 private:
     struct Particle
@@ -72,6 +75,7 @@ private:
     qint64 m_switchAt = 0;      // 最近一次阶段切换时刻 ms
     qint64 m_phase2At = -1;     // 进入阶段2的时刻，用于 1.5s 自动推进
     QString m_text;
+    bool m_textIsNoFrame = false; // 当前文案是否为“无画面”安抚文案（语言切换时据此重翻译）
     qreal m_fade = 1.0;         // 整体透明度（退场淡出）
     bool m_fading = false;
 };

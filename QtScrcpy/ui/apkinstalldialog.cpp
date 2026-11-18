@@ -4,9 +4,9 @@
 #include <QCheckBox>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
 #include <QFileDialog>
 #include <QHBoxLayout>
-#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -19,56 +19,112 @@
 
 ApkInstallDialog::ApkInstallDialog(QWidget *parent) : QDialog(parent)
 {
-    setWindowTitle(QStringLiteral("批量安装 APK"));
     setAcceptDrops(true);
     resize(680, 480);
 
     auto *layout = new QVBoxLayout(this);
-    layout->addWidget(new QLabel(QStringLiteral("拖入 apk 文件或目录，或输入路径（支持 \\\\server\\share 网络路径）："), this));
+    m_hintLabel = new QLabel(this);
+    layout->addWidget(m_hintLabel);
 
     auto *inputRow = new QHBoxLayout;
     m_pathEdit = new QLineEdit(this);
-    m_pathEdit->setPlaceholderText(
-        QStringLiteral("例如：C:\\apks\\app.apk  或  \\\\172.26.20.199\\研发部\\安卓\\...\\xx.apk  或目录"));
-    auto *addBtn = new QPushButton(QStringLiteral("添加"), this);
-    auto *fileBtn = new QPushButton(QStringLiteral("选择文件"), this);
-    auto *dirBtn = new QPushButton(QStringLiteral("选择目录"), this);
+    m_addBtn = new QPushButton(this);
+    m_fileBtn = new QPushButton(this);
+    m_dirBtn = new QPushButton(this);
     inputRow->addWidget(m_pathEdit, 1);
-    inputRow->addWidget(addBtn);
-    inputRow->addWidget(fileBtn);
-    inputRow->addWidget(dirBtn);
+    inputRow->addWidget(m_addBtn);
+    inputRow->addWidget(m_fileBtn);
+    inputRow->addWidget(m_dirBtn);
     layout->addLayout(inputRow);
 
     m_list = new QListWidget(this);
     m_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    m_list->setToolTip(QStringLiteral("可将文件或目录直接拖到此处"));
     layout->addWidget(m_list, 1);
 
     auto *optRow = new QHBoxLayout;
-    m_recursive = new QCheckBox(QStringLiteral("包含子目录中的 apk"), this);
+    m_recursive = new QCheckBox(this);
     m_recursive->setChecked(true);
-    auto *removeBtn = new QPushButton(QStringLiteral("移除选中"), this);
+    m_removeBtn = new QPushButton(this);
     m_summary = new QLabel(this);
     optRow->addWidget(m_recursive);
-    optRow->addWidget(removeBtn);
+    optRow->addWidget(m_removeBtn);
     optRow->addStretch(1);
     optRow->addWidget(m_summary);
     layout->addLayout(optRow);
 
     auto *btnRow = new QHBoxLayout;
-    m_startBtn = new QPushButton(QStringLiteral("开始安装"), this);
-    m_cancelBtn = new QPushButton(QStringLiteral("取消"), this);
+    m_startBtn = new QPushButton(this);
+    m_cancelBtn = new QPushButton(this);
     btnRow->addStretch(1);
     btnRow->addWidget(m_startBtn);
     btnRow->addWidget(m_cancelBtn);
     layout->addLayout(btnRow);
 
-    connect(addBtn, &QPushButton::clicked, this, &ApkInstallDialog::addFromInput);
-    connect(fileBtn, &QPushButton::clicked, this, &ApkInstallDialog::browseFiles);
-    connect(dirBtn, &QPushButton::clicked, this, &ApkInstallDialog::browseDirs);
-    connect(removeBtn, &QPushButton::clicked, this, &ApkInstallDialog::removeSelected);
+    connect(m_addBtn, &QPushButton::clicked, this, &ApkInstallDialog::addFromInput);
+    connect(m_fileBtn, &QPushButton::clicked, this, &ApkInstallDialog::browseFiles);
+    connect(m_dirBtn, &QPushButton::clicked, this, &ApkInstallDialog::browseDirs);
+    connect(m_removeBtn, &QPushButton::clicked, this, &ApkInstallDialog::removeSelected);
     connect(m_startBtn, &QPushButton::clicked, this, &ApkInstallDialog::startInstall);
     connect(m_cancelBtn, &QPushButton::clicked, this, &ApkInstallDialog::cancelInstall);
+
+    retranslateUi();
+}
+
+void ApkInstallDialog::retranslateUi()
+{
+    setWindowTitle(tr("Batch install APK"));
+    m_hintLabel->setText(tr("Drop apk files or folders here, or enter a path (UNC network paths supported):"));
+    m_pathEdit->setPlaceholderText(tr("e.g. C:\\apks\\app.apk  or  \\\\host\\share\\app.apk  or a folder"));
+    m_addBtn->setText(tr("Add"));
+    m_fileBtn->setText(tr("Choose files"));
+    m_dirBtn->setText(tr("Choose folder"));
+    m_list->setToolTip(tr("You can drag files or folders directly onto this list"));
+    m_recursive->setText(tr("Include apk files in subfolders"));
+    m_removeBtn->setText(tr("Remove selected"));
+    m_startBtn->setText(tr("Start install"));
+    m_cancelBtn->setText(m_busy ? tr("Cancel install") : tr("Close"));
+    refreshSummary();
+    refreshItemTexts();
+}
+
+void ApkInstallDialog::refreshSummary()
+{
+    switch (m_summaryMode) {
+    case SummaryMode::Total:
+        m_summary->setText(tr("%1 APK file(s)").arg(m_list->count()));
+        break;
+    case SummaryMode::Installing:
+        m_summary->setText(tr("Installing 0/%1").arg(m_list->count()));
+        break;
+    case SummaryMode::Finished:
+        m_summary->setText(tr("Done: %1 succeeded / %2 failed").arg(m_successCount).arg(m_failCount));
+        break;
+    case SummaryMode::Cancelled:
+        m_summary->setText(tr("Cancelled"));
+        break;
+    case SummaryMode::None:
+    default:
+        m_summary->clear();
+        break;
+    }
+}
+
+void ApkInstallDialog::refreshItemTexts()
+{
+    for (int i = 0; i < m_list->count(); ++i) {
+        QListWidgetItem *item = m_list->item(i);
+        const QString path = item->data(Qt::UserRole).toString();
+        const QString status = item->data(Qt::UserRole + 1).toString();
+        item->setText(path + QStringLiteral("  [") + status + QStringLiteral("]"));
+    }
+}
+
+void ApkInstallDialog::changeEvent(QEvent *event)
+{
+    QDialog::changeEvent(event);
+    if (event->type() == QEvent::LanguageChange) {
+        retranslateUi();
+    }
 }
 
 void ApkInstallDialog::addPaths(const QStringList &rawPaths)
@@ -84,16 +140,19 @@ void ApkInstallDialog::addPaths(const QStringList &rawPaths)
         if (existing.contains(apk)) {
             continue;
         }
-        auto *item = new QListWidgetItem(apk + QStringLiteral("  [等待]"));
+        auto *item = new QListWidgetItem(m_list);
         item->setData(Qt::UserRole, apk);
+        item->setData(Qt::UserRole + 1, tr("Pending"));
+        item->setText(apk + QStringLiteral("  [") + tr("Pending") + QStringLiteral("]"));
         m_list->addItem(item);
         ++added;
     }
     if (added > 0) {
-        m_summary->setText(QStringLiteral("共 %1 个 apk").arg(m_list->count()));
+        m_summaryMode = SummaryMode::Total;
+        refreshSummary();
     }
     if (!skipped.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("跳过无效路径"), skipped.join(QLatin1Char('\n')), QMessageBox::Ok);
+        QMessageBox::warning(this, tr("Skipped invalid paths"), skipped.join(QLatin1Char('\n')), QMessageBox::Ok);
     }
 }
 
@@ -109,14 +168,15 @@ void ApkInstallDialog::addFromInput()
 
 void ApkInstallDialog::browseFiles()
 {
-    const QStringList files = QFileDialog::getOpenFileNames(this, QStringLiteral("选择要安装的 apk"), QString(),
-                                                            QStringLiteral("APK 文件 (*.apk);;所有文件 (*.*)"));
+    const QStringList files = QFileDialog::getOpenFileNames(
+        this, tr("Choose APK files to install"), QString(),
+        tr("APK files (*.apk);;All files (*.*)"));
     addPaths(files);
 }
 
 void ApkInstallDialog::browseDirs()
 {
-    const QString dir = QFileDialog::getExistingDirectory(this, QStringLiteral("选择包含 apk 的目录"));
+    const QString dir = QFileDialog::getExistingDirectory(this, tr("Choose folder containing APK files"));
     if (!dir.isEmpty()) {
         addPaths(QStringList() << dir);
     }
@@ -131,14 +191,15 @@ void ApkInstallDialog::removeSelected()
     for (QListWidgetItem *item : selected) {
         delete m_list->takeItem(m_list->row(item));
     }
-    m_summary->setText(QStringLiteral("共 %1 个 apk").arg(m_list->count()));
+    m_summaryMode = SummaryMode::Total;
+    refreshSummary();
 }
 
 void ApkInstallDialog::setBusy(bool busy)
 {
     m_busy = busy;
     m_startBtn->setEnabled(!busy && m_list->count() > 0);
-    m_cancelBtn->setText(busy ? QStringLiteral("取消安装") : QStringLiteral("关闭"));
+    m_cancelBtn->setText(busy ? tr("Cancel install") : tr("Close"));
 }
 
 void ApkInstallDialog::startInstall()
@@ -147,15 +208,17 @@ void ApkInstallDialog::startInstall()
     for (int i = 0; i < m_list->count(); ++i) {
         const QString path = m_list->item(i)->data(Qt::UserRole).toString();
         paths.append(path);
-        m_list->item(i)->setText(path + QStringLiteral("  [等待]"));
+        m_list->item(i)->setData(Qt::UserRole + 1, tr("Pending"));
     }
     if (paths.isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("批量安装 APK"), QStringLiteral("请先添加 apk 文件或目录"),
+        QMessageBox::information(this, tr("Batch install APK"), tr("Please add APK files or folders first"),
                                  QMessageBox::Ok);
         return;
     }
+    refreshItemTexts();
     setBusy(true);
-    m_summary->setText(QStringLiteral("正在安装 0/%1").arg(paths.size()));
+    m_summaryMode = SummaryMode::Installing;
+    refreshSummary();
     emit installRequested(paths);
 }
 
@@ -164,6 +227,7 @@ void ApkInstallDialog::setItemStatus(const QString &path, const QString &status)
     for (int i = 0; i < m_list->count(); ++i) {
         QListWidgetItem *item = m_list->item(i);
         if (item->data(Qt::UserRole).toString() == path) {
+            item->setData(Qt::UserRole + 1, status);
             item->setText(path + QStringLiteral("  [") + status + QStringLiteral("]"));
             m_list->scrollToItem(item);
             break;
@@ -174,7 +238,10 @@ void ApkInstallDialog::setItemStatus(const QString &path, const QString &status)
 void ApkInstallDialog::finish(int successCount, int failCount)
 {
     setBusy(false);
-    m_summary->setText(QStringLiteral("完成：成功 %1 / 失败 %2").arg(successCount).arg(failCount));
+    m_successCount = successCount;
+    m_failCount = failCount;
+    m_summaryMode = SummaryMode::Finished;
+    refreshSummary();
 }
 
 void ApkInstallDialog::cancelInstall()
@@ -182,7 +249,8 @@ void ApkInstallDialog::cancelInstall()
     if (m_busy) {
         emit cancelled();
         finish(0, 0);
-        m_summary->setText(QStringLiteral("已取消"));
+        m_summaryMode = SummaryMode::Cancelled;
+        refreshSummary();
     } else {
         close();
     }

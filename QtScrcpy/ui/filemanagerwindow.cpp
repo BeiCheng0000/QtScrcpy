@@ -4,6 +4,7 @@
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QDateTime>
+#include <QEvent>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
@@ -67,11 +68,11 @@ QString parentPath(const QString &path)
 FileManagerWindow::FileManagerWindow(const QString &serial, QWidget *parent)
     : QWidget(parent, Qt::Window), m_serial(serial)
 {
-    setWindowTitle(tr("文件管理 - %1").arg(serial));
     setAcceptDrops(true);
     m_manager = new qsc::FileManager(serial, this);
 
     buildUi();
+    retranslateUi();
 
     connect(m_manager, &qsc::FileManager::dirListed, this, &FileManagerWindow::onDirListed);
     connect(m_manager, &qsc::FileManager::listFailed, this, &FileManagerWindow::onListFailed);
@@ -101,35 +102,27 @@ void FileManagerWindow::buildUi()
 
     m_backBtn = new QToolButton(this);
     m_backBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
-    m_backBtn->setToolTip(tr("返回上一步 (Alt+←)"));
     m_backBtn->setAutoRaise(true);
 
     m_forwardBtn = new QToolButton(this);
     m_forwardBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
-    m_forwardBtn->setToolTip(tr("前进 (Alt+→)"));
     m_forwardBtn->setAutoRaise(true);
 
     m_upBtn = new QToolButton(this);
     m_upBtn->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
-    m_upBtn->setToolTip(tr("上级目录 (Backspace)"));
     m_upBtn->setAutoRaise(true);
 
     m_refreshBtn = new QToolButton(this);
     m_refreshBtn->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-    m_refreshBtn->setToolTip(tr("刷新 (F5)"));
     m_refreshBtn->setAutoRaise(true);
 
     m_uploadBtn = new QToolButton(this);
-    m_uploadBtn->setText(tr("上传"));
     m_uploadBtn->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
     m_uploadBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    m_uploadBtn->setToolTip(tr("上传文件到当前目录（也可直接拖拽文件/文件夹到窗口）"));
 
     m_downloadBtn = new QToolButton(this);
-    m_downloadBtn->setText(tr("下载"));
     m_downloadBtn->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     m_downloadBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    m_downloadBtn->setToolTip(tr("下载选中的文件/文件夹到电脑"));
 
     nav->addWidget(m_backBtn);
     nav->addWidget(m_forwardBtn);
@@ -153,7 +146,6 @@ void FileManagerWindow::buildUi()
     nav->addWidget(crumbScroll, 1);
 
     m_pathEdit = new QLineEdit(this);
-    m_pathEdit->setPlaceholderText(tr("输入设备路径后回车跳转"));
     m_pathEdit->setMinimumWidth(220);
     nav->addWidget(m_pathEdit);
 
@@ -161,7 +153,6 @@ void FileManagerWindow::buildUi()
 
     // ---- 文件列表 ----
     m_model = new QStandardItemModel(0, 4, this);
-    m_model->setHorizontalHeaderLabels(QStringList() << tr("名称") << tr("修改时间") << tr("类型") << tr("大小"));
 
     m_proxy = new QSortFilterProxyModel(this);
     m_proxy->setSourceModel(m_model);
@@ -196,7 +187,7 @@ void FileManagerWindow::buildUi()
 
     // ---- 状态行 ----
     auto *statusRow = new QHBoxLayout;
-    m_statusLabel = new QLabel(tr("就绪"), this);
+    m_statusLabel = new QLabel(this);
     m_progress = new QProgressBar(this);
     m_progress->setVisible(false);
     m_progress->setTextVisible(true);
@@ -245,6 +236,33 @@ void FileManagerWindow::buildUi()
     connect(m_view, &QTableView::customContextMenuRequested, this, &FileManagerWindow::showContextMenu);
 
     resize(1000, 660);
+}
+
+void FileManagerWindow::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::LanguageChange) {
+        retranslateUi();
+    }
+}
+
+void FileManagerWindow::retranslateUi()
+{
+    setWindowTitle(tr("File manager - %1").arg(m_serial));
+    m_backBtn->setToolTip(tr("Back (Alt+Left)"));
+    m_forwardBtn->setToolTip(tr("Forward (Alt+Right)"));
+    m_upBtn->setToolTip(tr("Parent folder (Backspace)"));
+    m_refreshBtn->setToolTip(tr("Refresh (F5)"));
+    m_uploadBtn->setText(tr("Upload"));
+    m_uploadBtn->setToolTip(tr("Upload files to current folder (you can also drag files/folders onto the window)"));
+    m_downloadBtn->setText(tr("Download"));
+    m_downloadBtn->setToolTip(tr("Download selected files/folders to computer"));
+    m_pathEdit->setPlaceholderText(tr("Enter device path and press Enter to jump"));
+    m_model->setHorizontalHeaderLabels(
+        QStringList() << tr("Name") << tr("Modified") << tr("Type") << tr("Size"));
+    if (m_statusLabel->text().isEmpty()) {
+        m_statusLabel->setText(tr("Ready"));
+    }
 }
 
 // ---------------- 导航 ----------------
