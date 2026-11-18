@@ -39,6 +39,9 @@ ToolForm::ToolForm(QWidget *adsorbWidget, AdsorbPositions adsorbPos) : MagneticW
     connect(&m_recordTimer, &QTimer::timeout, this, &ToolForm::updateRecordUi);
     if (VideoForm *form = qobject_cast<VideoForm *>(parent())) {
         connect(form, &VideoForm::recordingStateChanged, this, &ToolForm::updateRecordUi);
+        // 录制计时对齐到视频 0 点（首帧写入录制器的时刻）：
+        // 点击按钮→首帧之间的空窗不计入显示时长，与生成视频的内容时长一致
+        connect(form, &VideoForm::recordingClockStarted, this, [this]() { m_recordElapsed.restart(); });
     }
 
     createSettingsMenu();

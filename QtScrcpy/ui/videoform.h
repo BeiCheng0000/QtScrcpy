@@ -55,6 +55,9 @@ public:
 
 signals:
     void recordingStateChanged();
+    // 首个视频帧写入录制器（视频 pts 0 点）：工具栏录制计时以此为起点，
+    // 与视频文件的实际内容时长保持一致
+    void recordingClockStarted();
     // 批量 apk 安装：每个 apk 完成一项状态，队列结束后汇总
     void apkInstallProgress(const QString &path, const QString &status);
     void apkInstallFinished(int successCount, int failCount);
@@ -141,6 +144,7 @@ private:
     void syncInstallTip();
     QPointer<QLabel> m_installTipLabel;
     QTimer m_installTipTimer;
+    bool m_recordingClockEmitted = false; // 本次录制是否已广播视频 0 点（recordingClockStarted）
     QStringList m_installQueue;
     bool m_installBusy = false;
     bool m_installCancelled = false;

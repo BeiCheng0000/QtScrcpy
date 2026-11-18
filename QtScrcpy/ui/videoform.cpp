@@ -1140,6 +1140,7 @@ bool VideoForm::startRecord()
     }
 
     qInfo() << "recording started:" << filePath << "with audio:" << withAudio;
+    m_recordingClockEmitted = false;
     emit recordingStateChanged();
     return true;
 }
@@ -1238,10 +1239,18 @@ void VideoForm::onFrame(int width, int height, uint8_t *dataY, uint8_t *dataU, u
     if (auto *overlay = qobject_cast<LoadingOverlay *>(m_loadingWidget.data())) {
         overlay->advancePhase(2);
     }
-    updateRender(width, height, dataY, dataU, dataV, linesizeY, linesizeU, linesizeV);
+    // P1 打点优化：先推帧打点再渲染。pts = 帧到达时刻，渲染（OpenGL/软件
+    // 上传，可达数十毫秒）不计入视频时间轴，消除 UI 繁忙时逐帧滞后累积。
     if (m_recorder && m_recorder->isRecording()) {
         m_recorder->pushVideoFrame(dataY, dataU, dataV, width, height, linesizeY, linesizeU, linesizeV);
+        // 首个进入录制器的帧即视频 pts 0 点：广播给工具栏，把录制计时对齐到
+        // 视频实际内容起点（点击→首帧的空窗不计入视频）
+        if (!m_recordingClockEmitted) {
+            m_recordingClockEmitted = true;
+            emit recordingClockStarted();
+        }
     }
+    updateRender(width, height, dataY, dataU, dataV, linesizeY, linesizeU, linesizeV);
 }
 
 void VideoForm::onFrameMetal(void *cvPixelBuffer, int width, int height)

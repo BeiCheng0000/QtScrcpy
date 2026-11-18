@@ -129,6 +129,11 @@ public:
     QString error;
 
     QElapsedTimer clock;
+    // 首帧对齐：视频 0 点 = 首帧到达时刻。点击录制→首帧之间的空窗（屏幕静止时
+    // 可能几秒）不计入视频时间轴，解决“视频比真实时间慢几秒”。
+    std::atomic<bool> firstFrameAligned{false};
+    std::atomic<qint64> ptsOffset{0}; // 视频 pts = clock.elapsed() - ptsOffset
+    std::atomic<qint64> vTailPts{0};  // 末帧视频 pts（时长统计用）
     qint64 lastVPts = -1;
     std::atomic<qint64> audioSamples{0};
     std::atomic<qint64> videoFrameCount{0};
@@ -453,7 +458,7 @@ void VideoRecorder::Impl::workerLoop()
                 overlayOn = static_cast<bool>(overlayPainter);
             }
             if (overlayOn) {
-                const qint64 now = clock.elapsed();
+                const qint64 now = clock.elapsed() - ptsOffset.load();
                 const qint64 interval = 1000 / (fps > 0 ? fps : 30);
                 if (now - lastVPts >= interval) {
                     VideoFrame dup = lastFrame;
@@ -555,6 +560,7 @@ bool VideoRecorder::Impl::encodeVideo(VideoFrame &frame)
     }
 
     vFrame->pts = pts;
+    vTailPts.store(pts); // 供 stop() 统计实际内容时长
 
     ret = avcodec_send_frame(vCtx, vFrame);
     if (ret < 0) {
@@ -689,9 +695,13 @@ bool VideoRecorder::Impl::pumpAudio()
         return true;
     }
 
-    // 音频 PTS 与视频 PTS 使用同一个墙上时钟。任何缺失的 sndcpy 数据都用静音填充，
-    // 而不是缩短时间轴。
-    const qint64 elapsedMs = clock.elapsed();
+    // 音频 PTS 与视频 PTS 使用同一对齐时钟（0 点 = 首视频帧）。
+    // 首帧对齐前不产音频包，保证 A/V 从同一 0 点开始，消除视频“迟到”错位。
+    if (!firstFrameAligned.load()) {
+        return true;
+    }
+    // 任何缺失的 sndcpy 数据都用静音填充，而不是缩短时间轴。
+    const qint64 elapsedMs = clock.elapsed() - ptsOffset.load();
     const qint64 expected = elapsedMs * sampleRate / 1000;
     qint64 due = expected - audioWrittenSamples;
     if (due <= 0) {
@@ -863,6 +873,9 @@ bool VideoRecorder::start(const QString &filePath, int width, int height, int fp
     m_impl->videoFrameCount = 0;
     m_impl->audioSamples = 0;
     m_impl->lastVPts = -1;
+    m_impl->firstFrameAligned = false;
+    m_impl->ptsOffset = 0;
+    m_impl->vTailPts = 0;
     // 补帧缓存来自上一轮 worker 线程，必须失效，防止旧帧混入新录像
     m_impl->lastFrameValid = false;
     m_impl->audioPending.clear();
@@ -896,7 +909,6 @@ void VideoRecorder::pushVideoFrame(const uint8_t *dataY, const uint8_t *dataU, c
     frame.strideY = linesizeY;
     frame.strideU = linesizeU;
     frame.strideV = linesizeV;
-    frame.ptsMs = m_impl->clock.elapsed();
 
     const int heights[3] = {height, (height + 1) / 2, (height + 1) / 2};
     const int strides[3] = {linesizeY, linesizeU, linesizeV};
@@ -913,6 +925,12 @@ void VideoRecorder::pushVideoFrame(const uint8_t *dataY, const uint8_t *dataU, c
         std::memcpy(frame.v.data() + static_cast<size_t>(y) * linesizeV, dataV + static_cast<size_t>(y) * linesizeV,
                     linesizeV);
     }
+
+    // 打点在数据拷贝完成后进行（渲染开销不计入 pts）；首帧到达时刻即视频 0 点
+    if (!m_impl->firstFrameAligned.exchange(true)) {
+        m_impl->ptsOffset = m_impl->clock.elapsed();
+    }
+    frame.ptsMs = m_impl->clock.elapsed() - m_impl->ptsOffset.load();
 
     std::lock_guard<std::mutex> lock(m_impl->queueMutex);
     if (m_impl->vQueue.size() >= static_cast<size_t>(kMaxVideoQueue)) {
@@ -965,13 +983,19 @@ void VideoRecorder::stop()
         m_impl->worker.join();
     }
 
-    const qint64 durationMs = m_impl->clock.elapsed();
+    qint64 durationMs = 0; // 实际内容时长（首帧对齐后的视频/音频时间轴）
     bool ok = !m_impl->failed;
     if (m_impl->headerWritten) {
         // 将音频时间轴与最后一帧视频对齐，并在关闭文件前输出最后一帧
         //（已用静音填充）AAC 帧。
         ok = m_impl->pumpAudio() && ok;
         m_impl->flushAudioAccumulator();
+        // 时长 = 实际内容时长：末帧视频 pts 与音频时间轴取大者。
+        // 不用 clock.elapsed()——那会把点击→首帧的空窗计入，虚标时长。
+        durationMs = m_impl->vTailPts.load();
+        if (m_impl->audioEnabled && m_impl->audioWrittenSamples > 0) {
+            durationMs = qMax(durationMs, m_impl->audioWrittenSamples * 1000 / m_impl->sampleRate);
+        }
         ok = m_impl->flushEncoders() && ok;
         const int ret = av_write_trailer(m_impl->fmt);
         if (ret < 0) {
