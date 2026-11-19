@@ -626,23 +626,23 @@
     </message>
     <message>
         <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
-        <translation type="finished">無線（IP:ポート）接続のみに有効。2.4GHz Wi-Fi では無制限FPSと音声の帯域を賄えない場合があります。30FPS なら帯域需要が半減し、画質の目立った劣化はありません。</translation>
+        <translation>無線（IP:ポート）接続のみに有効。2.4GHz Wi-Fi では無制限FPSと音声の帯域を賄えない場合があります。30FPS なら帯域需要が半減し、画質の目立った劣化はありません。</translation>
     </message>
     <message>
         <source>Wireless max FPS</source>
-        <translation type="finished">無線最大FPS</translation>
+        <translation>無線最大FPS</translation>
     </message>
     <message>
         <source>max fps: %1 (%2)</source>
-        <translation type="finished">最大FPS: %1 (%2)</translation>
+        <translation>最大FPS: %1 (%2)</translation>
     </message>
     <message>
         <source>limited</source>
-        <translation type="finished">制限</translation>
+        <translation>制限</translation>
     </message>
     <message>
         <source>unlimited</source>
-        <translation type="finished">無制限</translation>
+        <translation>無制限</translation>
     </message>
 </context>
 <context>
@@ -1383,6 +1383,18 @@ Audio: %3</source>
     <message>
         <source>失败：</source>
         <translation>失敗: </translation>
+    </message>
+    <message>
+        <source>Duration: %1 s
+Size: %2 MB
+Audio: %3
+
+Note: almost no content was captured; the screen may have been off the whole time.</source>
+        <translation>長さ: %1 秒
+サイズ: %2 MB
+音声: %3
+
+注意: ほとんど内容が記録されていません。画面がずっとオフだった可能性があります。</translation>
     </message>
 </context>
 <context>

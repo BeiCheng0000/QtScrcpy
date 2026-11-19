@@ -184,6 +184,25 @@ bool Device::screenshot()
     return copied;
 }
 
+bool Device::grabCurrentFrame(QImage &out)
+{
+    if (!m_decoder) {
+        return false;
+    }
+
+    bool grabbed = false;
+    // VideoBuffer 会在回调返回后立即释放 RGB 缓冲区，必须深拷贝
+    m_decoder->peekFrame([&grabbed, &out](int width, int height, uint8_t *dataRGB32) {
+        if (!dataRGB32 || width <= 0 || height <= 0) {
+            return;
+        }
+        QImage image(dataRGB32, width, height, QImage::Format_RGB32);
+        out = image.copy();
+        grabbed = !out.isNull();
+    });
+    return grabbed;
+}
+
 void Device::startActivity(const QString &action)
 {
     if (isCameraMode() || action.isEmpty()) {

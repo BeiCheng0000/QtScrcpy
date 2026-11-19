@@ -626,23 +626,23 @@
     </message>
     <message>
         <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
-        <translation type="finished">Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</translation>
+        <translation>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</translation>
     </message>
     <message>
         <source>Wireless max FPS</source>
-        <translation type="finished">Wireless max FPS</translation>
+        <translation>Wireless max FPS</translation>
     </message>
     <message>
         <source>max fps: %1 (%2)</source>
-        <translation type="finished">max fps: %1 (%2)</translation>
+        <translation>max fps: %1 (%2)</translation>
     </message>
     <message>
         <source>limited</source>
-        <translation type="finished">limited</translation>
+        <translation>limited</translation>
     </message>
     <message>
         <source>unlimited</source>
-        <translation type="finished">unlimited</translation>
+        <translation>unlimited</translation>
     </message>
 </context>
 <context>
@@ -1383,6 +1383,18 @@ Audio: %3</translation>
     <message>
         <source>失败：</source>
         <translation>Failed: </translation>
+    </message>
+    <message>
+        <source>Duration: %1 s
+Size: %2 MB
+Audio: %3
+
+Note: almost no content was captured; the screen may have been off the whole time.</source>
+        <translation>Duration: %1 s
+Size: %2 MB
+Audio: %3
+
+Note: almost no content was captured; the screen may have been off the whole time.</translation>
     </message>
 </context>
 <context>

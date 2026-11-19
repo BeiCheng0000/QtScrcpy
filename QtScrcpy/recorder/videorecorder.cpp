@@ -951,6 +951,43 @@ void VideoRecorder::pushVideoFrame(const uint8_t *dataY, const uint8_t *dataU, c
     m_impl->queueCv.notify_one();
 }
 
+bool VideoRecorder::pushRGB32Frame(const QImage &img)
+{
+    if (!m_impl || !m_impl->running.load() || img.isNull()) {
+        return false;
+    }
+
+    const QImage src = img.convertToFormat(QImage::Format_RGB32);
+    const int w = src.width();
+    const int h = src.height();
+    if (w <= 0 || h <= 0) {
+        return false;
+    }
+
+    // RGB32 → YUV420P（每次录制仅首帧调用一次，临时上下文开销可忽略）
+    SwsContext *sws = sws_getContext(w, h, AV_PIX_FMT_RGB32, w, h, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr,
+                                     nullptr, nullptr);
+    if (!sws) {
+        return false;
+    }
+
+    const int strideY = w;
+    const int strideU = (w + 1) / 2;
+    const int strideV = (w + 1) / 2;
+    std::vector<uint8_t> y(static_cast<size_t>(strideY) * h);
+    std::vector<uint8_t> u(static_cast<size_t>(strideU) * ((h + 1) / 2));
+    std::vector<uint8_t> v(static_cast<size_t>(strideV) * ((h + 1) / 2));
+    uint8_t *dstData[4] = {y.data(), u.data(), v.data(), nullptr};
+    const int dstStride[4] = {strideY, strideU, strideV, 0};
+    const uint8_t *srcData[4] = {src.constBits(), nullptr, nullptr, nullptr};
+    const int srcStride[4] = {static_cast<int>(src.bytesPerLine()), 0, 0, 0};
+    sws_scale(sws, srcData, srcStride, 0, h, dstData, dstStride);
+    sws_freeContext(sws);
+
+    pushVideoFrame(y.data(), u.data(), v.data(), w, h, strideY, strideU, strideV);
+    return true;
+}
+
 void VideoRecorder::pushAudioData(const char *data, int size)
 {
     if (!m_impl || !m_impl->running.load() || !m_impl->audioEnabled || !data || size <= 0) {

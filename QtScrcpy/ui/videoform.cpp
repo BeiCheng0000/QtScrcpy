@@ -1093,6 +1093,16 @@ bool VideoForm::startRecord()
         });
     }
 
+    // 点击录制即出首帧：设备屏幕静止（或息屏）时不推帧，视频 0 点（首帧对齐）会等到
+    // 画面第一次变化。立即把投屏当前帧注入录制器，时间轴从点击时刻开始，静止期间
+    // 由录制器补帧逻辑按 fps 填充。
+    if (auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial)) {
+        QImage grab;
+        if (device->grabCurrentFrame(grab)) {
+            recorder->pushRGB32Frame(grab);
+        }
+    }
+
     qInfo() << "recording started:" << filePath << "with audio:" << withAudio;
     m_recordingClockEmitted = false;
     emit recordingStateChanged();
@@ -1137,8 +1147,12 @@ void VideoForm::onRecordingFinished(const QString &filePath, qint64 durationMs, 
     box.setIcon(QMessageBox::Information);
     box.setWindowTitle(tr("recording finished"));
     box.setText(tr("Saved to:\n%1").arg(QDir::toNativeSeparators(filePath)));
-    box.setInformativeText(tr("Duration: %1 s\nSize: %2 MB\nAudio: %3")
-                               .arg(durationMs / 1000)
+    // 几乎无内容：等首帧模式下全程黑屏（息屏）被丢弃时会出现
+    const QString info = durationMs < 200
+        ? tr("Duration: %1 s\nSize: %2 MB\nAudio: %3\n\nNote: almost no content was captured; "
+             "the screen may have been off the whole time.")
+        : tr("Duration: %1 s\nSize: %2 MB\nAudio: %3");
+    box.setInformativeText(info.arg(durationMs / 1000)
                                .arg(bytes / 1024.0 / 1024.0, 0, 'f', 1)
                                .arg(hasAudio ? tr("yes") : tr("no")));
     QPushButton *openButton = box.addButton(tr("open folder"), QMessageBox::ActionRole);

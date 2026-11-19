@@ -1,4 +1,5 @@
 #pragma once
+#include <QImage>
 #include <QPointer>
 #include <QMouseEvent>
 
@@ -139,6 +140,9 @@ public:
     virtual void installApkRequest(const QString &apkFile) = 0;
 
     virtual bool screenshot() = 0;
+    // 取当前渲染帧（RGB32 深拷贝）。设备尚未产生首帧时返回 false。
+    // 用于录制启动时立即注入画面，避免屏幕静止时录制从画面第一次变化才开始。
+    virtual bool grabCurrentFrame(QImage &out) { Q_UNUSED(out); return false; }
     virtual void showTouch(bool show) = 0;
     virtual void setCameraTorch(bool on) { Q_UNUSED(on); }
     virtual void cameraZoomIn() {}

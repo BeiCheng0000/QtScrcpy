@@ -32,6 +32,9 @@ public:
                int sampleRate = 48000, int channels = 2, int audioBitrate = 128000);
     void pushVideoFrame(const uint8_t *dataY, const uint8_t *dataU, const uint8_t *dataV, int width, int height,
                         int linesizeY, int linesizeU, int linesizeV);
+    // RGB32 图像转 YUV 后入队（内部转换，一次性调用，用于"点击录制即出首帧"：
+    // 设备屏幕静止时不推帧，若不注入当前画面，录制内容会从画面第一次变化才开始）
+    bool pushRGB32Frame(const QImage &img);
     void pushAudioData(const char *data, int size);
     void stop();
 

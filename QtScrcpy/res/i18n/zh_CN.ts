@@ -626,23 +626,23 @@
     </message>
     <message>
         <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
-        <translation type="finished">仅无线（IP:端口）连接生效。2.4GHz Wi-Fi 可能承载不了不限帧率加音频的带宽；30 帧率可将带宽需求减半且画质无明显损失。</translation>
+        <translation>仅无线（IP:端口）连接生效。2.4GHz Wi-Fi 可能承载不了不限帧率加音频的带宽；30 帧率可将带宽需求减半且画质无明显损失。</translation>
     </message>
     <message>
         <source>Wireless max FPS</source>
-        <translation type="finished">无线最大帧率</translation>
+        <translation>无线最大帧率</translation>
     </message>
     <message>
         <source>max fps: %1 (%2)</source>
-        <translation type="finished">最大帧率: %1 (%2)</translation>
+        <translation>最大帧率: %1 (%2)</translation>
     </message>
     <message>
         <source>limited</source>
-        <translation type="finished">已限制</translation>
+        <translation>已限制</translation>
     </message>
     <message>
         <source>unlimited</source>
-        <translation type="finished">不限</translation>
+        <translation>不限</translation>
     </message>
 </context>
 <context>
@@ -1383,6 +1383,18 @@ Choose No to record video only.</source>
     <message>
         <source>失败：</source>
         <translation>失败：</translation>
+    </message>
+    <message>
+        <source>Duration: %1 s
+Size: %2 MB
+Audio: %3
+
+Note: almost no content was captured; the screen may have been off the whole time.</source>
+        <translation>时长: %1 秒
+大小: %2 MB
+音频: %3
+
+注意：几乎没有捕获到内容——屏幕可能全程处于息屏状态。</translation>
     </message>
 </context>
 <context>

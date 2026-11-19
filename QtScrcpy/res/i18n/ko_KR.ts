@@ -626,23 +626,23 @@
     </message>
     <message>
         <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
-        <translation type="finished">무선(IP:포트) 전용입니다. 2.4GHz Wi-Fi에서는 무제한 FPS와 오디오를 감당하지 못할 수 있습니다. 30FPS로 대역폭 수요를 절반으로 줄여도 화질 저하는 눈에 띄지 않습니다.</translation>
+        <translation>무선(IP:포트) 전용입니다. 2.4GHz Wi-Fi에서는 무제한 FPS와 오디오를 감당하지 못할 수 있습니다. 30FPS로 대역폭 수요를 절반으로 줄여도 화질 저하는 눈에 띄지 않습니다.</translation>
     </message>
     <message>
         <source>Wireless max FPS</source>
-        <translation type="finished">무선 최대 FPS</translation>
+        <translation>무선 최대 FPS</translation>
     </message>
     <message>
         <source>max fps: %1 (%2)</source>
-        <translation type="finished">최대 FPS: %1 (%2)</translation>
+        <translation>최대 FPS: %1 (%2)</translation>
     </message>
     <message>
         <source>limited</source>
-        <translation type="finished">제한됨</translation>
+        <translation>제한됨</translation>
     </message>
     <message>
         <source>unlimited</source>
-        <translation type="finished">무제한</translation>
+        <translation>무제한</translation>
     </message>
 </context>
 <context>
@@ -1383,6 +1383,18 @@ Audio: %3</source>
     <message>
         <source>失败：</source>
         <translation>실패: </translation>
+    </message>
+    <message>
+        <source>Duration: %1 s
+Size: %2 MB
+Audio: %3
+
+Note: almost no content was captured; the screen may have been off the whole time.</source>
+        <translation>길이: %1초
+크기: %2 MB
+오디오: %3
+
+참고: 캡처된 내용이 거의 없습니다. 화면이 계속 꺼져 있었을 수 있습니다.</translation>
     </message>
 </context>
 <context>
