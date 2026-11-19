@@ -161,7 +161,7 @@ public:
     bool initAudio(int audioBitrate);
     void workerLoop();
     bool encodeVideo(VideoFrame &frame);
-    bool composeOverlay(VideoFrame &frame, const VideoRecorder::OverlayPainter &painter, qint64 pts);
+    bool composeOverlay(VideoFrame &frame, const VideoRecorder::OverlayPainter &painter, qint64 pts, qint64 wallMs);
     bool pumpAudio();
     bool encodeAudioFrame(const int16_t *samples, int nbSamples);
     void flushAudioAccumulator();
@@ -512,7 +512,9 @@ bool VideoRecorder::Impl::encodeVideo(VideoFrame &frame)
 
     if (painter) {
         // 叠加路径：YUV→BGRA 画面矩形 → QPainter 绘制 → 回写 YUV（含 letterbox）
-        if (!composeOverlay(frame, painter, pts)) {
+        // wallMs = 墙钟时刻（与 UI 侧 MouseTrackRecorder 事件 ts 同基准）；
+        // pts 因首帧对齐存在空窗偏移，不能用于事件时间比较。
+        if (!composeOverlay(frame, painter, pts, clock.elapsed())) {
             return false;
         }
     } else if (frame.width == encW && frame.height == encH) {
@@ -574,7 +576,8 @@ bool VideoRecorder::Impl::encodeVideo(VideoFrame &frame)
 // 叠加合成：把原始帧缩放到画面矩形（与常规 letterbox 同规则），
 // 交给回调在 BGRA 图像上绘制（QImage 仅包装缓冲，无拷贝），再转回
 // YUV420P 写入编码帧中心，四周保留黑边。
-bool VideoRecorder::Impl::composeOverlay(VideoFrame &frame, const VideoRecorder::OverlayPainter &painter, qint64 pts)
+bool VideoRecorder::Impl::composeOverlay(VideoFrame &frame, const VideoRecorder::OverlayPainter &painter, qint64 pts,
+                                         qint64 wallMs)
 {
     if (frame.width <= 0 || frame.height <= 0) {
         fail(QStringLiteral("overlay: invalid frame size %1x%2").arg(frame.width).arg(frame.height));
@@ -608,7 +611,7 @@ bool VideoRecorder::Impl::composeOverlay(VideoFrame &frame, const VideoRecorder:
     sws_scale(overlaySwsToRgb, srcData, srcStride, 0, frame.height, rgbData, rgbStrides);
 
     QImage img(overlayRgb.data(), dstW, dstH, rgbStride, QImage::Format_ARGB32);
-    painter(img, pts, scale);
+    painter(img, pts, scale, wallMs);
 
     if (!overlaySwsToYuv || overlayDstW != dstW || overlayDstH != dstH) {
         sws_freeContext(overlaySwsToYuv);
@@ -853,6 +856,14 @@ void VideoRecorder::setOverlayPainter(OverlayPainter painter)
     }
     std::lock_guard<std::mutex> lock(m_impl->overlayMutex);
     m_impl->overlayPainter = std::move(painter);
+}
+
+qint64 VideoRecorder::videoPtsOffsetMs() const
+{
+    if (!m_impl || !m_impl->firstFrameAligned.load()) {
+        return -1;
+    }
+    return m_impl->ptsOffset.load();
 }
 
 VideoRecorder::~VideoRecorder()

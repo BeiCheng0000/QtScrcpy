@@ -624,6 +624,26 @@
         <source>Optional: 6-digit PIN shown in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the pair port; used for this pairing only and not saved</source>
         <translation>Optional: 6-digit PIN shown in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the pair port; used for this pairing only and not saved</translation>
     </message>
+    <message>
+        <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
+        <translation type="finished">Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</translation>
+    </message>
+    <message>
+        <source>Wireless max FPS</source>
+        <translation type="finished">Wireless max FPS</translation>
+    </message>
+    <message>
+        <source>max fps: %1 (%2)</source>
+        <translation type="finished">max fps: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>limited</source>
+        <translation type="finished">limited</translation>
+    </message>
+    <message>
+        <source>unlimited</source>
+        <translation type="finished">unlimited</translation>
+    </message>
 </context>
 <context>
     <name>FileManagerWindow</name>

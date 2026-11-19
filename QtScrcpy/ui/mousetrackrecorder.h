@@ -62,13 +62,18 @@ public:
     void onWheelEvent(const QPointF &posInVideo, const QSize &videoSize, const QSize &frameSize, int angleDeltaY);
 
     // 开始/结束一次录制会话。eventsPath 非空时把操作轨迹落盘（JSON Lines）。
+    // videoPtsOffsetMs >= 0 时（首帧对齐后的墙钟偏移）写入尾部 meta，
+    // 使落盘事件（墙钟 ts）可换算到视频时间轴：videoTs = ts - offset。
     void startSession(const QString &eventsPath);
-    void endSession();
+    void endSession(qint64 videoPtsOffsetMs = -1);
     bool isActive() const;
 
     // 编码线程：在画面图像 img（原始帧缩放 scale 后，不含 letterbox 黑边）上
-    // 绘制 ptsMs 时刻应显示的光标/波纹/尾迹。
-    void paintAt(QImage &img, qint64 ptsMs, double scale);
+    // 绘制 wallMs 时刻应显示的光标/波纹/尾迹。
+    // wallMs 必须与 onMouseEvent/onWheelEvent 的 ts 同为录制墙钟基准
+    // （VideoRecorder 传入 clock.elapsed()）；若误传视频 ptsMs（0 点=首帧），
+    // 事件会因 pts 空窗偏移而"迟到"数秒才显示。
+    void paintAt(QImage &img, qint64 wallMs, double scale);
 
 private:
     struct Ripple

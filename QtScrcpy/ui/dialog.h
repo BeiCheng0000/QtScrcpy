@@ -161,6 +161,7 @@ private:
     QLineEdit *m_configTitleEdit = nullptr;
     QLineEdit *m_configPushPathEdit = nullptr;
     QSpinBox *m_configMaxFpsSpin = nullptr;
+    QSpinBox *m_configWirelessMaxFpsSpin = nullptr;
     QCheckBox *m_configRenderExpiredCheck = nullptr;
     QSpinBox *m_configDecoderThreadsSpin = nullptr;
     QComboBox *m_configOpenGlBox = nullptr;

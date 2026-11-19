@@ -73,6 +73,7 @@ public:
     QString getLanguage();
     QString getTitle();
     int getMaxFps();
+    int getWirelessMaxFps();
     int getDesktopOpenGL();
     int getSkin();
     int getRenderExpiredFrames();

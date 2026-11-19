@@ -624,6 +624,26 @@
         <source>Optional: 6-digit PIN shown in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the pair port; used for this pairing only and not saved</source>
         <translation>선택: 기기 &apos;PIN으로 페어링&apos;에 표시되는 6자리 PIN. 포트와 함께 입력. 이번에만 사용하며 저장되지 않음</translation>
     </message>
+    <message>
+        <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
+        <translation type="finished">무선(IP:포트) 전용입니다. 2.4GHz Wi-Fi에서는 무제한 FPS와 오디오를 감당하지 못할 수 있습니다. 30FPS로 대역폭 수요를 절반으로 줄여도 화질 저하는 눈에 띄지 않습니다.</translation>
+    </message>
+    <message>
+        <source>Wireless max FPS</source>
+        <translation type="finished">무선 최대 FPS</translation>
+    </message>
+    <message>
+        <source>max fps: %1 (%2)</source>
+        <translation type="finished">최대 FPS: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>limited</source>
+        <translation type="finished">제한됨</translation>
+    </message>
+    <message>
+        <source>unlimited</source>
+        <translation type="finished">무제한</translation>
+    </message>
 </context>
 <context>
     <name>FileManagerWindow</name>

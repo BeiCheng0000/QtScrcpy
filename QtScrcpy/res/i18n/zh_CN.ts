@@ -624,6 +624,26 @@
         <source>Optional: 6-digit PIN shown in the device&apos;s &apos;Pair using PIN&apos; dialog, must be filled together with the pair port; used for this pairing only and not saved</source>
         <translation>选填：手机「无线调试 → 使用配对码配对设备」中显示的 6 位配对码，需与配对端口同时填写；仅用于本次配对，不会被保存</translation>
     </message>
+    <message>
+        <source>Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; 30 FPS halves bandwidth demand without visible quality loss.</source>
+        <translation type="finished">仅无线（IP:端口）连接生效。2.4GHz Wi-Fi 可能承载不了不限帧率加音频的带宽；30 帧率可将带宽需求减半且画质无明显损失。</translation>
+    </message>
+    <message>
+        <source>Wireless max FPS</source>
+        <translation type="finished">无线最大帧率</translation>
+    </message>
+    <message>
+        <source>max fps: %1 (%2)</source>
+        <translation type="finished">最大帧率: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>limited</source>
+        <translation type="finished">已限制</translation>
+    </message>
+    <message>
+        <source>unlimited</source>
+        <translation type="finished">不限</translation>
+    </message>
 </context>
 <context>
     <name>FileManagerWindow</name>

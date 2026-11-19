@@ -508,6 +508,16 @@ void Dialog::initAdvancedConfigUi(QWidget *parent)
     m_configMaxFpsSpin->setSpecialValueText(tr("Unlimited"));
     layout->addRow(tr("Maximum FPS"), m_configMaxFpsSpin);
 
+    // 无线（ip:port）专用最大帧率：受限 Wi-Fi 通道（尤其 2.4GHz Wi-Fi 4）
+    // 实测吞吐可能低于视频码率 + 音频之和，不限帧会通道积压、延迟累积。
+    m_configWirelessMaxFpsSpin = new FocusWheelSpinBox(group);
+    m_configWirelessMaxFpsSpin->setRange(0, 240);
+    m_configWirelessMaxFpsSpin->setSpecialValueText(tr("Unlimited"));
+    m_configWirelessMaxFpsSpin->setToolTip(
+        tr("Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; "
+           "30 FPS halves bandwidth demand without visible quality loss."));
+    layout->addRow(tr("Wireless max FPS"), m_configWirelessMaxFpsSpin);
+
     m_configRenderExpiredCheck = new QCheckBox(tr("Render expired video frames"), group);
     layout->addRow(m_configRenderExpiredCheck);
 
@@ -611,6 +621,7 @@ void Dialog::loadAdvancedConfig()
     m_configTitleEdit->setText(config.getTitle());
     m_configPushPathEdit->setText(config.getPushFilePath());
     m_configMaxFpsSpin->setValue(qBound(0, config.getMaxFps(), m_configMaxFpsSpin->maximum()));
+    m_configWirelessMaxFpsSpin->setValue(qBound(0, config.getWirelessMaxFps(), m_configWirelessMaxFpsSpin->maximum()));
     m_configRenderExpiredCheck->setChecked(config.getRenderExpiredFrames() != 0);
     m_configDecoderThreadsSpin->setValue(qBound(0, config.getDecoderThreads(), m_configDecoderThreadsSpin->maximum()));
     m_configOpenGlBox->setCurrentIndex(qMax(0, m_configOpenGlBox->findData(config.getDesktopOpenGL())));
@@ -665,6 +676,7 @@ void Dialog::saveAdvancedConfig()
     values.insert("WindowTitle", m_configTitleEdit->text().trimmed());
     values.insert("PushFilePath", pushPath);
     values.insert("MaxFps", m_configMaxFpsSpin->value());
+    values.insert("WirelessMaxFps", m_configWirelessMaxFpsSpin->value());
     values.insert("RenderExpiredFrames", m_configRenderExpiredCheck->isChecked() ? 1 : 0);
     values.insert("DecoderThreads", m_configDecoderThreadsSpin->value());
     values.insert("UseDesktopOpenGL", m_configOpenGlBox->currentData());
@@ -1014,6 +1026,10 @@ void Dialog::changeEvent(QEvent *event)
         m_appConfigGroup->setTitle(tr("Application configuration"));
         setComboItemText(m_configLanguageBox, 0, tr("Automatic"));
         m_configMaxFpsSpin->setSpecialValueText(tr("Unlimited"));
+        m_configWirelessMaxFpsSpin->setSpecialValueText(tr("Unlimited"));
+        m_configWirelessMaxFpsSpin->setToolTip(
+            tr("Wireless (IP:port) only. 2.4GHz Wi-Fi may not carry unlimited FPS plus audio; "
+               "30 FPS halves bandwidth demand without visible quality loss."));
         m_configDecoderThreadsSpin->setSpecialValueText(tr("Auto"));
         m_configDecoderThreadsSpin->setToolTip(
             tr("FFmpeg decoder threads. 1 = single thread (old behavior, lowest latency); "
@@ -1030,7 +1046,7 @@ void Dialog::changeEvent(QEvent *event)
         m_saveButton->setText(tr("Save"));
         retranslateFormLabels(m_appConfigGroup->layout(),
                               { tr("Language"), tr("Window title"), tr("Push file path"), tr("Maximum FPS"),
-                                QString(), tr("Decoder threads"), tr("OpenGL backend"),
+                                tr("Wireless max FPS"), QString(), tr("Decoder threads"), tr("OpenGL backend"),
                                 tr("Device server path"), tr("ADB executable"), tr("Codec options"),
                                 tr("Codec name"), tr("Log level") });
     }
@@ -1138,7 +1154,11 @@ void Dialog::startServerFor(const QString &serial)
     outLog(tr("bitrate: %1 Mbps (%2)").arg(params.bitRate / 1000000.0, 0, 'g', 4)
                .arg(wifiDevice ? tr("wireless") : tr("usb")), false);
     // on devices with Android >= 10, the capture frame rate can be limited
-    params.maxFps = static_cast<quint32>(Config::getInstance().getMaxFps());
+    // 帧率上限按连接方式区分：无线默认 30（受限通道防积压，见 config.cpp 注释）
+    params.maxFps = static_cast<quint32>(wifiDevice ? Config::getInstance().getWirelessMaxFps()
+                                                    : Config::getInstance().getMaxFps());
+    outLog(tr("max fps: %1 (%2)").arg(params.maxFps)
+               .arg(params.maxFps ? tr("limited") : tr("unlimited")), false);
     params.decodeThreads = Config::getInstance().getDecoderThreads();
     // 控制台 FPS 诊断日志跟随"显示 FPS"开关
     params.fpsLogEnabled = ui->fpsCheck->isChecked();

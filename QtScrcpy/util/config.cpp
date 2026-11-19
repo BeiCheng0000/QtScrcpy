@@ -27,6 +27,13 @@
 #define COMMON_MAX_FPS_KEY "MaxFps"
 #define COMMON_MAX_FPS_DEF 0
 
+// 无线连接专用最大帧率：2.4GHz Wi-Fi 4 等受限通道实测吞吐可能低于
+// 视频目标码率 + 音频之和，帧率不限时需求超容量导致 TCP 积压、延迟持续
+// 累积（表现为"操作后画面慢半拍且越攒越多"）。限帧直接降低通道需求，
+// 每帧可用比特反而更多。0 = 不限（高带宽环境可自行调回）。
+#define COMMON_WIRELESS_MAX_FPS_KEY "WirelessMaxFps"
+#define COMMON_WIRELESS_MAX_FPS_DEF 30
+
 #define COMMON_DESKTOP_OPENGL_KEY "UseDesktopOpenGL"
 #define COMMON_DESKTOP_OPENGL_DEF -1
 
@@ -255,6 +262,7 @@ void Config::initializeConfig()
             defaults.setValue(COMMON_TITLE_KEY, COMMON_TITLE_DEF);
             defaults.setValue(COMMON_PUSHFILE_KEY, COMMON_PUSHFILE_DEF);
             defaults.setValue(COMMON_MAX_FPS_KEY, COMMON_MAX_FPS_DEF);
+            defaults.setValue(COMMON_WIRELESS_MAX_FPS_KEY, COMMON_WIRELESS_MAX_FPS_DEF);
             defaults.setValue(COMMON_RENDER_EXPIRED_FRAMES_KEY, COMMON_RENDER_EXPIRED_FRAMES_DEF);
             defaults.setValue(COMMON_DESKTOP_OPENGL_KEY, COMMON_DESKTOP_OPENGL_DEF);
             defaults.setValue(COMMON_SERVER_PATH_KEY, COMMON_SERVER_PATH_DEF);
@@ -448,6 +456,15 @@ int Config::getMaxFps()
     fps = m_settings->value(COMMON_MAX_FPS_KEY, COMMON_MAX_FPS_DEF).toInt();
     m_settings->endGroup();
     return fps;
+}
+
+int Config::getWirelessMaxFps()
+{
+    int fps = 0;
+    m_settings->beginGroup(GROUP_COMMON);
+    fps = m_settings->value(COMMON_WIRELESS_MAX_FPS_KEY, COMMON_WIRELESS_MAX_FPS_DEF).toInt();
+    m_settings->endGroup();
+    return qBound(0, fps, 240);
 }
 
 int Config::getDesktopOpenGL()

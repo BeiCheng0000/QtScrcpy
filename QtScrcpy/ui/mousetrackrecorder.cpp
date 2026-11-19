@@ -163,11 +163,17 @@ void MouseTrackRecorder::startSession(const QString &eventsPath)
     }
 }
 
-void MouseTrackRecorder::endSession()
+void MouseTrackRecorder::endSession(qint64 videoPtsOffsetMs)
 {
     QMutexLocker locker(&m_mutex);
     m_sessionActive = false;
     if (m_logFile.isOpen()) {
+        // 记录墙钟 → 视频时间轴的偏移，供落盘轨迹对齐视频使用
+        if (videoPtsOffsetMs >= 0) {
+            m_logFile.write(QStringLiteral("{\"_meta\":{\"videoPtsOffsetMs\":%1}}\n")
+                                .arg(videoPtsOffsetMs)
+                                .toUtf8());
+        }
         m_logFile.write("\n]\n");
         m_logFile.close();
     }
@@ -178,7 +184,7 @@ bool MouseTrackRecorder::isActive() const
     return m_sessionActive;
 }
 
-void MouseTrackRecorder::paintAt(QImage &img, qint64 ptsMs, double scale)
+void MouseTrackRecorder::paintAt(QImage &img, qint64 wallMs, double scale)
 {
     if (img.isNull() || scale <= 0) {
         return;
@@ -195,11 +201,12 @@ void MouseTrackRecorder::paintAt(QImage &img, qint64 ptsMs, double scale)
     qint64 wheelTs = 0;
     {
         QMutexLocker locker(&m_mutex);
-        // 清理过期对象（惰性回收，避免单独的定时器）
-        while (!m_ripples.isEmpty() && ptsMs - m_ripples.first().ts > m_style.rippleMs) {
+        // 清理过期对象（惰性回收，避免单独的定时器）。
+        // wallMs 与事件 ts 同为墙钟基准，年龄计算即时正确。
+        while (!m_ripples.isEmpty() && wallMs - m_ripples.first().ts > m_style.rippleMs) {
             m_ripples.removeFirst();
         }
-        while (!m_trail.isEmpty() && ptsMs - m_trail.first().ts > m_style.trailMs && !m_dragging) {
+        while (!m_trail.isEmpty() && wallMs - m_trail.first().ts > m_style.trailMs && !m_dragging) {
             m_trail.removeFirst();
         }
         // 光标平滑：绘制帧间向目标位置靠拢
@@ -221,7 +228,7 @@ void MouseTrackRecorder::paintAt(QImage &img, qint64 ptsMs, double scale)
     if (!trail.isEmpty()) {
         const QColor &base = m_style.trailColor;
         for (int i = 1; i < trail.size(); ++i) {
-            const double age = ptsMs - trail.at(i).ts;
+            const double age = wallMs - trail.at(i).ts;
             const double a = qBound(0.0, 1.0 - age / m_style.trailMs, 1.0);
             if (a <= 0) {
                 continue;
@@ -265,7 +272,7 @@ void MouseTrackRecorder::paintAt(QImage &img, qint64 ptsMs, double scale)
 
     // 点击波纹：径向渐变光晕 + 彩色辉光环 + 白色亮环 + 按下闪光
     for (const Ripple &r : ripples) {
-        const double t = qBound(0.0, double(ptsMs - r.ts) / m_style.rippleMs, 1.0);
+        const double t = qBound(0.0, double(wallMs - r.ts) / m_style.rippleMs, 1.0);
         const QColor &color = r.type == RightButton  ? m_style.rightColor
                               : r.type == MiddleButton ? m_style.middleColor
                                                        : m_style.pressColor;
@@ -316,8 +323,8 @@ void MouseTrackRecorder::paintAt(QImage &img, qint64 ptsMs, double scale)
     }
 
     // 滚动方向指示：辉光箭头 + 光晕
-    if (wheelDir != 0 && ptsMs - wheelTs <= m_style.wheelFlashMs) {
-        const double a = qBound(0.0, 1.0 - double(ptsMs - wheelTs) / m_style.wheelFlashMs, 1.0);
+    if (wheelDir != 0 && wallMs - wheelTs <= m_style.wheelFlashMs) {
+        const double a = qBound(0.0, 1.0 - double(wallMs - wheelTs) / m_style.wheelFlashMs, 1.0);
         const QColor &color = m_style.pressColor;
         const QPointF center(cursor.x() * unit, (cursor.y() - m_style.cursorRadius * 1.7) * unit);
         const double s = 7 * unit;
@@ -353,7 +360,7 @@ void MouseTrackRecorder::paintAt(QImage &img, qint64 ptsMs, double scale)
     // 默认态 = 原图 + 呼吸动效；按下态 = 下压 + 轻旋 + 变暗（与 HTML 预览一致）。
     if (m_cursorValid && !cursor.isNull() && !m_gloveNormal.isNull()) {
         const QPointF c = cursor * unit;
-        const double pulse = 1.0 + 0.05 * qSin(ptsMs * 2 * M_PI / 1400.0);
+        const double pulse = 1.0 + 0.05 * qSin(wallMs * 2 * M_PI / 1400.0);
         const double side = m_style.cursorRadius * 3.2 * unit * (dragging ? 1.0 : pulse);
         const QImage &img = dragging ? m_glovePressed : m_gloveNormal;
         const double h = side * double(img.height()) / img.width();

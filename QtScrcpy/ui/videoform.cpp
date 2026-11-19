@@ -1086,8 +1086,10 @@ bool VideoForm::startRecord()
     if (config.recordMouseTrack) {
         m_trackRecorder->startSession(filePath + QStringLiteral(".events.json"));
         QSharedPointer<MouseTrackRecorder> track = m_trackRecorder;
-        recorder->setOverlayPainter([track](QImage &img, qint64 ptsMs, double scale) {
-            track->paintAt(img, ptsMs, scale);
+        // wallMs = 录制墙钟（与事件 ts 同基准）；ptsMs 因首帧对齐有偏移不能用于事件
+        recorder->setOverlayPainter([track](QImage &img, qint64 ptsMs, double scale, qint64 wallMs) {
+            Q_UNUSED(ptsMs);
+            track->paintAt(img, wallMs, scale);
         });
     }
 
@@ -1111,7 +1113,7 @@ void VideoForm::stopRecord()
     // stop() is idempotent and also joins a worker that already exited after
     // an encoding error.
     m_recorder->setOverlayPainter(nullptr);
-    m_trackRecorder->endSession();
+    m_trackRecorder->endSession(m_recorder->videoPtsOffsetMs());
     m_recorder->stop();
     emit recordingStateChanged();
 }
