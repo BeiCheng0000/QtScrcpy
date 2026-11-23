@@ -1,6 +1,7 @@
 #ifndef VIDEOFORM_H
 #define VIDEOFORM_H
 
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QSharedPointer>
 #include <QStringList>
@@ -74,6 +75,16 @@ private:
     QString buildRecordFilePath() const;
     void openRecordFolder(const QString &filePath) const;
 
+    // ===== 投屏端无操作自动熄屏（需外层勾选「自动熄屏」才启用）=====
+    // 语义与设备端熄屏严格区分：
+    //  - 熄屏对象是「投屏画面」（本窗口显示），不是设备屏幕；
+    //  - 点击亮屏只恢复本窗口显示，不下发任何设备指令，
+    //    设备端屏幕保持其当前状态（勾选自动熄屏时即为熄屏）。
+    void restartIdleTimer();       // 鼠标/键盘活动重置无操作计时
+    void enterMirroringOff();      // 达到无操作阈值：盖黑幕进入投屏熄屏
+    void exitMirroringOff();       // 点击亮屏：撤黑幕恢复投屏显示（含保护窗）
+    void placeScreenOffOverlay();  // 黑幕跟随画面区域（缩放/全屏）
+
     // 让窗口几何尺寸与视频宽高比保持同步。否则最大化（或从最小化还原）后会
     // 留下大片黑边。
     QSize fittedWindowSize(bool fillScreen);
@@ -127,6 +138,9 @@ protected:
     void showEvent(QShowEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+    // 拦截投屏熄屏黑幕上的鼠标按下：QLabel 对未处理事件向父级传播并不可靠，
+    // 这里在事件过滤器中确定性捕获，保证点击黑幕必定退出熄屏态
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
@@ -174,6 +188,16 @@ private:
     QPointer<VideoRecorder> m_recorder;
     QString m_recordAudioKey;
     bool m_closing = false;
+
+    // 投屏端熄屏状态：m_mirroringOff 仅表示本窗口画面被盖黑（与设备端
+    // 熄屏无关，点击亮屏不下发任何设备指令，设备屏幕保持其当前状态）；
+    // m_resumeGuard 为亮屏后 500ms 保护窗，吞掉窗口期内的
+    // 鼠标事件防止误触发；m_idleTimer 计无操作时长（仅勾选自动熄屏时启用）
+    bool m_mirroringOff = false;
+    bool m_autoOffEnabled = false;
+    QElapsedTimer m_resumeGuard;
+    QTimer m_idleTimer;
+    QPointer<QLabel> m_screenOffOverlay;
 
     // 智能最大化状态。最大化时把画面放大到屏幕可容纳的最大尺寸（而不是留黑边），
     // 但窗口仍保持普通状态，使系统的最大化/还原按钮能正常切换。这些字段记录

@@ -1168,6 +1168,41 @@ MTK가 아닌 기기에서 사용하면 인코딩 실패나 화면 이상이 발
     </message>
 </context>
 <context>
+    <name>QObject</name>
+    <message>
+        <source>未找到 adb，请在设置中检查 adb 路径</source>
+        <translation>adb를 찾을 수 없습니다. 설정에서 adb 경로를 확인하세요</translation>
+    </message>
+    <message>
+        <source>设备日志抓取已在进行中</source>
+        <translation>기기 로그 캡처가 이미 실행 중입니다</translation>
+    </message>
+    <message>
+        <source>无法创建日志目录：%1</source>
+        <translation>로그 디렉터리를 만들 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>无法写入日志文件：%1</source>
+        <translation>로그 파일을 쓸 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>正在抓取设备日志…</source>
+        <translation>기기 로그를 캡처하는 중…</translation>
+    </message>
+    <message>
+        <source>adb logcat 启动失败，请检查 adb 与设备</source>
+        <translation>adb logcat 시작 실패. adb와 기기를 확인하세요</translation>
+    </message>
+    <message>
+        <source>设备日志已清空</source>
+        <translation>기기 로그를 지웠습니다</translation>
+    </message>
+    <message>
+        <source>清空设备日志失败（退出码 %1）</source>
+        <translation>기기 로그 지우기 실패 (종료 코드 %1)</translation>
+    </message>
+</context>
+<context>
     <name>ToolForm</name>
     <message>
         <source>Tool</source>
@@ -1276,6 +1311,42 @@ MTK가 아닌 기기에서 사용하면 인코딩 실패나 화면 이상이 발
     <message>
         <source>Screenshot copied, ready to paste</source>
         <translation>스크린샷이 복사되었습니다. 붙여넣을 수 있습니다</translation>
+    </message>
+    <message>
+        <source>清空设备日志</source>
+        <translation>기기 로그 지우기</translation>
+    </message>
+    <message>
+        <source>停止抓取设备日志</source>
+        <translation>기기 로그 캡처 중지</translation>
+    </message>
+    <message>
+        <source>开始抓取设备日志</source>
+        <translation>기기 로그 캡처 시작</translation>
+    </message>
+    <message>
+        <source>设备日志</source>
+        <translation>기기 로그</translation>
+    </message>
+    <message>
+        <source>日志抓取被中断，已保存到：
+%1</source>
+        <translation>로그 캡처가 중단되었습니다. 저장 위치:
+%1</translation>
+    </message>
+    <message>
+        <source>已保存到：
+%1</source>
+        <translation>저장 위치:
+%1</translation>
+    </message>
+    <message>
+        <source>大小：%1 KB</source>
+        <translation>크기: %1 KB</translation>
+    </message>
+    <message>
+        <source>打开文件夹</source>
+        <translation>폴더 열기</translation>
     </message>
 </context>
 <context>
@@ -1395,6 +1466,10 @@ Note: almost no content was captured; the screen may have been off the whole tim
 오디오: %3
 
 참고: 캡처된 내용이 거의 없습니다. 화면이 계속 꺼져 있었을 수 있습니다.</translation>
+    </message>
+    <message>
+        <source>投屏已熄屏，点击亮屏</source>
+        <translation>미러링 꺼짐, 클릭해서 켜기</translation>
     </message>
 </context>
 <context>
@@ -1652,6 +1727,10 @@ Note: almost no content was captured; the screen may have been off the whole tim
     <message>
         <source>refresh</source>
         <translation>새로 고침</translation>
+    </message>
+    <message>
+        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
+        <translation>5분 동안 조작이 없으면 미러링 화면이 자동으로 꺼집니다. 미러링 창을 클릭하면 화면 표시만 복구되며, 기기 화면은 꺼진 상태로 유지됩니다.</translation>
     </message>
 </context>
 <context>

@@ -1142,6 +1142,15 @@ void Dialog::startServerFor(const QString &serial)
 {
     outLog("start server...", false);
 
+    // 勾选状态实时同步到配置：VideoForm 构造时读 Config.autoOffScreen 决定
+    // 是否启用投屏端无操作熄屏，而完整配置保存要等程序关闭（~Dialog），
+    // 这里不提前同步的话，本会话内勾选后连接的设备（含多台）全部不生效
+    {
+        UserBootConfig bootCfg = Config::getInstance().getUserBootConfig();
+        bootCfg.autoOffScreen = ui->closeScreenCheck->isChecked();
+        Config::getInstance().setUserBootConfig(bootCfg);
+    }
+
     // 这里“original”的 toUShort 结果为 0 也是可接受的情况
     quint16 videoSize = ui->maxSizeBox->currentText().trimmed().toUShort();
     qsc::DeviceParams params;

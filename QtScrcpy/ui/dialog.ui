@@ -954,6 +954,9 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="toolTip">
+               <string>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</string>
+              </property>
               <property name="text">
                <string>screen-off</string>
               </property>

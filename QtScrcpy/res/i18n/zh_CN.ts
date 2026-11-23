@@ -1168,6 +1168,41 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</source
     </message>
 </context>
 <context>
+    <name>QObject</name>
+    <message>
+        <source>未找到 adb，请在设置中检查 adb 路径</source>
+        <translation>未找到 adb，请在设置中检查 adb 路径</translation>
+    </message>
+    <message>
+        <source>设备日志抓取已在进行中</source>
+        <translation>设备日志抓取已在进行中</translation>
+    </message>
+    <message>
+        <source>无法创建日志目录：%1</source>
+        <translation>无法创建日志目录：%1</translation>
+    </message>
+    <message>
+        <source>无法写入日志文件：%1</source>
+        <translation>无法写入日志文件：%1</translation>
+    </message>
+    <message>
+        <source>正在抓取设备日志…</source>
+        <translation>正在抓取设备日志…</translation>
+    </message>
+    <message>
+        <source>adb logcat 启动失败，请检查 adb 与设备</source>
+        <translation>adb logcat 启动失败，请检查 adb 与设备</translation>
+    </message>
+    <message>
+        <source>设备日志已清空</source>
+        <translation>设备日志已清空</translation>
+    </message>
+    <message>
+        <source>清空设备日志失败（退出码 %1）</source>
+        <translation>清空设备日志失败（退出码 %1）</translation>
+    </message>
+</context>
+<context>
     <name>ToolForm</name>
     <message>
         <source>Tool</source>
@@ -1276,6 +1311,42 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</source
     <message>
         <source>Screenshot copied, ready to paste</source>
         <translation>已截图，可以进行粘贴</translation>
+    </message>
+    <message>
+        <source>清空设备日志</source>
+        <translation>清空设备日志</translation>
+    </message>
+    <message>
+        <source>停止抓取设备日志</source>
+        <translation>停止抓取设备日志</translation>
+    </message>
+    <message>
+        <source>开始抓取设备日志</source>
+        <translation>开始抓取设备日志</translation>
+    </message>
+    <message>
+        <source>设备日志</source>
+        <translation>设备日志</translation>
+    </message>
+    <message>
+        <source>日志抓取被中断，已保存到：
+%1</source>
+        <translation>日志抓取被中断，已保存到：
+%1</translation>
+    </message>
+    <message>
+        <source>已保存到：
+%1</source>
+        <translation>已保存到：
+%1</translation>
+    </message>
+    <message>
+        <source>大小：%1 KB</source>
+        <translation>大小：%1 KB</translation>
+    </message>
+    <message>
+        <source>打开文件夹</source>
+        <translation>打开文件夹</translation>
     </message>
 </context>
 <context>
@@ -1395,6 +1466,10 @@ Note: almost no content was captured; the screen may have been off the whole tim
 音频: %3
 
 注意：几乎没有捕获到内容——屏幕可能全程处于息屏状态。</translation>
+    </message>
+    <message>
+        <source>投屏已熄屏，点击亮屏</source>
+        <translation>投屏已熄屏，点击亮屏</translation>
     </message>
 </context>
 <context>
@@ -1652,6 +1727,10 @@ Note: almost no content was captured; the screen may have been off the whole tim
     <message>
         <source>Encoder Settings...</source>
         <translation>编码器设置...</translation>
+    </message>
+    <message>
+        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
+        <translation>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</translation>
     </message>
 </context>
 <context>

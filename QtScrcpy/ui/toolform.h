@@ -17,6 +17,7 @@ namespace Ui
 }
 
 class Device;       // 前向声明，避免引入完整头文件
+class DeviceLogGrabber; // 设备日志抓取器（清空/开始/停止）
 class QLabel;       // 前向声明，提示标签使用
 class QPushButton;  // 前向声明，设置菜单按钮使用
 // 右侧吸附式工具栏：随视频窗口显示，提供截屏、录制、按键、设置等快捷控制
@@ -79,6 +80,11 @@ private:
     void hideSettingsMenu();                // 隐藏扩展菜单并停止隐藏检测定时器
     void startActivity(const QString &action); // 通过 adb 打开指定 Android 设置页
     void showScreenshotHint();              // 显示“已截图，可以粘贴”轻量提示
+    void showToastText(const QString &text); // 通用轻量提示（日志操作结果等）
+    void onDeviceLogCaptured(const QString &path, bool error); // 日志抓取会话结束弹窗（确认+打开文件夹）
+    void openLogFileFolder(const QString &filePath) const; // 资源管理器定位日志文件
+    void updateLogGrabUi(bool grabbing);    // 抓取状态变化 → 菜单文案/齿轮红点联动
+    void placeGrabDot();                    // 定位齿轮按钮上的“抓取中”红点
     void retranslateDynamicUi();            // 刷新代码动态创建、Designer 无法自动 retrans 的文案
 
 private:
@@ -95,6 +101,10 @@ private:
     QElapsedTimer m_recordElapsed;  // 录制已持续时长
     QWidget *m_settingsMenu = nullptr; // 悬停弹出的设置子菜单（无边框工具窗口）
     QList<QPushButton *> m_settingsMenuButtons; // 设置菜单按钮（语言切换时刷新文本）
+    QPushButton *m_clearLogBtn = nullptr;   // 设备日志清空入口
+    QPushButton *m_grabLogBtn = nullptr;    // 设备日志抓取开始/停止入口
+    DeviceLogGrabber *m_logGrabber = nullptr; // 设备日志抓取器（随本窗口销毁自动停止）
+    QLabel *m_grabDot = nullptr;            // 齿轮按钮右上角“抓取中”红点
     QLabel *m_toast = nullptr;          // 截图成功后的轻量提示标签
 };
 

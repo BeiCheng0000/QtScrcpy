@@ -1168,6 +1168,41 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</transl
     </message>
 </context>
 <context>
+    <name>QObject</name>
+    <message>
+        <source>未找到 adb，请在设置中检查 adb 路径</source>
+        <translation>adb not found, please check the adb path in settings</translation>
+    </message>
+    <message>
+        <source>设备日志抓取已在进行中</source>
+        <translation>Device log capture is already running</translation>
+    </message>
+    <message>
+        <source>无法创建日志目录：%1</source>
+        <translation>Cannot create log directory: %1</translation>
+    </message>
+    <message>
+        <source>无法写入日志文件：%1</source>
+        <translation>Cannot write log file: %1</translation>
+    </message>
+    <message>
+        <source>正在抓取设备日志…</source>
+        <translation>Capturing device log...</translation>
+    </message>
+    <message>
+        <source>adb logcat 启动失败，请检查 adb 与设备</source>
+        <translation>adb logcat failed to start, please check adb and device</translation>
+    </message>
+    <message>
+        <source>设备日志已清空</source>
+        <translation>Device log cleared</translation>
+    </message>
+    <message>
+        <source>清空设备日志失败（退出码 %1）</source>
+        <translation>Failed to clear device log (exit %1)</translation>
+    </message>
+</context>
+<context>
     <name>ToolForm</name>
     <message>
         <source>Tool</source>
@@ -1276,6 +1311,42 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</transl
     <message>
         <source>Screenshot copied, ready to paste</source>
         <translation>Screenshot copied, ready to paste</translation>
+    </message>
+    <message>
+        <source>清空设备日志</source>
+        <translation>Clear device log</translation>
+    </message>
+    <message>
+        <source>停止抓取设备日志</source>
+        <translation>Stop device log capture</translation>
+    </message>
+    <message>
+        <source>开始抓取设备日志</source>
+        <translation>Start device log capture</translation>
+    </message>
+    <message>
+        <source>设备日志</source>
+        <translation>device log</translation>
+    </message>
+    <message>
+        <source>日志抓取被中断，已保存到：
+%1</source>
+        <translation>Log capture was interrupted, saved to:
+%1</translation>
+    </message>
+    <message>
+        <source>已保存到：
+%1</source>
+        <translation>Saved to:
+%1</translation>
+    </message>
+    <message>
+        <source>大小：%1 KB</source>
+        <translation>Size: %1 KB</translation>
+    </message>
+    <message>
+        <source>打开文件夹</source>
+        <translation>open folder</translation>
     </message>
 </context>
 <context>
@@ -1395,6 +1466,10 @@ Size: %2 MB
 Audio: %3
 
 Note: almost no content was captured; the screen may have been off the whole time.</translation>
+    </message>
+    <message>
+        <source>投屏已熄屏，点击亮屏</source>
+        <translation>Mirroring is off, click to resume</translation>
     </message>
 </context>
 <context>
@@ -1652,6 +1727,10 @@ Note: almost no content was captured; the screen may have been off the whole tim
     <message>
         <source>Open encoder advanced settings: optimization levels for visual quality and performance.</source>
         <translation>Open encoder advanced settings: optimization levels for visual quality and performance.</translation>
+    </message>
+    <message>
+        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
+        <translation>Mirroring view turns off after 5 minutes of inactivity; click the mirroring window to resume the view only, the device screen stays off.</translation>
     </message>
 </context>
 <context>

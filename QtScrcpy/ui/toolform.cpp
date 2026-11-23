@@ -1,19 +1,27 @@
 #include <QApplication>
 #include <QCursor>
 #include <QDebug>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFileInfo>
+#include <QFrame>
 #include <QGuiApplication>
 #include <QHideEvent>
 #include <QLabel>
 #include <QLayout>
+#include <QMessageBox>
 #include <QMouseEvent>
+#include <QProcess>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScreen>
 #include <QShowEvent>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include "iconhelper.h"
 #include "apkinstalldialog.h"
+#include "deviceloggrabber.h"
 #include "toolform.h"
 #include "ui_toolform.h"
 #include "videoform.h"
@@ -71,6 +79,20 @@ ToolForm::ToolForm(QWidget *adsorbWidget, AdsorbPositions adsorbPos) : MagneticW
             m_toast->hide();
         }
     });
+
+    // 设备日志抓取器：状态变化驱动菜单文案与齿轮红点；结果经通用 toast 提示。
+    // 本窗口销毁时 Grabber 析构自动结束抓取会话并落盘。
+    m_logGrabber = new DeviceLogGrabber(this);
+    connect(m_logGrabber, &DeviceLogGrabber::stateChanged, this, &ToolForm::updateLogGrabUi);
+    connect(m_logGrabber, &DeviceLogGrabber::message, this, &ToolForm::showToastText);
+    connect(m_logGrabber, &DeviceLogGrabber::captureFinished, this, &ToolForm::onDeviceLogCaptured);
+
+    // 齿轮按钮右上角“抓取中”红点（仅状态提示，不接收鼠标事件）
+    m_grabDot = new QLabel(ui->expandSettingsBtn);
+    m_grabDot->setStyleSheet(QStringLiteral("background:#e53935; border-radius:4px;"));
+    m_grabDot->setFixedSize(8, 8);
+    m_grabDot->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    m_grabDot->hide();
 }
 
 ToolForm::~ToolForm()
@@ -208,6 +230,17 @@ void ToolForm::retranslateDynamicUi()
     for (int i = 0; i < m_settingsMenuButtons.size() && i < 4; ++i) {
         m_settingsMenuButtons.at(i)->setText(texts[i]);
     }
+    // 设备日志入口（抓取项文案随状态切换）
+    if (m_clearLogBtn) {
+        m_clearLogBtn->setText(tr("清空设备日志"));
+    }
+    if (m_grabLogBtn) {
+        const bool grabbing = m_logGrabber && m_logGrabber->isGrabbing();
+        m_grabLogBtn->setText(grabbing ? tr("停止抓取设备日志") : tr("开始抓取设备日志"));
+    }
+    if (m_settingsMenu && m_settingsMenu->isVisible()) {
+        m_settingsMenu->adjustSize();
+    }
     // 截图提示是临时 label，若当前正显示则同步更新
     if (m_toast && m_toast->isVisible()) {
         m_toast->setText(tr("Screenshot copied, ready to paste"));
@@ -309,6 +342,39 @@ void ToolForm::createSettingsMenu()
         }
         layout->addWidget(button);
     }
+
+    // 分隔线 + 设备日志操作区：清空 / 抓取开始-停止（同一入口按状态切换文案）
+    auto *separator = new QFrame(m_settingsMenu);
+    separator->setFrameShape(QFrame::HLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    separator->setStyleSheet(QStringLiteral("color: #5a5a5a;"));
+    layout->addWidget(separator);
+
+    m_clearLogBtn = new QPushButton(tr("清空设备日志"), m_settingsMenu);
+    m_clearLogBtn->setCursor(Qt::PointingHandCursor);
+    connect(m_clearLogBtn, &QPushButton::clicked, this, [this]() {
+        hideSettingsMenu();
+        if (m_logGrabber) {
+            m_logGrabber->clear(m_serial);
+        }
+    });
+    layout->addWidget(m_clearLogBtn);
+
+    m_grabLogBtn = new QPushButton(tr("开始抓取设备日志"), m_settingsMenu);
+    m_grabLogBtn->setCursor(Qt::PointingHandCursor);
+    connect(m_grabLogBtn, &QPushButton::clicked, this, [this]() {
+        hideSettingsMenu();
+        if (!m_logGrabber) {
+            return;
+        }
+        if (m_logGrabber->isGrabbing()) {
+            m_logGrabber->stop();
+        } else {
+            m_logGrabber->start(m_serial);
+        }
+    });
+    layout->addWidget(m_grabLogBtn);
+
     m_settingsMenu->adjustSize();
 }
 
@@ -392,6 +458,101 @@ void ToolForm::showScreenshotHint()
     m_toast->show();
     m_toast->raise();
     m_toastTimer.start(2200);
+}
+
+void ToolForm::showToastText(const QString &text)
+{
+    if (!m_toast) {
+        m_toast = new QLabel(this, Qt::Tool | Qt::FramelessWindowHint);
+        m_toast->setAttribute(Qt::WA_ShowWithoutActivating, true);
+        m_toast->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        m_toast->setAlignment(Qt::AlignCenter);
+        m_toast->setStyleSheet(R"(QLabel {
+            color: #ffffff;
+            background: #2b2b2b;
+            border: 1px solid #5a5a5a;
+            border-radius: 4px;
+            padding: 8px 14px;
+            font-size: 13px;
+        })");
+    }
+
+    m_toast->setText(text);
+    m_toast->adjustSize();
+
+    const QPoint anchor = ui->expandSettingsBtn->mapToGlobal(QPoint(0, 0));
+    int x = anchor.x() - m_toast->width() - 8;
+    int y = anchor.y() + (ui->expandSettingsBtn->height() - m_toast->height()) / 2;
+    if (QScreen *primary = QGuiApplication::primaryScreen()) {
+        const QRect screen = primary->availableGeometry();
+        x = qBound(screen.left(), x, screen.right() - m_toast->width() + 1);
+        y = qBound(screen.top(), y, screen.bottom() - m_toast->height() + 1);
+    }
+    m_toast->move(x, y);
+    m_toast->show();
+    m_toast->raise();
+    m_toastTimer.start(2600);
+}
+
+void ToolForm::onDeviceLogCaptured(const QString &path, bool error)
+{
+    // 与录制视频结束弹窗同款：保存路径 + 文件大小 + 打开文件夹定位 + 确认
+    QFileInfo fileInfo(path);
+    QMessageBox box(this);
+    box.setIcon(error ? QMessageBox::Warning : QMessageBox::Information);
+    box.setWindowTitle(tr("设备日志"));
+    box.setText(error ? tr("日志抓取被中断，已保存到：\n%1").arg(QDir::toNativeSeparators(path))
+                      : tr("已保存到：\n%1").arg(QDir::toNativeSeparators(path)));
+    box.setInformativeText(tr("大小：%1 KB").arg(fileInfo.size() / 1024.0, 0, 'f', 1));
+    QPushButton *openButton = box.addButton(tr("打开文件夹"), QMessageBox::ActionRole);
+    box.addButton(QMessageBox::Ok);
+    box.exec();
+    if (box.clickedButton() == openButton) {
+        openLogFileFolder(path);
+    }
+}
+
+void ToolForm::openLogFileFolder(const QString &filePath) const
+{
+    // 与录制完成"打开文件夹"一致：优先资源管理器 /select 定位到文件本身
+    const QString dir = QFileInfo(filePath).absolutePath();
+#if defined(Q_OS_WIN32)
+    if (!QProcess::startDetached(QStringLiteral("explorer.exe"),
+                                 QStringList{QStringLiteral("/select,%1").arg(QDir::toNativeSeparators(filePath))})) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+    }
+#elif defined(Q_OS_MACOS)
+    if (!QProcess::startDetached(QStringLiteral("open"), QStringList{QStringLiteral("-R"), filePath})) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+    }
+#else
+    QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+#endif
+}
+
+void ToolForm::updateLogGrabUi(bool grabbing)
+{
+    if (m_grabLogBtn) {
+        m_grabLogBtn->setText(grabbing ? tr("停止抓取设备日志") : tr("开始抓取设备日志"));
+    }
+    if (m_grabDot) {
+        m_grabDot->setVisible(grabbing);
+        if (grabbing) {
+            placeGrabDot();
+        }
+    }
+    if (m_settingsMenu && m_settingsMenu->isVisible()) {
+        m_settingsMenu->adjustSize();
+    }
+}
+
+void ToolForm::placeGrabDot()
+{
+    if (m_grabDot && ui->expandSettingsBtn) {
+        // 齿轮按钮右上角悬出一点，不遮挡图标
+        m_grabDot->move(ui->expandSettingsBtn->width() - 10, 4);
+        m_grabDot->raise();
+    }
 }
 
 void ToolForm::on_fullScreenBtn_clicked()
@@ -607,6 +768,7 @@ void ToolForm::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
     updateButtonSpacing();
+    placeGrabDot();
 }
 
 void ToolForm::updateButtonSpacing()
