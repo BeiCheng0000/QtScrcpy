@@ -363,9 +363,10 @@ void Device::initSignals()
                     }
                 });
 
-                // 显示界面时才自动息屏（m_params.display）
+                // 显示界面时才自动息屏（m_params.display）。走 Device 统一
+                // 入口：observer（VideoForm）能收到广播同步 m_displayOff
                 if (m_params.videoSource == VIDEO_SOURCE_DISPLAY && m_params.closeScreen && m_params.display && m_controller) {
-                    m_controller->setDisplayPower(false);
+                    setDisplayPower(false);
                 }
                 // 启动 Android 应用仅对显示采集有意义。部分打包的服务端版本在
                 // 相机流活跃时不接受控制消息类型 16，会导致会话终止。

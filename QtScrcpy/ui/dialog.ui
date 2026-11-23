@@ -955,10 +955,35 @@
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</string>
+               <string>勾选后连接即熄灭设备屏幕；投屏画面在设定时长无操作后盖黑幕，点击黑幕临时点亮设备看画面，亮屏后无操作 1 分钟自动重新熄灭。</string>
               </property>
               <property name="text">
                <string>screen-off</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QSpinBox" name="autoOffMinutesBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>投屏黑幕的无操作触发时长（分钟），默认 5 分钟。</string>
+              </property>
+              <property name="suffix">
+               <string> 分钟</string>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>120</number>
+              </property>
+              <property name="value">
+               <number>5</number>
               </property>
              </widget>
             </item>

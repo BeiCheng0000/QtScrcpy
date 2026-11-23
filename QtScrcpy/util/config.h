@@ -34,6 +34,7 @@ struct UserBootConfig
     bool showFPS          = false;
     bool windowOnTop      = false;
     bool autoOffScreen    = false;
+    int autoOffMinutes    = 5;   // 「自动熄屏」无操作时长（分钟），默认 5 分钟
     bool framelessWindow  = false;
     bool keepAlive        = false;
     bool simpleMode       = false;

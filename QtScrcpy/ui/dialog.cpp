@@ -778,6 +778,7 @@ void Dialog::updateBootConfig(bool toView)
         ui->fpsCheck->setChecked(config.showFPS);
         ui->alwaysTopCheck->setChecked(config.windowOnTop);
         ui->closeScreenCheck->setChecked(config.autoOffScreen);
+        ui->autoOffMinutesBox->setValue(qBound(1, config.autoOffMinutes, 120));
         ui->stayAwakeCheck->setChecked(config.keepAlive);
         ui->useSingleModeCheck->setChecked(config.simpleMode);
         ui->autoUpdatecheckBox->setChecked(config.autoUpdateDevice);
@@ -823,6 +824,7 @@ void Dialog::updateBootConfig(bool toView)
         config.showFPS = ui->fpsCheck->isChecked();
         config.windowOnTop = ui->alwaysTopCheck->isChecked();
         config.autoOffScreen = ui->closeScreenCheck->isChecked();
+        config.autoOffMinutes = ui->autoOffMinutesBox->value();
         config.framelessWindow = ui->framelessCheck->isChecked();
         config.keepAlive = ui->stayAwakeCheck->isChecked();
         config.simpleMode = ui->useSingleModeCheck->isChecked();
@@ -1148,6 +1150,7 @@ void Dialog::startServerFor(const QString &serial)
     {
         UserBootConfig bootCfg = Config::getInstance().getUserBootConfig();
         bootCfg.autoOffScreen = ui->closeScreenCheck->isChecked();
+        bootCfg.autoOffMinutes = ui->autoOffMinutesBox->value();
         Config::getInstance().setUserBootConfig(bootCfg);
     }
 
@@ -1636,6 +1639,9 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
     }
     auto videoForm = new VideoForm(ui->framelessCheck->isChecked(), ui->showToolbar->isChecked(), ui->decodeModeBox->currentIndex());
     videoForm->setSerial(serial);
+    // 与 params.closeScreen 同源：都取「自动熄屏」勾选框，避免 Config
+    // 与 UI 不同步导致投屏黑幕/点击电源逻辑整体失效
+    videoForm->setAutoOffEnabled(ui->closeScreenCheck->isChecked(), ui->autoOffMinutesBox->value());
     // 用户点 X 关闭投屏窗口 = 主动断开：标记豁免，防止自动重连把窗口复活。
     // 掉线清理路径（onDeviceDisconnected）也会 close 窗口，但会先把自己登记到
     // m_internalClosing：那种 close 不代表用户操作，不得触发豁免

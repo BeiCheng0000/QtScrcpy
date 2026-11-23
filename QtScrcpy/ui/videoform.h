@@ -30,6 +30,9 @@ class VideoForm : public QWidget, public qsc::DeviceObserver
     Q_OBJECT
 public:
     explicit VideoForm(bool framelessWindow = false, bool showToolBar = true, int decodeMode = 0, QWidget *parent = 0);
+    // 由 dialog 用「自动熄屏」勾选框的值设置（与 params.closeScreen 同源），
+    // 不能只从 Config 读——两处不同步会导致投屏黑幕/点击电源逻辑整体失效
+    void setAutoOffEnabled(bool enabled, int idleMinutes);
     ~VideoForm();
 
     void staysOnTop(bool top = true);
@@ -81,9 +84,7 @@ private:
     //  - 点击亮屏只恢复本窗口显示，不下发任何设备指令，
     //    设备端屏幕保持其当前状态（勾选自动熄屏时即为熄屏）。
     void restartIdleTimer();       // 鼠标/键盘活动重置无操作计时
-    void enterMirroringOff();      // 达到无操作阈值：盖黑幕进入投屏熄屏
-    void exitMirroringOff();       // 点击亮屏：撤黑幕恢复投屏显示（含保护窗）
-    void placeScreenOffOverlay();  // 黑幕跟随画面区域（缩放/全屏）
+    void enterMirroringOff();      // 达到无操作阈值：直接关闭设备电源（setDisplayPower(false)）
 
     // 让窗口几何尺寸与视频宽高比保持同步。否则最大化（或从最小化还原）后会
     // 留下大片黑边。
@@ -98,6 +99,8 @@ private:
     void updateFPS(quint32 fps, quint32 skipped) override;
     void onVideoSessionChanged(const QSize &size, bool clientResized) override;
     void grabCursor(bool grab) override;
+    void setDisplayPower(bool on) override; // 设备电源状态回执，同步 m_displayOff
+    bool isDeviceScreenOff() const;         // 实时查询设备物理屏是否熄灭（adb）
 
     // 皮肤（手机边框）已废弃：原 updateStyleSheet/getMargins 随之删除
     void initUI();
@@ -189,15 +192,16 @@ private:
     QString m_recordAudioKey;
     bool m_closing = false;
 
-    // 投屏端熄屏状态：m_mirroringOff 仅表示本窗口画面被盖黑（与设备端
-    // 熄屏无关，点击亮屏不下发任何设备指令，设备屏幕保持其当前状态）；
-    // m_resumeGuard 为亮屏后 500ms 保护窗，吞掉窗口期内的
-    // 鼠标事件防止误触发；m_idleTimer 计无操作时长（仅勾选自动熄屏时启用）
-    bool m_mirroringOff = false;
+    // 投屏端熄屏流程（勾选「自动熄屏」）：连接即熄灭设备物理屏（视频流
+    // 继续捕获，投屏有画面）→ 无操作 N 分钟盖投屏黑幕 → 点击黑幕仅撤掉
+    // 黑幕恢复投屏显示，设备保持熄屏；m_resumeGuard 为亮屏后 500ms
+    // 保护窗，吞掉窗口期内的鼠标事件防止误触发
+    bool m_mirroringOff = false; // 保留：仅表示设备灭屏态（点击投屏走电源键逻辑），不再有黑幕
     bool m_autoOffEnabled = false;
+    int m_idleMinutes = 5;      // dialog 传入的无操作熄屏时长（分钟）
+    bool m_displayOff = false;  // 设备物理屏是否处于熄灭态（本程序下发的/自动熄屏的）
     QElapsedTimer m_resumeGuard;
     QTimer m_idleTimer;
-    QPointer<QLabel> m_screenOffOverlay;
 
     // 智能最大化状态。最大化时把画面放大到屏幕可容纳的最大尺寸（而不是留黑边），
     // 但窗口仍保持普通状态，使系统的最大化/还原按钮能正常切换。这些字段记录

@@ -50,21 +50,18 @@
 #endif
 
 // ===== 投屏端无操作自动熄屏 =====
-// 需外层勾选「自动熄屏」才启用。注意与设备端熄屏严格区分：
-// 这里盖黑的只是投屏窗口的显示，点击亮屏不下发任何设备指令。
-static const int kMirroringIdleOffMs = 5 * 60 * 1000; // 无操作 5 分钟熄屏
-
+// 需外层勾选「自动熄屏」才启用。无操作盖黑幕的时长由设置页配置
+// （config.autoOffMinutes，默认 5 分钟，1~120 兜底）；点击黑幕撤掉投屏
+// 黑幕，并让设备短暂亮屏以便视频流刷新，随后自动重新物理熄灭。
+// 电源键亮屏与关闭屏幕两条控制消息之间的间隔（毫秒）：太短会被设备
+// 连续处理导致"亮了又灭"看不到画面；太长则显得迟钝。300ms 足够让
+// 电源键先生效、视频流刷新一帧。
+static const int kPowerToCloseDelayMs = 300;
 VideoForm::VideoForm(bool framelessWindow, bool showToolbar, int decodeMode, QWidget *parent) : QWidget(parent), ui(new Ui::videoForm), m_decodeMode(decodeMode)
 {
     ui->setupUi(this);
-    // 投屏端无操作自动熄屏：仅在外层勾选「自动熄屏」后启用；熄屏对象是
-    // 投屏窗口的显示，点击亮屏不下发任何设备指令（与设备端熄屏无关）
-    m_autoOffEnabled = Config::getInstance().getUserBootConfig().autoOffScreen;
-    if (m_autoOffEnabled) {
-        m_idleTimer.setSingleShot(true);
-        connect(&m_idleTimer, &QTimer::timeout, this, &VideoForm::enterMirroringOff);
-        m_idleTimer.start(kMirroringIdleOffMs);
-    }
+    // 「自动熄屏」由 dialog 通过 setAutoOffEnabled() 传入（与设备连接参数
+    // closeScreen 同源），构造时不再读 Config 猜测，避免两处不同步
     m_flexResizeTimer.setSingleShot(true);
     m_flexResizeTimer.setInterval(300);
     // 全屏模式：轮询全局光标实现“贴屏幕右缘唤出工具栏，移出即收起”
@@ -293,6 +290,19 @@ void VideoForm::updateRender(int width, int height, uint8_t* dataY, uint8_t* dat
     }
     m_videoWidget->setFrameSize(QSize(width, height));
     m_videoWidget->updateTextures(dataY, dataU, dataV, linesizeY, linesizeU, linesizeV);
+}
+
+void VideoForm::setAutoOffEnabled(bool enabled, int idleMinutes)
+{
+    m_autoOffEnabled = enabled;
+    m_idleMinutes = qBound(1, idleMinutes, 120);
+    m_idleTimer.stop();
+    if (!enabled) {
+        return;
+    }
+    m_idleTimer.setSingleShot(true);
+    connect(&m_idleTimer, &QTimer::timeout, this, &VideoForm::enterMirroringOff);
+    m_idleTimer.start(m_idleMinutes * 60 * 1000);
 }
 
 void VideoForm::setSerial(const QString &serial)
@@ -996,67 +1006,63 @@ void VideoForm::grabCursor(bool grab)
 
 void VideoForm::restartIdleTimer()
 {
-    // 投屏端熄屏仅在启用时计时；任何鼠标/键盘活动都会重置计时
+    // 任何鼠标/键盘活动都重置投屏黑幕的无操作计时。必须用 dialog
+    // 传入的时长（与设置页一致），不能读 Config——两处不同步会导致
+    // 配置 1 分钟却按 Config 的旧值（如 5 分钟）计时
     if (m_autoOffEnabled && !m_mirroringOff) {
-        m_idleTimer.start(kMirroringIdleOffMs);
+        m_idleTimer.start(m_idleMinutes * 60 * 1000);
     }
+}
+
+void VideoForm::setDisplayPower(bool on)
+{
+    // 设备电源状态回执（工具栏电源键、Ctrl+O、连接熄屏、本程序点击
+    // 亮/熄均经 Device::setDisplayPower 广播）：同步真实状态，避免
+    // 靠猜测导致"普通点击就点亮设备"
+    m_displayOff = !on;
+}
+
+bool VideoForm::isDeviceScreenOff() const
+{
+    // 设备自己关电源（系统超时/手动按电源键）不会走 setDisplayPower
+    // 广播，m_displayOff 无从得知；点击投屏时实时查一次屏幕状态。
+    // adb shell dumpsys display 输出里 mScreenState=OFF 表示物理屏熄灭。
+    QString adb = Config::getInstance().getAdbPath();
+    if (adb.isEmpty()) {
+        adb = QStringLiteral("adb");
+    }
+    QProcess proc;
+    proc.setProgram(adb);
+    proc.setArguments({ QStringLiteral("-s"), m_serial, QStringLiteral("shell"),
+                        QStringLiteral("dumpsys display | grep mScreenState") });
+    proc.start();
+    if (!proc.waitForFinished(300)) {
+        proc.kill();
+        proc.waitForFinished(100);
+        return false; // 查询超时：不误判为熄屏，走正常触摸注入
+    }
+    const QString out = QString::fromLocal8Bit(proc.readAllStandardOutput());
+    return out.contains(QStringLiteral("mScreenState=OFF"));
 }
 
 bool VideoForm::eventFilter(QObject *watched, QEvent *event)
 {
-    // 黑幕上的鼠标按下：确定性捕获并退出投屏熄屏态（不依赖 QLabel
-    // 的未处理事件向父级传播），保证"点击亮屏"必定生效
-    if (watched == m_screenOffOverlay && event->type() == QEvent::MouseButtonPress && m_mirroringOff) {
-        exitMirroringOff();
-        return true;
-    }
     return QWidget::eventFilter(watched, event);
 }
 
 void VideoForm::enterMirroringOff()
 {
-    // 投屏端熄屏：黑幕盖住投屏画面并给出提示，不改变设备端状态
+    // 无操作 N 分钟：调一次电源键真正关闭设备电源（与手动闭环一致，
+    // 用 postPower 而非 setDisplayPower——后者对该设备无效），
+    // 不加任何投屏端黑幕/浮层。设备灭屏后的点击恢复由 mousePressEvent
+    // 中已闭环的"电源键亮屏 → 关闭屏幕"逻辑处理
     m_mirroringOff = true;
     m_idleTimer.stop();
-    if (!m_screenOffOverlay) {
-        m_screenOffOverlay = new QLabel(this);
-        m_screenOffOverlay->setText(tr("投屏已熄屏，点击亮屏"));
-        m_screenOffOverlay->setAlignment(Qt::AlignCenter);
-        m_screenOffOverlay->setCursor(Qt::PointingHandCursor);
-        m_screenOffOverlay->installEventFilter(this);
-        m_screenOffOverlay->setStyleSheet(R"(QLabel {
-            color: #d0d0d0;
-            background: #000000;
-            font-size: 15px;
-        })");
+    auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
+    if (device && !isDeviceScreenOff()) {
+        device->postPower(); // 设备亮屏时才按电源键熄灭（已灭屏则不动）
     }
-    placeScreenOffOverlay();
-    m_screenOffOverlay->show();
-    m_screenOffOverlay->raise();
-}
-
-void VideoForm::exitMirroringOff()
-{
-    // 点击亮屏：仅恢复本窗口的投屏显示，不下发任何设备指令，
-    // 设备端屏幕保持其当前状态（设备亮屏请使用工具栏电源键）
-    m_mirroringOff = false;
-    if (m_screenOffOverlay) {
-        m_screenOffOverlay->hide();
-    }
-    // 500ms 保护窗：吞掉恢复显示瞬间的释放/双击/滚轮，防止这次
-    // "亮屏点击"被继续当成触摸注入设备（误触发防护）
-    m_resumeGuard.start();
-    restartIdleTimer();
-}
-
-void VideoForm::placeScreenOffOverlay()
-{
-    if (!m_screenOffOverlay) {
-        return;
-    }
-    QWidget *vw = videoWidget();
-    m_screenOffOverlay->setGeometry(vw ? vw->geometry() : rect());
-    m_screenOffOverlay->raise();
+    m_displayOff = true;
 }
 
 bool VideoForm::isRecording() const
@@ -1342,9 +1348,22 @@ void VideoForm::staysOnTop(bool top)
 
 void VideoForm::mousePressEvent(QMouseEvent *event)
 {
-    // 投屏端熄屏态：点击仅恢复投屏显示，不注入设备
-    if (m_mirroringOff) {
-        exitMirroringOff();
+    // 设备自己关电源（自动/手动）：点击投屏同样走
+    // "电源键亮屏 → 短暂亮屏后关闭屏幕"逻辑，且吞掉本次点击不注入设备
+    if (m_autoOffEnabled && isDeviceScreenOff()) {
+        m_mirroringOff = false; // 设备已灭屏态，本次点击走电源键闭环
+        auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
+        if (device) {
+            device->postPower(); // 电源键：点亮
+            QTimer::singleShot(kPowerToCloseDelayMs, this, [this]() {
+                auto dev = qsc::IDeviceManage::getInstance().getDevice(m_serial);
+                if (dev) {
+                    dev->setDisplayPower(false); // 工具栏关闭屏幕
+                }
+            });
+        }
+        m_resumeGuard.start();
+        restartIdleTimer();
         event->accept();
         return;
     }
@@ -1714,10 +1733,6 @@ void VideoForm::resizeEvent(QResizeEvent *event)
     syncLoadingOverlay();
     // APK 安装提示浮层保持居中
     syncInstallTip();
-    // 投屏端熄屏黑幕跟随画面区域
-    if (m_mirroringOff && m_screenOffOverlay && m_screenOffOverlay->isVisible()) {
-        placeScreenOffOverlay();
-    }
     if (m_toolForm && !isFullScreen()) {
         m_toolForm->resize(m_toolForm->width(), frameGeometry().height());
     }
