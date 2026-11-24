@@ -3,24 +3,30 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHideEvent>
 #include <QLabel>
 #include <QLayout>
+#include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QProcess>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QResizeEvent>
 #include <QScreen>
 #include <QShowEvent>
 #include <QUrl>
+#include <QVariant>
 #include <QVBoxLayout>
 
+#include "adbprocess.h"
 #include "iconhelper.h"
 #include "apkinstalldialog.h"
+#include "apkmanagerwindow.h"
 #include "deviceloggrabber.h"
 #include "toolform.h"
 #include "ui_toolform.h"
@@ -238,6 +244,12 @@ void ToolForm::retranslateDynamicUi()
         const bool grabbing = m_logGrabber && m_logGrabber->isGrabbing();
         m_grabLogBtn->setText(grabbing ? tr("停止抓取设备日志") : tr("开始抓取设备日志"));
     }
+    if (m_switchEnvBtn) {
+        m_switchEnvBtn->setText(tr("切换环境"));
+    }
+    if (m_apkManagerBtn) {
+        m_apkManagerBtn->setText(tr("APK管理"));
+    }
     if (m_settingsMenu && m_settingsMenu->isVisible()) {
         m_settingsMenu->adjustSize();
     }
@@ -375,6 +387,23 @@ void ToolForm::createSettingsMenu()
     });
     layout->addWidget(m_grabLogBtn);
 
+    // 分隔线 + 切换环境：点击后在按钮处弹出环境下拉菜单（正式/生产、灰度、测试、开发）
+    auto *envSeparator = new QFrame(m_settingsMenu);
+    envSeparator->setFrameShape(QFrame::HLine);
+    envSeparator->setFrameShadow(QFrame::Sunken);
+    envSeparator->setStyleSheet(QStringLiteral("color: #5a5a5a;"));
+    layout->addWidget(envSeparator);
+
+    m_switchEnvBtn = new QPushButton(tr("切换环境"), m_settingsMenu);
+    m_switchEnvBtn->setCursor(Qt::PointingHandCursor);
+    connect(m_switchEnvBtn, &QPushButton::clicked, this, &ToolForm::showEnvironmentMenu);
+    layout->addWidget(m_switchEnvBtn);
+
+    m_apkManagerBtn = new QPushButton(tr("APK管理"), m_settingsMenu);
+    m_apkManagerBtn->setCursor(Qt::PointingHandCursor);
+    connect(m_apkManagerBtn, &QPushButton::clicked, this, &ToolForm::openApkManager);
+    layout->addWidget(m_apkManagerBtn);
+
     m_settingsMenu->adjustSize();
 }
 
@@ -416,6 +445,200 @@ void ToolForm::hideSettingsMenu()
     if (m_settingsMenu) {
         m_settingsMenu->hide();
     }
+}
+
+void ToolForm::openApkManager()
+{
+    hideSettingsMenu();
+    if (m_serial.isEmpty()) {
+        showToastText(tr("未连接设备，无法管理 APK"));
+        return;
+    }
+    if (m_apkManager.isNull()) {
+        // parent 设为投屏窗口（ToolForm 的 parent 即 VideoForm），保证窗口层级绑定；
+        // ApkManagerWindow 内部会设为 Qt::Tool + 置顶，始终悬浮于投屏页面之上。
+        m_apkManager = new ApkManagerWindow(m_serial, parentWidget());
+        m_apkManager->setAttribute(Qt::WA_DeleteOnClose, true);
+    }
+    m_apkManager->showNormal();
+    m_apkManager->raise();
+    m_apkManager->activateWindow();
+}
+
+// 环境切换：在“切换环境”按钮位置弹出下拉菜单，选择后执行对应切换。
+// 四个环境与 切换环境v1.5.bat 一致：
+//   正式/生产 -> 删除 /sdcard/config.ini（恢复默认）
+//   灰度/测试/开发 -> 写 gray/test/dev 到临时 config.ini 并 push 到 /sdcard/config.ini
+// 切换完成后统一查询并清除所有包名含 com.jxw 的应用缓存。
+void ToolForm::showEnvironmentMenu()
+{
+    hideSettingsMenu();
+    if (m_serial.isEmpty()) {
+        showToastText(tr("未连接设备，无法切换环境"));
+        return;
+    }
+
+    // 用字面量 tr(...) 以便 lupdate 抽取；value 为空表示删除配置（正式/生产）
+    struct EnvItem
+    {
+        QString value;
+        QString label;
+    };
+    const QList<EnvItem> items = {
+        { QString(), tr("正式/生产") },
+        { QStringLiteral("gray"), tr("灰度") },
+        { QStringLiteral("test"), tr("测试") },
+        { QStringLiteral("dev"), tr("开发") },
+    };
+
+    QMenu menu;
+    menu.setObjectName(QStringLiteral("envMenu"));
+    menu.setStyleSheet(R"(
+        QMenu#envMenu {
+            background: #2b2b2b;
+            border: 1px solid #5a5a5a;
+        }
+        QMenu#envMenu::item { color: #f0f0f0; padding: 6px 22px 6px 14px; }
+        QMenu#envMenu::item:selected { background: #3d7fbf; }
+    )");
+    for (const EnvItem &item : items) {
+        QAction *action = menu.addAction(item.label);
+        action->setData(QVariant(item.value));
+    }
+
+    QAction *chosen = menu.exec(QCursor::pos());
+    if (!chosen) {
+        return;
+    }
+
+    const QString value = chosen->data().toString();
+    const QString label = chosen->text();
+    switchEnvironment(value, label);
+}
+
+void ToolForm::switchEnvironment(const QString &envKey, const QString &envLabel)
+{
+    if (m_envSwitching) {
+        showToastText(tr("环境切换进行中，请稍候"));
+        return;
+    }
+    m_envSwitching = true;
+    showToastText(tr("正在切换到「%1」环境…").arg(envLabel));
+
+    QPointer<ToolForm> guard = this;
+    auto switchDone = [this, guard, envLabel](bool ok, bool timedOut, const QString &out) {
+        if (!guard) {
+            return;
+        }
+        if (timedOut || !ok) {
+            m_envSwitching = false;
+            const QString detail = out.trimmed();
+            QString msg = tr("切换「%1」环境失败").arg(envLabel);
+            if (!detail.isEmpty()) {
+                msg += QStringLiteral("：") + detail;
+            }
+            showToastText(msg);
+            return;
+        }
+        // 配置已就位，查询所有包名含 com.jxw 的应用后逐个清缓存
+        adbExecAsync(QStringList() << QStringLiteral("shell") << QStringLiteral("pm list packages com.jxw"),
+                     15000,
+                     [this, guard, envLabel](bool listOk, bool listTimeout, const QString &listOut) {
+                         if (!guard) {
+                             return;
+                         }
+                         QStringList packages;
+                         if (listOk && !listTimeout) {
+                             for (const QString &rawLine : listOut.split('\n')) {
+                                 const QString line = rawLine.trimmed();
+                                 if (line.startsWith(QStringLiteral("package:"))) {
+                                     packages.append(line.mid(QStringLiteral("package:").size()).trimmed());
+                                 }
+                             }
+                         }
+                         if (packages.isEmpty()) {
+                             m_envSwitching = false;
+                             showToastText(tr("已切换到「%1」环境，未找到需清缓存的 com.jxw 应用").arg(envLabel));
+                             return;
+                         }
+                         clearJxwPackages(0, packages, 0, 0);
+                     });
+    };
+
+    if (envKey.isEmpty()) {
+        // 正式/生产：删除配置文件。rm 对不存在文件返回非 0，用 "rm -f" 保证幂等成功。
+        adbExecAsync(QStringList() << QStringLiteral("shell") << QStringLiteral("rm -f /sdcard/config.ini"),
+                     15000, switchDone);
+    } else {
+        // 灰度/测试/开发：写本地临时 config.ini（无换行，与 bat 的 set /p 一致）后 push。
+        QString safeSerial = m_serial;
+        safeSerial.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9_.-]")), QStringLiteral("_"));
+        const QString localPath = QDir::tempPath() + QStringLiteral("/qtscrcpy_env_config_")
+                                  + safeSerial + QStringLiteral(".ini");
+        QFile file(localPath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            m_envSwitching = false;
+            showToastText(tr("切换环境失败：无法写入临时配置文件"));
+            return;
+        }
+        const QByteArray content = envKey.toUtf8();
+        const bool written = file.write(content) == content.size();
+        file.close();
+        if (!written) {
+            m_envSwitching = false;
+            showToastText(tr("切换环境失败：无法写入临时配置文件"));
+            return;
+        }
+        QPointer<ToolForm> selfGuard = this;
+        adbExecAsync(QStringList() << QStringLiteral("push") << localPath << QStringLiteral("/sdcard/config.ini"),
+                     20000,
+                     [this, selfGuard, localPath, switchDone](bool ok, bool timedOut, const QString &out) {
+                         QFile::remove(localPath); // 无论成败都清理临时文件
+                         if (!selfGuard) {
+                             return;
+                         }
+                         switchDone(ok, timedOut, out);
+                     });
+    }
+}
+
+void ToolForm::clearJxwPackages(int index, const QStringList &packages, int cleared, int failed)
+{
+    if (index >= packages.size()) {
+        m_envSwitching = false;
+        QString msg = tr("环境切换完成：已清除 %1 个 com.jxw 应用缓存").arg(cleared);
+        if (failed > 0) {
+            msg += tr("，%1 个失败").arg(failed);
+        }
+        showToastText(msg);
+        return;
+    }
+
+    const QString package = packages.at(index);
+    QPointer<ToolForm> guard = this;
+    adbExecAsync(QStringList() << QStringLiteral("shell") << (QStringLiteral("pm clear ") + package), 15000,
+                 [this, guard, packages, index, cleared, failed](bool ok, bool timedOut, const QString &out) {
+                     if (!guard) {
+                         return;
+                     }
+                     // pm clear 成功输出 "Success"；部分 ROM 退出码为 0 却失败，故以输出为准
+                     const bool success = ok && !timedOut
+                                          && out.contains(QStringLiteral("Success"), Qt::CaseInsensitive);
+                     clearJxwPackages(index + 1, packages, cleared + (success ? 1 : 0), failed + (success ? 0 : 1));
+                 });
+}
+
+void ToolForm::adbExecAsync(const QStringList &args, int timeoutMs,
+                            const std::function<void(bool, bool, const QString &)> &done)
+{
+    auto *adb = new qsc::AdbProcess(this);
+    adb->executeWithTimeout(m_serial, args, timeoutMs,
+                            [adb, done](bool ok, bool timedOut, const QString &out) {
+                                if (done) {
+                                    done(ok, timedOut, out);
+                                }
+                                adb->deleteLater();
+                            });
 }
 
 void ToolForm::startActivity(const QString &action)

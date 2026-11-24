@@ -8,6 +8,8 @@
 #include <QTimer>
 #include <QWidget>
 
+#include <functional>
+
 #include "../QtScrcpyCore/include/QtScrcpyCore.h"
 #include "magneticwidget.h"
 
@@ -18,6 +20,7 @@ namespace Ui
 
 class Device;       // 前向声明，避免引入完整头文件
 class DeviceLogGrabber; // 设备日志抓取器（清空/开始/停止）
+class ApkManagerWindow; // APK 管理窗口（工具栏-系统设置）
 class QLabel;       // 前向声明，提示标签使用
 class QPushButton;  // 前向声明，设置菜单按钮使用
 // 右侧吸附式工具栏：随视频窗口显示，提供截屏、录制、按键、设置等快捷控制
@@ -87,6 +90,15 @@ private:
     void placeGrabDot();                    // 定位齿轮按钮上的“抓取中”红点
     void retranslateDynamicUi();            // 刷新代码动态创建、Designer 无法自动 retrans 的文案
 
+    // 切换环境（工具栏-系统设置悬浮菜单）：按环境写 /sdcard/config.ini 并清 com.jxw 缓存
+    void showEnvironmentMenu();                       // 在“切换环境”按钮处弹出环境下拉菜单
+    void switchEnvironment(const QString &envKey, const QString &envLabel); // 执行单环境切换全流程
+    void clearJxwPackages(int index, const QStringList &packages, int cleared, int failed); // 逐个清 com.jxw 应用缓存
+    void openApkManager();                             // 打开 APK 管理窗口（工具栏-系统设置悬浮菜单）
+    void adbExecAsync(const QStringList &args, int timeoutMs,
+                      const std::function<void(bool ok, bool timedOut, const QString &out)> &done); // 带超时的一次性 adb 执行封装
+
+
 private:
     Ui::ToolForm *ui;
     QPoint m_dragPosition;          // 拖拽时鼠标相对窗口左上角的偏移
@@ -106,6 +118,10 @@ private:
     DeviceLogGrabber *m_logGrabber = nullptr; // 设备日志抓取器（随本窗口销毁自动停止）
     QLabel *m_grabDot = nullptr;            // 齿轮按钮右上角“抓取中”红点
     QLabel *m_toast = nullptr;          // 截图成功后的轻量提示标签
+    QPushButton *m_switchEnvBtn = nullptr; // 设置菜单里的“切换环境”入口（语言切换时刷新文本）
+    QPushButton *m_apkManagerBtn = nullptr; // 设置菜单里的“APK管理”入口（语言切换时刷新文本）
+    bool m_envSwitching = false;        // 环境切换进行中，防止重复点击
+    QPointer<ApkManagerWindow> m_apkManager; // APK 管理窗口（每设备单实例，关闭自动释放）
 };
 
 #endif // TOOLFORM_H

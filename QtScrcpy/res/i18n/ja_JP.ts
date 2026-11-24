@@ -105,6 +105,133 @@
     </message>
 </context>
 <context>
+    <name>ApkManagerWindow</name>
+    <message>
+        <source>APK管理</source>
+        <translation>APK管理</translation>
+    </message>
+    <message>
+        <source>图标名称</source>
+        <translation>アイコン / 名前</translation>
+    </message>
+    <message>
+        <source>包名</source>
+        <translation>パッケージ名</translation>
+    </message>
+    <message>
+        <source>版本号</source>
+        <translation>バージョン</translation>
+    </message>
+    <message>
+        <source>操作</source>
+        <translation>操作</translation>
+    </message>
+    <message>
+        <source>刷新</source>
+        <translation>更新</translation>
+    </message>
+    <message>
+        <source>正在获取应用列表…</source>
+        <translation>アプリ一覧を取得中…</translation>
+    </message>
+    <message>
+        <source>获取应用列表失败</source>
+        <translation>アプリ一覧の取得に失敗しました</translation>
+    </message>
+    <message>
+        <source>未找到第三方应用</source>
+        <translation>サードパーティ製アプリが見つかりません</translation>
+    </message>
+    <message>
+        <source>打开</source>
+        <translation>開く</translation>
+    </message>
+    <message>
+        <source>卸载</source>
+        <translation>アンインストール</translation>
+    </message>
+    <message>
+        <source>清缓存</source>
+        <translation>キャッシュ消去</translation>
+    </message>
+    <message>
+        <source>杀进程</source>
+        <translation>強制停止</translation>
+    </message>
+    <message>
+        <source>已加载 %1 个应用</source>
+        <translation>%1 件のアプリを読み込みました</translation>
+    </message>
+    <message>
+        <source>正在解析 %1</source>
+        <translation>%1 を解析中</translation>
+    </message>
+    <message>
+        <source>已打开 %1</source>
+        <translation>%1 を開きました</translation>
+    </message>
+    <message>
+        <source>打开失败：%1</source>
+        <translation>open 失敗：%1</translation>
+    </message>
+    <message>
+        <source>已卸载 %1</source>
+        <translation>%1 をアンインストールしました</translation>
+    </message>
+    <message>
+        <source>卸载失败：%1</source>
+        <translation>アンインストール失敗：%1</translation>
+    </message>
+    <message>
+        <source>已清除 %1 的缓存</source>
+        <translation>%1 のキャッシュを消去しました</translation>
+    </message>
+    <message>
+        <source>清缓存失败：%1</source>
+        <translation>キャッシュ消去失敗：%1</translation>
+    </message>
+    <message>
+        <source>已杀掉 %1 的进程</source>
+        <translation>%1 を強制停止しました</translation>
+    </message>
+    <message>
+        <source>杀进程失败：%1</source>
+        <translation>強制停止失敗：%1</translation>
+    </message>
+    <message>
+        <source>卸载确认</source>
+        <translation>アンインストール確認</translation>
+    </message>
+    <message>
+        <source>确定卸载 %1 吗？</source>
+        <translation>%1 をアンインストールしますか？</translation>
+    </message>
+    <message>
+        <source>应用没有可启动的界面</source>
+        <translation>起動可能な画面がありません</translation>
+    </message>
+    <message>
+        <source>已复制到剪贴板</source>
+        <translation>クリップボードにコピーしました</translation>
+    </message>
+    <message>
+        <source>复制名称</source>
+        <translation>名前をコピー</translation>
+    </message>
+    <message>
+        <source>复制包名</source>
+        <translation>パッケージ名をコピー</translation>
+    </message>
+    <message>
+        <source>复制版本号</source>
+        <translation>バージョンをコピー</translation>
+    </message>
+    <message>
+        <source>复制整行</source>
+        <translation>行をコピー</translation>
+    </message>
+</context>
+<context>
     <name>Dialog</name>
     <message>
         <source>show</source>
@@ -1348,6 +1475,66 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</source
         <source>打开文件夹</source>
         <translation>フォルダーを開く</translation>
     </message>
+    <message>
+        <source>切换环境</source>
+        <translation>環境を切り替え</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法切换环境</source>
+        <translation>デバイスが接続されていないため、環境を切り替えられません</translation>
+    </message>
+    <message>
+        <source>正式/生产</source>
+        <translation>本番</translation>
+    </message>
+    <message>
+        <source>灰度</source>
+        <translation>グレー</translation>
+    </message>
+    <message>
+        <source>测试</source>
+        <translation>テスト</translation>
+    </message>
+    <message>
+        <source>开发</source>
+        <translation>開発</translation>
+    </message>
+    <message>
+        <source>环境切换进行中，请稍候</source>
+        <translation>環境切り替え中です。しばらくお待ちください</translation>
+    </message>
+    <message>
+        <source>正在切换到「%1」环境…</source>
+        <translation>「%1」環境に切り替えています…</translation>
+    </message>
+    <message>
+        <source>切换「%1」环境失败</source>
+        <translation>「%1」環境への切り替えに失敗しました</translation>
+    </message>
+    <message>
+        <source>已切换到「%1」环境，未找到需清缓存的 com.jxw 应用</source>
+        <translation>「%1」環境に切り替えました。キャッシュを消去する com.jxw アプリが見つかりません</translation>
+    </message>
+    <message>
+        <source>切换环境失败：无法写入临时配置文件</source>
+        <translation>切り替え失敗：一時設定ファイルを書き込めません</translation>
+    </message>
+    <message>
+        <source>环境切换完成：已清除 %1 个 com.jxw 应用缓存</source>
+        <translation>環境切り替え完了：%1 件の com.jxw アプリのキャッシュを消去しました</translation>
+    </message>
+    <message>
+        <source>，%1 个失败</source>
+        <translation>、%1 件失敗</translation>
+    </message>
+    <message>
+        <source>APK管理</source>
+        <translation>APK管理</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法管理 APK</source>
+        <translation>デバイスが接続されていないため、APK を管理できません</translation>
+    </message>
 </context>
 <context>
     <name>VideoForm</name>
@@ -1466,10 +1653,6 @@ Note: almost no content was captured; the screen may have been off the whole tim
 音声: %3
 
 注意: ほとんど内容が記録されていません。画面がずっとオフだった可能性があります。</translation>
-    </message>
-    <message>
-        <source>投屏已熄屏，点击亮屏</source>
-        <translation>ミラーリング停止中、クリックで再開</translation>
     </message>
 </context>
 <context>
@@ -1729,8 +1912,16 @@ Note: almost no content was captured; the screen may have been off the whole tim
         <translation>エンコーダー設定...</translation>
     </message>
     <message>
-        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
-        <translation>5分間操作がないとミラーリング表示が自動的にオフになります。ミラーリングウィンドウをクリックすると表示のみ復帰し、端末の画面はオフのままです。</translation>
+        <source>勾选后连接即熄灭设备屏幕；投屏画面在设定时长无操作后盖黑幕，点击黑幕临时点亮设备看画面，亮屏后无操作 1 分钟自动重新熄灭。</source>
+        <translation>チェックすると接続時にデバイス画面を消灯します。無操作時間が経過するとミラーリング画面に黒い覆いが表示され、クリックで一時的に画面を点灯し、点灯後 1 分無操作で再び自動消灯します。</translation>
+    </message>
+    <message>
+        <source>投屏黑幕的无操作触发时长（分钟），默认 5 分钟。</source>
+        <translation>ミラーリング画面の黒い覆いが表示される無操作時間（分）。既定値は 5 分です。</translation>
+    </message>
+    <message>
+        <source> 分钟</source>
+        <translation> 分</translation>
     </message>
 </context>
 <context>

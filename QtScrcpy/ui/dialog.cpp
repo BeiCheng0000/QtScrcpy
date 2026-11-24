@@ -36,6 +36,7 @@
 #include "videoform.h"
 #include "filemanagerwindow.h"
 #include "groupcontrolwidget.h"
+#include "apkmanagerwindow.h" // 设备连接成功后后台预热 APK 管理缓存
 #include "nowheelcontrols.h"
 #include "../groupcontroller/groupcontroller.h"
 
@@ -1637,6 +1638,10 @@ void Dialog::onDeviceConnected(bool success, const QString &serial, const QStrin
     if (serial == m_reconnectSerial) {
         stopAutoReconnect(); // 掉线设备已自动恢复
     }
+    // 后台预热 APK 管理磁盘缓存：连接成功后异步解析第三方应用，
+    // 用户之后打开「APK管理」直接命中缓存秒开；不阻塞投屏，同一 serial 仅一次。
+    ApkManagerWindow::warmUpCache(serial);
+
     auto videoForm = new VideoForm(ui->framelessCheck->isChecked(), ui->showToolbar->isChecked(), ui->decodeModeBox->currentIndex());
     videoForm->setSerial(serial);
     // 与 params.closeScreen 同源：都取「自动熄屏」勾选框，避免 Config
@@ -1727,6 +1732,7 @@ void Dialog::onDeviceDisconnected(QString serial)
     // 绝不能让已消失设备的 sndcpy 音频桥接继续播放。
     AudioOutput::instance().stopForDevice(serial);
     GroupController::instance().removeDevice(serial);
+    ApkManagerWindow::clearWarmedCache(serial); // 重连后允许再次预热，补上新装的应用
 
     // 文件管理窗口依附于设备会话：设备断开即关闭，避免对失效设备继续操作
     if (m_fileWindows.contains(serial)) {

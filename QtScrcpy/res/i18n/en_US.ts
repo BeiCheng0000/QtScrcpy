@@ -105,6 +105,133 @@
     </message>
 </context>
 <context>
+    <name>ApkManagerWindow</name>
+    <message>
+        <source>APK管理</source>
+        <translation>APK Manager</translation>
+    </message>
+    <message>
+        <source>图标名称</source>
+        <translation>Icon / Name</translation>
+    </message>
+    <message>
+        <source>包名</source>
+        <translation>Package</translation>
+    </message>
+    <message>
+        <source>版本号</source>
+        <translation>Version</translation>
+    </message>
+    <message>
+        <source>操作</source>
+        <translation>Actions</translation>
+    </message>
+    <message>
+        <source>刷新</source>
+        <translation>Refresh</translation>
+    </message>
+    <message>
+        <source>正在获取应用列表…</source>
+        <translation>Loading app list…</translation>
+    </message>
+    <message>
+        <source>获取应用列表失败</source>
+        <translation>Failed to get app list</translation>
+    </message>
+    <message>
+        <source>未找到第三方应用</source>
+        <translation>No third-party apps found</translation>
+    </message>
+    <message>
+        <source>打开</source>
+        <translation>Open</translation>
+    </message>
+    <message>
+        <source>卸载</source>
+        <translation>Uninstall</translation>
+    </message>
+    <message>
+        <source>清缓存</source>
+        <translation>Clear cache</translation>
+    </message>
+    <message>
+        <source>杀进程</source>
+        <translation>Force stop</translation>
+    </message>
+    <message>
+        <source>已加载 %1 个应用</source>
+        <translation>Loaded %1 app(s)</translation>
+    </message>
+    <message>
+        <source>正在解析 %1</source>
+        <translation>Parsing %1</translation>
+    </message>
+    <message>
+        <source>已打开 %1</source>
+        <translation>Opened %1</translation>
+    </message>
+    <message>
+        <source>打开失败：%1</source>
+        <translation>Failed to open: %1</translation>
+    </message>
+    <message>
+        <source>已卸载 %1</source>
+        <translation>Uninstalled %1</translation>
+    </message>
+    <message>
+        <source>卸载失败：%1</source>
+        <translation>Failed to uninstall: %1</translation>
+    </message>
+    <message>
+        <source>已清除 %1 的缓存</source>
+        <translation>Cleared cache for %1</translation>
+    </message>
+    <message>
+        <source>清缓存失败：%1</source>
+        <translation>Failed to clear cache: %1</translation>
+    </message>
+    <message>
+        <source>已杀掉 %1 的进程</source>
+        <translation>Force-stopped %1</translation>
+    </message>
+    <message>
+        <source>杀进程失败：%1</source>
+        <translation>Failed to force stop: %1</translation>
+    </message>
+    <message>
+        <source>卸载确认</source>
+        <translation>Uninstall confirmation</translation>
+    </message>
+    <message>
+        <source>确定卸载 %1 吗？</source>
+        <translation>Uninstall %1?</translation>
+    </message>
+    <message>
+        <source>应用没有可启动的界面</source>
+        <translation>App has no launchable activity</translation>
+    </message>
+    <message>
+        <source>已复制到剪贴板</source>
+        <translation>Copied to clipboard</translation>
+    </message>
+    <message>
+        <source>复制名称</source>
+        <translation>Copy name</translation>
+    </message>
+    <message>
+        <source>复制包名</source>
+        <translation>Copy package</translation>
+    </message>
+    <message>
+        <source>复制版本号</source>
+        <translation>Copy version</translation>
+    </message>
+    <message>
+        <source>复制整行</source>
+        <translation>Copy row</translation>
+    </message>
+</context>
+<context>
     <name>Dialog</name>
     <message>
         <source>show</source>
@@ -1348,6 +1475,66 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</transl
         <source>打开文件夹</source>
         <translation>open folder</translation>
     </message>
+    <message>
+        <source>切换环境</source>
+        <translation>Switch Environment</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法切换环境</source>
+        <translation>No device connected, cannot switch environment</translation>
+    </message>
+    <message>
+        <source>正式/生产</source>
+        <translation>Production</translation>
+    </message>
+    <message>
+        <source>灰度</source>
+        <translation>Gray</translation>
+    </message>
+    <message>
+        <source>测试</source>
+        <translation>Test</translation>
+    </message>
+    <message>
+        <source>开发</source>
+        <translation>Dev</translation>
+    </message>
+    <message>
+        <source>环境切换进行中，请稍候</source>
+        <translation>Environment switch in progress, please wait</translation>
+    </message>
+    <message>
+        <source>正在切换到「%1」环境…</source>
+        <translation>Switching to &quot;%1&quot; environment…</translation>
+    </message>
+    <message>
+        <source>切换「%1」环境失败</source>
+        <translation>Failed to switch to &quot;%1&quot; environment</translation>
+    </message>
+    <message>
+        <source>已切换到「%1」环境，未找到需清缓存的 com.jxw 应用</source>
+        <translation>Switched to &quot;%1&quot; environment; no com.jxw apps found to clear</translation>
+    </message>
+    <message>
+        <source>切换环境失败：无法写入临时配置文件</source>
+        <translation>Switch failed: cannot write temporary config file</translation>
+    </message>
+    <message>
+        <source>环境切换完成：已清除 %1 个 com.jxw 应用缓存</source>
+        <translation>Environment switched: cleared cache for %1 com.jxw app(s)</translation>
+    </message>
+    <message>
+        <source>，%1 个失败</source>
+        <translation>, %1 failed</translation>
+    </message>
+    <message>
+        <source>APK管理</source>
+        <translation>APK Manager</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法管理 APK</source>
+        <translation>No device connected, cannot manage APKs</translation>
+    </message>
 </context>
 <context>
     <name>VideoForm</name>
@@ -1466,10 +1653,6 @@ Size: %2 MB
 Audio: %3
 
 Note: almost no content was captured; the screen may have been off the whole time.</translation>
-    </message>
-    <message>
-        <source>投屏已熄屏，点击亮屏</source>
-        <translation>Mirroring is off, click to resume</translation>
     </message>
 </context>
 <context>
@@ -1729,8 +1912,16 @@ Note: almost no content was captured; the screen may have been off the whole tim
         <translation>Open encoder advanced settings: optimization levels for visual quality and performance.</translation>
     </message>
     <message>
-        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
-        <translation>Mirroring view turns off after 5 minutes of inactivity; click the mirroring window to resume the view only, the device screen stays off.</translation>
+        <source>勾选后连接即熄灭设备屏幕；投屏画面在设定时长无操作后盖黑幕，点击黑幕临时点亮设备看画面，亮屏后无操作 1 分钟自动重新熄灭。</source>
+        <translation>When checked, the device screen turns off on connect; after a period of inactivity a black overlay covers the mirroring view, click it to briefly wake the screen, and it auto turns off again after 1 minute of inactivity.</translation>
+    </message>
+    <message>
+        <source>投屏黑幕的无操作触发时长（分钟），默认 5 分钟。</source>
+        <translation>Idle time (minutes) before the mirroring black overlay appears, default 5 minutes.</translation>
+    </message>
+    <message>
+        <source> 分钟</source>
+        <translation> min</translation>
     </message>
 </context>
 <context>

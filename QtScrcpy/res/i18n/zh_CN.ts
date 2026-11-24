@@ -105,6 +105,133 @@
     </message>
 </context>
 <context>
+    <name>ApkManagerWindow</name>
+    <message>
+        <source>APK管理</source>
+        <translation>APK管理</translation>
+    </message>
+    <message>
+        <source>图标名称</source>
+        <translation>图标名称</translation>
+    </message>
+    <message>
+        <source>包名</source>
+        <translation>包名</translation>
+    </message>
+    <message>
+        <source>版本号</source>
+        <translation>版本号</translation>
+    </message>
+    <message>
+        <source>操作</source>
+        <translation>操作</translation>
+    </message>
+    <message>
+        <source>刷新</source>
+        <translation>刷新</translation>
+    </message>
+    <message>
+        <source>正在获取应用列表…</source>
+        <translation>正在获取应用列表…</translation>
+    </message>
+    <message>
+        <source>获取应用列表失败</source>
+        <translation>获取应用列表失败</translation>
+    </message>
+    <message>
+        <source>未找到第三方应用</source>
+        <translation>未找到第三方应用</translation>
+    </message>
+    <message>
+        <source>打开</source>
+        <translation>打开</translation>
+    </message>
+    <message>
+        <source>卸载</source>
+        <translation>卸载</translation>
+    </message>
+    <message>
+        <source>清缓存</source>
+        <translation>清缓存</translation>
+    </message>
+    <message>
+        <source>杀进程</source>
+        <translation>杀进程</translation>
+    </message>
+    <message>
+        <source>已加载 %1 个应用</source>
+        <translation>已加载 %1 个应用</translation>
+    </message>
+    <message>
+        <source>正在解析 %1</source>
+        <translation>正在解析 %1</translation>
+    </message>
+    <message>
+        <source>已打开 %1</source>
+        <translation>已打开 %1</translation>
+    </message>
+    <message>
+        <source>打开失败：%1</source>
+        <translation>打开失败：%1</translation>
+    </message>
+    <message>
+        <source>已卸载 %1</source>
+        <translation>已卸载 %1</translation>
+    </message>
+    <message>
+        <source>卸载失败：%1</source>
+        <translation>卸载失败：%1</translation>
+    </message>
+    <message>
+        <source>已清除 %1 的缓存</source>
+        <translation>已清除 %1 的缓存</translation>
+    </message>
+    <message>
+        <source>清缓存失败：%1</source>
+        <translation>清缓存失败：%1</translation>
+    </message>
+    <message>
+        <source>已杀掉 %1 的进程</source>
+        <translation>已杀掉 %1 的进程</translation>
+    </message>
+    <message>
+        <source>杀进程失败：%1</source>
+        <translation>杀进程失败：%1</translation>
+    </message>
+    <message>
+        <source>卸载确认</source>
+        <translation>卸载确认</translation>
+    </message>
+    <message>
+        <source>确定卸载 %1 吗？</source>
+        <translation>确定卸载 %1 吗？</translation>
+    </message>
+    <message>
+        <source>应用没有可启动的界面</source>
+        <translation>应用没有可启动的界面</translation>
+    </message>
+    <message>
+        <source>已复制到剪贴板</source>
+        <translation>已复制到剪贴板</translation>
+    </message>
+    <message>
+        <source>复制名称</source>
+        <translation>复制名称</translation>
+    </message>
+    <message>
+        <source>复制包名</source>
+        <translation>复制包名</translation>
+    </message>
+    <message>
+        <source>复制版本号</source>
+        <translation>复制版本号</translation>
+    </message>
+    <message>
+        <source>复制整行</source>
+        <translation>复制整行</translation>
+    </message>
+</context>
+<context>
     <name>Dialog</name>
     <message>
         <source>show</source>
@@ -1348,6 +1475,66 @@ Using on non-MTK devices may cause encoding failure or visual artifacts.</source
         <source>打开文件夹</source>
         <translation>打开文件夹</translation>
     </message>
+    <message>
+        <source>切换环境</source>
+        <translation>切换环境</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法切换环境</source>
+        <translation>未连接设备，无法切换环境</translation>
+    </message>
+    <message>
+        <source>正式/生产</source>
+        <translation>正式/生产</translation>
+    </message>
+    <message>
+        <source>灰度</source>
+        <translation>灰度</translation>
+    </message>
+    <message>
+        <source>测试</source>
+        <translation>测试</translation>
+    </message>
+    <message>
+        <source>开发</source>
+        <translation>开发</translation>
+    </message>
+    <message>
+        <source>环境切换进行中，请稍候</source>
+        <translation>环境切换进行中，请稍候</translation>
+    </message>
+    <message>
+        <source>正在切换到「%1」环境…</source>
+        <translation>正在切换到「%1」环境…</translation>
+    </message>
+    <message>
+        <source>切换「%1」环境失败</source>
+        <translation>切换「%1」环境失败</translation>
+    </message>
+    <message>
+        <source>已切换到「%1」环境，未找到需清缓存的 com.jxw 应用</source>
+        <translation>已切换到「%1」环境，未找到需清缓存的 com.jxw 应用</translation>
+    </message>
+    <message>
+        <source>切换环境失败：无法写入临时配置文件</source>
+        <translation>切换环境失败：无法写入临时配置文件</translation>
+    </message>
+    <message>
+        <source>环境切换完成：已清除 %1 个 com.jxw 应用缓存</source>
+        <translation>环境切换完成：已清除 %1 个 com.jxw 应用缓存</translation>
+    </message>
+    <message>
+        <source>，%1 个失败</source>
+        <translation>，%1 个失败</translation>
+    </message>
+    <message>
+        <source>APK管理</source>
+        <translation>APK管理</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法管理 APK</source>
+        <translation>未连接设备，无法管理 APK</translation>
+    </message>
 </context>
 <context>
     <name>VideoForm</name>
@@ -1466,10 +1653,6 @@ Note: almost no content was captured; the screen may have been off the whole tim
 音频: %3
 
 注意：几乎没有捕获到内容——屏幕可能全程处于息屏状态。</translation>
-    </message>
-    <message>
-        <source>投屏已熄屏，点击亮屏</source>
-        <translation>投屏已熄屏，点击亮屏</translation>
     </message>
 </context>
 <context>
@@ -1729,8 +1912,16 @@ Note: almost no content was captured; the screen may have been off the whole tim
         <translation>编码器设置...</translation>
     </message>
     <message>
-        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
-        <translation>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</translation>
+        <source>勾选后连接即熄灭设备屏幕；投屏画面在设定时长无操作后盖黑幕，点击黑幕临时点亮设备看画面，亮屏后无操作 1 分钟自动重新熄灭。</source>
+        <translation>勾选后连接即熄灭设备屏幕；投屏画面在设定时长无操作后盖黑幕，点击黑幕临时点亮设备看画面，亮屏后无操作 1 分钟自动重新熄灭。</translation>
+    </message>
+    <message>
+        <source>投屏黑幕的无操作触发时长（分钟），默认 5 分钟。</source>
+        <translation>投屏黑幕的无操作触发时长（分钟），默认 5 分钟。</translation>
+    </message>
+    <message>
+        <source> 分钟</source>
+        <translation> 分钟</translation>
     </message>
 </context>
 <context>

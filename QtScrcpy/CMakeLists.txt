@@ -198,6 +198,8 @@ set(QC_UI_SOURCES
     ui/apkpathutils.cpp
     ui/apkinstalldialog.h
     ui/apkinstalldialog.cpp
+    ui/apkmanagerwindow.h
+    ui/apkmanagerwindow.cpp
     ui/deviceloggrabber.h
     ui/deviceloggrabber.cpp
     ui/groupcontrolwidget.h

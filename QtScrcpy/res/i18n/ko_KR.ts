@@ -105,6 +105,133 @@
     </message>
 </context>
 <context>
+    <name>ApkManagerWindow</name>
+    <message>
+        <source>APK管理</source>
+        <translation>APK 관리</translation>
+    </message>
+    <message>
+        <source>图标名称</source>
+        <translation>아이콘 / 이름</translation>
+    </message>
+    <message>
+        <source>包名</source>
+        <translation>패키지명</translation>
+    </message>
+    <message>
+        <source>版本号</source>
+        <translation>버전</translation>
+    </message>
+    <message>
+        <source>操作</source>
+        <translation>작업</translation>
+    </message>
+    <message>
+        <source>刷新</source>
+        <translation>새로고침</translation>
+    </message>
+    <message>
+        <source>正在获取应用列表…</source>
+        <translation>앱 목록을 가져오는 중…</translation>
+    </message>
+    <message>
+        <source>获取应用列表失败</source>
+        <translation>앱 목록 가져오기 실패</translation>
+    </message>
+    <message>
+        <source>未找到第三方应用</source>
+        <translation>서드파티 앱을 찾을 수 없습니다</translation>
+    </message>
+    <message>
+        <source>打开</source>
+        <translation>열기</translation>
+    </message>
+    <message>
+        <source>卸载</source>
+        <translation>제거</translation>
+    </message>
+    <message>
+        <source>清缓存</source>
+        <translation>캐시 지우기</translation>
+    </message>
+    <message>
+        <source>杀进程</source>
+        <translation>강제 종료</translation>
+    </message>
+    <message>
+        <source>已加载 %1 个应用</source>
+        <translation>앱 %1개를 불러왔습니다</translation>
+    </message>
+    <message>
+        <source>正在解析 %1</source>
+        <translation>%1 분석 중</translation>
+    </message>
+    <message>
+        <source>已打开 %1</source>
+        <translation>%1 열기 완료</translation>
+    </message>
+    <message>
+        <source>打开失败：%1</source>
+        <translation>열기 실패: %1</translation>
+    </message>
+    <message>
+        <source>已卸载 %1</source>
+        <translation>%1 제거 완료</translation>
+    </message>
+    <message>
+        <source>卸载失败：%1</source>
+        <translation>제거 실패: %1</translation>
+    </message>
+    <message>
+        <source>已清除 %1 的缓存</source>
+        <translation>%1 캐시를 지웠습니다</translation>
+    </message>
+    <message>
+        <source>清缓存失败：%1</source>
+        <translation>캐시 지우기 실패: %1</translation>
+    </message>
+    <message>
+        <source>已杀掉 %1 的进程</source>
+        <translation>%1 강제 종료 완료</translation>
+    </message>
+    <message>
+        <source>杀进程失败：%1</source>
+        <translation>강제 종료 실패: %1</translation>
+    </message>
+    <message>
+        <source>卸载确认</source>
+        <translation>제거 확인</translation>
+    </message>
+    <message>
+        <source>确定卸载 %1 吗？</source>
+        <translation>%1을(를) 제거하시겠습니까?</translation>
+    </message>
+    <message>
+        <source>应用没有可启动的界面</source>
+        <translation>실행 가능한 화면이 없습니다</translation>
+    </message>
+    <message>
+        <source>已复制到剪贴板</source>
+        <translation>클립보드에 복사했습니다</translation>
+    </message>
+    <message>
+        <source>复制名称</source>
+        <translation>이름 복사</translation>
+    </message>
+    <message>
+        <source>复制包名</source>
+        <translation>패키지명 복사</translation>
+    </message>
+    <message>
+        <source>复制版本号</source>
+        <translation>버전 복사</translation>
+    </message>
+    <message>
+        <source>复制整行</source>
+        <translation>행 복사</translation>
+    </message>
+</context>
+<context>
     <name>Dialog</name>
     <message>
         <source>show</source>
@@ -1348,6 +1475,66 @@ MTK가 아닌 기기에서 사용하면 인코딩 실패나 화면 이상이 발
         <source>打开文件夹</source>
         <translation>폴더 열기</translation>
     </message>
+    <message>
+        <source>切换环境</source>
+        <translation>환경 전환</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法切换环境</source>
+        <translation>연결된 기기가 없어 환경을 전환할 수 없습니다</translation>
+    </message>
+    <message>
+        <source>正式/生产</source>
+        <translation>운영</translation>
+    </message>
+    <message>
+        <source>灰度</source>
+        <translation>회색(그레이)</translation>
+    </message>
+    <message>
+        <source>测试</source>
+        <translation>테스트</translation>
+    </message>
+    <message>
+        <source>开发</source>
+        <translation>개발</translation>
+    </message>
+    <message>
+        <source>环境切换进行中，请稍候</source>
+        <translation>환경 전환 중입니다. 잠시 기다려 주세요</translation>
+    </message>
+    <message>
+        <source>正在切换到「%1」环境…</source>
+        <translation>&quot;%1&quot; 환경으로 전환 중…</translation>
+    </message>
+    <message>
+        <source>切换「%1」环境失败</source>
+        <translation>&quot;%1&quot; 환경 전환 실패</translation>
+    </message>
+    <message>
+        <source>已切换到「%1」环境，未找到需清缓存的 com.jxw 应用</source>
+        <translation>&quot;%1&quot; 환경으로 전환했습니다. 캐시를 지울 com.jxw 앱을 찾지 못했습니다</translation>
+    </message>
+    <message>
+        <source>切换环境失败：无法写入临时配置文件</source>
+        <translation>전환 실패: 임시 설정 파일을 쓸 수 없습니다</translation>
+    </message>
+    <message>
+        <source>环境切换完成：已清除 %1 个 com.jxw 应用缓存</source>
+        <translation>환경 전환 완료: com.jxw 앱 %1개의 캐시를 지웠습니다</translation>
+    </message>
+    <message>
+        <source>，%1 个失败</source>
+        <translation>, %1개 실패</translation>
+    </message>
+    <message>
+        <source>APK管理</source>
+        <translation>APK 관리</translation>
+    </message>
+    <message>
+        <source>未连接设备，无法管理 APK</source>
+        <translation>연결된 기기가 없어 APK를 관리할 수 없습니다</translation>
+    </message>
 </context>
 <context>
     <name>VideoForm</name>
@@ -1466,10 +1653,6 @@ Note: almost no content was captured; the screen may have been off the whole tim
 오디오: %3
 
 참고: 캡처된 내용이 거의 없습니다. 화면이 계속 꺼져 있었을 수 있습니다.</translation>
-    </message>
-    <message>
-        <source>投屏已熄屏，点击亮屏</source>
-        <translation>미러링 꺼짐, 클릭해서 켜기</translation>
     </message>
 </context>
 <context>
@@ -1729,8 +1912,16 @@ Note: almost no content was captured; the screen may have been off the whole tim
         <translation>새로 고침</translation>
     </message>
     <message>
-        <source>投屏画面在 5 分钟无操作后自动熄屏；点击投屏窗口仅恢复投屏显示，设备屏幕保持关闭。</source>
-        <translation>5분 동안 조작이 없으면 미러링 화면이 자동으로 꺼집니다. 미러링 창을 클릭하면 화면 표시만 복구되며, 기기 화면은 꺼진 상태로 유지됩니다.</translation>
+        <source>勾选后连接即熄灭设备屏幕；投屏画面在设定时长无操作后盖黑幕，点击黑幕临时点亮设备看画面，亮屏后无操作 1 分钟自动重新熄灭。</source>
+        <translation>선택하면 연결 시 기기 화면이 꺼집니다. 일정 시간 동안 조작이 없으면 미러링 화면에 검은 덮개가 표시되며, 클릭하면 화면이 잠시 켜지고 켜진 뒤 1분간 조작이 없으면 다시 자동으로 꺼집니다.</translation>
+    </message>
+    <message>
+        <source>投屏黑幕的无操作触发时长（分钟），默认 5 分钟。</source>
+        <translation>미러링 화면에 검은 덮개가 표시되는 무작동 시간(분), 기본값은 5분입니다.</translation>
+    </message>
+    <message>
+        <source> 分钟</source>
+        <translation> 분</translation>
     </message>
 </context>
 <context>
