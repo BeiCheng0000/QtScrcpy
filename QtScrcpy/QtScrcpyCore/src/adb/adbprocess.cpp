@@ -34,6 +34,13 @@ void AdbProcess::setAdbPath(const QString &adbPath)
     AdbProcessImpl::resetAdbPath();
 }
 
+QString AdbProcess::getAdbPath()
+{
+    // 全工程统一入口：自定义路径优先；未配置或路径无效时，
+    // 依次尝试环境变量，最终回退程序内置 adb（详见 AdbProcessImpl::getAdbPath）。
+    return AdbProcessImpl::getAdbPath();
+}
+
 void AdbProcess::execute(const QString &serial, const QStringList &args)
 {
     m_adbImpl->execute(serial, args);

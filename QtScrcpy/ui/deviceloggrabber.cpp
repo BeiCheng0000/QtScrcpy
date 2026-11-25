@@ -8,7 +8,7 @@
 #include <QString>
 #include <QTextStream>
 
-#include "../util/config.h"
+#include "adbprocess.h" // 统一 adb 路径入口（自定义优先、回退内置）
 
 // 逐行解码：优先 UTF-8；出现非法序列（U+FFFD）时回退本地编码（GBK）。
 // 解决两类中文乱码：设备侧个别应用以 GBK 写中文日志、统一以 UTF-8 落盘。
@@ -51,7 +51,9 @@ DeviceLogGrabber::~DeviceLogGrabber()
 
 QString DeviceLogGrabber::resolveAdbOrNotify()
 {
-    const QString adb = Config::getInstance().getAdbPath();
+    // 统一入口：自定义路径优先，未配置/无效自动回退内置 adb。
+    // 不再直接读 Config::getAdbPath() 原值——那会在未配置自定义路径时导致抓取/清日志失败。
+    const QString adb = qsc::AdbProcess::getAdbPath();
     if (adb.isEmpty() || !QFileInfo::exists(adb)) {
         emit message(QObject::tr("未找到 adb，请在设置中检查 adb 路径"));
         return QString();

@@ -101,7 +101,6 @@ private:
     void clearAppCache(const QString &pkg);
     void forceStopApp(const QString &pkg);
 
-    static QString findAdb();
     QString findAapt(); // 结果缓存于成员，避免每个包重复扫描 SDK 目录
     static bool parseBadging(const QString &text, QString &label, QString &version, QString &iconPath);
     static QPixmap defaultIcon();

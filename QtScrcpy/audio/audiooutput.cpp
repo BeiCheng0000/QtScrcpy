@@ -16,6 +16,7 @@
 #endif
 
 #include "audiooutput.h"
+#include "adbprocess.h" // 统一 adb 路径入口（自定义优先、回退内置）
 
 namespace {
 constexpr int kBaseAudioPort = 28200;
@@ -83,13 +84,8 @@ void AudioSession::stopBridge()
         m_sndcpy.kill();
         m_sndcpy.waitForFinished(500);
     }
-    QString adb = QCoreApplication::applicationDirPath();
-#ifdef Q_OS_WIN32
-    adb += QStringLiteral("/adb.exe");
-#else
-    adb += QStringLiteral("/adb");
-#endif
-    if (!QFileInfo::exists(adb)) {
+    const QString adb = qsc::AdbProcess::getAdbPath();
+    if (adb.isEmpty() || !QFileInfo::exists(adb)) {
         qWarning() << "AudioOutput::cannot find adb to close audio bridge:" << adb;
         return;
     }

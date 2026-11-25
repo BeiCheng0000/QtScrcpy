@@ -26,6 +26,11 @@ public:
 
     static void setAdbPath(const QString& adbPath);
 
+    /// 全工程统一的 adb 可执行文件解析入口：
+    /// 优先使用用户配置的自定义路径；未配置或路径无效时回退到程序内置 adb。
+    /// 所有 adb 调用点都应通过此方法获取路径，保证行为一致。
+    static QString getAdbPath();
+
     void execute(const QString &serial, const QStringList &args);
 
     /// 带超时的一次性执行：内部使用独立 QProcess（stdout/stderr 合并），

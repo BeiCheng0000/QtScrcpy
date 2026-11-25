@@ -1027,9 +1027,10 @@ bool VideoForm::isDeviceScreenOff() const
     // 设备自己关电源（系统超时/手动按电源键）不会走 setDisplayPower
     // 广播，m_displayOff 无从得知；点击投屏时实时查一次屏幕状态。
     // adb shell dumpsys display 输出里 mScreenState=OFF 表示物理屏熄灭。
-    QString adb = Config::getInstance().getAdbPath();
+    // 统一入口：自定义路径优先，未配置/无效回退内置 adb（原先直读 Config 原值 + "adb" 字面量兜底）
+    const QString adb = qsc::AdbProcess::getAdbPath();
     if (adb.isEmpty()) {
-        adb = QStringLiteral("adb");
+        return false;
     }
     QProcess proc;
     proc.setProgram(adb);

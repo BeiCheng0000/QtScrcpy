@@ -1097,15 +1097,6 @@ void ApkManagerWindow::onForceStopClicked()
     if (!pkg.isEmpty()) forceStopApp(pkg);
 }
 
-QString ApkManagerWindow::findAdb()
-{
-    QString adb = Config::getInstance().getAdbPath();
-    if (!adb.isEmpty() && QFileInfo::exists(adb)) {
-        return adb;
-    }
-    return QStringLiteral("adb");
-}
-
 QString ApkManagerWindow::findAapt()
 {
     // SDK 目录扫描进程内只做一次（共享工具内 static 缓存），窗口与预热 worker 共用
