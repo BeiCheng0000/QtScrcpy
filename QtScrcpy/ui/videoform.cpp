@@ -51,12 +51,8 @@
 
 // ===== 投屏端无操作自动熄屏 =====
 // 需外层勾选「自动熄屏」才启用。无操作盖黑幕的时长由设置页配置
-// （config.autoOffMinutes，默认 5 分钟，1~120 兜底）；点击黑幕撤掉投屏
-// 黑幕，并让设备短暂亮屏以便视频流刷新，随后自动重新物理熄灭。
-// 电源键亮屏与关闭屏幕两条控制消息之间的间隔（毫秒）：太短会被设备
-// 连续处理导致"亮了又灭"看不到画面；太长则显得迟钝。300ms 足够让
-// 电源键先生效、视频流刷新一帧。
-static const int kPowerToCloseDelayMs = 300;
+// （config.autoOffMinutes，默认 5 分钟，1~120 兜底）；达到阈值时直接
+// 熄灭设备物理屏。设备灭屏后投屏点击仍直接注入触摸，屏幕保持熄灭。
 VideoForm::VideoForm(bool framelessWindow, bool showToolbar, int decodeMode, QWidget *parent) : QWidget(parent), ui(new Ui::videoForm), m_decodeMode(decodeMode)
 {
     ui->setupUi(this);
@@ -1009,7 +1005,7 @@ void VideoForm::restartIdleTimer()
     // 任何鼠标/键盘活动都重置投屏黑幕的无操作计时。必须用 dialog
     // 传入的时长（与设置页一致），不能读 Config——两处不同步会导致
     // 配置 1 分钟却按 Config 的旧值（如 5 分钟）计时
-    if (m_autoOffEnabled && !m_mirroringOff) {
+    if (m_autoOffEnabled) {
         m_idleTimer.start(m_idleMinutes * 60 * 1000);
     }
 }
@@ -1025,7 +1021,7 @@ void VideoForm::setDisplayPower(bool on)
 bool VideoForm::isDeviceScreenOff() const
 {
     // 设备自己关电源（系统超时/手动按电源键）不会走 setDisplayPower
-    // 广播，m_displayOff 无从得知；点击投屏时实时查一次屏幕状态。
+    // 广播，m_displayOff 无从得知；无操作熄屏前实时查一次屏幕状态。
     // adb shell dumpsys display 输出里 mScreenState=OFF 表示物理屏熄灭。
     // 统一入口：自定义路径优先，未配置/无效回退内置 adb（原先直读 Config 原值 + "adb" 字面量兜底）
     const QString adb = qsc::AdbProcess::getAdbPath();
@@ -1053,11 +1049,9 @@ bool VideoForm::eventFilter(QObject *watched, QEvent *event)
 
 void VideoForm::enterMirroringOff()
 {
-    // 无操作 N 分钟：调一次电源键真正关闭设备电源（与手动闭环一致，
-    // 用 postPower 而非 setDisplayPower——后者对该设备无效），
-    // 不加任何投屏端黑幕/浮层。设备灭屏后的点击恢复由 mousePressEvent
-    // 中已闭环的"电源键亮屏 → 关闭屏幕"逻辑处理
-    m_mirroringOff = true;
+    // 无操作 N 分钟：调一次电源键真正关闭设备电源（用 postPower 而非
+    // setDisplayPower——后者对该设备无效），不加任何投屏端黑幕/浮层。
+    // 灭屏后投屏点击仍直接注入触摸，设备屏保持熄灭，无需恢复流程
     m_idleTimer.stop();
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
     if (device && !isDeviceScreenOff()) {
@@ -1349,30 +1343,8 @@ void VideoForm::staysOnTop(bool top)
 
 void VideoForm::mousePressEvent(QMouseEvent *event)
 {
-    // 设备自己关电源（自动/手动）：点击投屏同样走
-    // "电源键亮屏 → 短暂亮屏后关闭屏幕"逻辑，且吞掉本次点击不注入设备
-    if (m_autoOffEnabled && isDeviceScreenOff()) {
-        m_mirroringOff = false; // 设备已灭屏态，本次点击走电源键闭环
-        auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
-        if (device) {
-            device->postPower(); // 电源键：点亮
-            QTimer::singleShot(kPowerToCloseDelayMs, this, [this]() {
-                auto dev = qsc::IDeviceManage::getInstance().getDevice(m_serial);
-                if (dev) {
-                    dev->setDisplayPower(false); // 工具栏关闭屏幕
-                }
-            });
-        }
-        m_resumeGuard.start();
-        restartIdleTimer();
-        event->accept();
-        return;
-    }
-    // 亮屏保护窗内的点击继续吞掉（防止同一动作被拆成触摸注入）
-    if (m_resumeGuard.isValid() && m_resumeGuard.elapsed() < 500) {
-        event->accept();
-        return;
-    }
+    // 设备灭屏态下点击也直接注入触摸（scrcpy 标准行为），
+    // 不吞点击、不点亮设备物理屏
     restartIdleTimer();
 
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
@@ -1426,12 +1398,6 @@ void VideoForm::mousePressEvent(QMouseEvent *event)
 
 void VideoForm::mouseReleaseEvent(QMouseEvent *event)
 {
-    // 熄屏或亮屏保护窗内：吞掉释放事件（press 已被吞，孤立 release
-    // 不能转成触摸下发）
-    if (m_mirroringOff || (m_resumeGuard.isValid() && m_resumeGuard.elapsed() < 500)) {
-        event->accept();
-        return;
-    }
     restartIdleTimer();
 
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
@@ -1475,10 +1441,8 @@ void VideoForm::mouseReleaseEvent(QMouseEvent *event)
 
 void VideoForm::mouseMoveEvent(QMouseEvent *event)
 {
-    // 鼠标活动重置投屏端无操作计时（熄屏态下移动不恢复显示）
-    if (!m_mirroringOff) {
-        restartIdleTimer();
-    }
+    // 鼠标活动重置投屏端无操作计时
+    restartIdleTimer();
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
         QPointF localPos = event->localPos();
         QPointF globalPos = event->globalPos();
@@ -1506,11 +1470,6 @@ void VideoForm::mouseMoveEvent(QMouseEvent *event)
 
 void VideoForm::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    // 熄屏/亮屏保护窗：吞掉双击，防止亮屏点击被识别为设备端双击触摸
-    if (m_mirroringOff || (m_resumeGuard.isValid() && m_resumeGuard.elapsed() < 500)) {
-        event->accept();
-        return;
-    }
     restartIdleTimer();
 
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);
@@ -1545,11 +1504,6 @@ void VideoForm::mouseDoubleClickEvent(QMouseEvent *event)
 
 void VideoForm::wheelEvent(QWheelEvent *event)
 {
-    // 熄屏/亮屏保护窗：滚轮不注入设备
-    if (m_mirroringOff || (m_resumeGuard.isValid() && m_resumeGuard.elapsed() < 500)) {
-        event->accept();
-        return;
-    }
     restartIdleTimer();
 
     auto device = qsc::IDeviceManage::getInstance().getDevice(m_serial);

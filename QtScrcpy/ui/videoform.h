@@ -79,12 +79,10 @@ private:
     void openRecordFolder(const QString &filePath) const;
 
     // ===== 投屏端无操作自动熄屏（需外层勾选「自动熄屏」才启用）=====
-    // 语义与设备端熄屏严格区分：
-    //  - 熄屏对象是「投屏画面」（本窗口显示），不是设备屏幕；
-    //  - 点击亮屏只恢复本窗口显示，不下发任何设备指令，
-    //    设备端屏幕保持其当前状态（勾选自动熄屏时即为熄屏）。
+    // 达到无操作阈值时直接熄灭设备物理屏；灭屏后投屏点击仍直接注入
+    // 触摸（scrcpy 标准行为），设备屏幕保持熄灭，无恢复流程
     void restartIdleTimer();       // 鼠标/键盘活动重置无操作计时
-    void enterMirroringOff();      // 达到无操作阈值：直接关闭设备电源（setDisplayPower(false)）
+    void enterMirroringOff();      // 达到无操作阈值：直接关闭设备电源（postPower）
 
     // 让窗口几何尺寸与视频宽高比保持同步。否则最大化（或从最小化还原）后会
     // 留下大片黑边。
@@ -193,14 +191,11 @@ private:
     bool m_closing = false;
 
     // 投屏端熄屏流程（勾选「自动熄屏」）：连接即熄灭设备物理屏（视频流
-    // 继续捕获，投屏有画面）→ 无操作 N 分钟盖投屏黑幕 → 点击黑幕仅撤掉
-    // 黑幕恢复投屏显示，设备保持熄屏；m_resumeGuard 为亮屏后 500ms
-    // 保护窗，吞掉窗口期内的鼠标事件防止误触发
-    bool m_mirroringOff = false; // 保留：仅表示设备灭屏态（点击投屏走电源键逻辑），不再有黑幕
+    // 继续捕获，投屏有画面）→ 无操作 N 分钟再次熄屏。灭屏态下点击投屏
+    // 直接注入触摸，屏幕保持熄灭
     bool m_autoOffEnabled = false;
     int m_idleMinutes = 5;      // dialog 传入的无操作熄屏时长（分钟）
     bool m_displayOff = false;  // 设备物理屏是否处于熄灭态（本程序下发的/自动熄屏的）
-    QElapsedTimer m_resumeGuard;
     QTimer m_idleTimer;
 
     // 智能最大化状态。最大化时把画面放大到屏幕可容纳的最大尺寸（而不是留黑边），

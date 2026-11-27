@@ -1,0 +1,14 @@
+{
+  "name": "u7f16-u7a0b-u5927-u795e",
+  "version": "1.0.28545930",
+  "description": "编程使用",
+  "author": {
+    "name": "CodeBuddy Custom Agent"
+  },
+  "agents": [
+    "./agents/编程大神.md"
+  ],
+  "keywords": [
+    "custom-manual-agent"
+  ]
+}

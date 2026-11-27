@@ -1,0 +1,11 @@
+{
+  "name": "manual-agents-project-641c15dbffcc",
+  "description": "Manual agents marketplace (local)",
+  "plugins": [
+    {
+      "name": "u7f16-u7a0b-u5927-u795e",
+      "source": "./plugins/u7f16-u7a0b-u5927-u795e",
+      "description": "编程使用"
+    }
+  ]
+}
